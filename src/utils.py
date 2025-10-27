@@ -1,3 +1,4 @@
+from logging import currentframe
 import random, math
 import itertools
 import matplotlib.pyplot as plt
@@ -279,12 +280,6 @@ def norm_vector(a):
     res = [i / M for i in a]
     return res
 
-def count(a):
-    res = []
-    for i in a:
-        res.append(i[1])
-    return res
-
 def count(edges):
     d = {}
     n = set()
@@ -299,7 +294,6 @@ def count(edges):
             for j in i:
                 n.add(j)
     print("& {} & {} & {} & {} & {} & {}".format(len(n), len(edges), d[2], d[3], d[4], d[5]))
-
 
 def plot_dist_hyperedges(edges, title):
     os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
@@ -320,6 +314,82 @@ def plot_dist_hyperedges(edges, title):
 
     ax.hist(x, bins=np.arange(M + 1)+0.5, density=True, alpha=0.5, histtype='bar', ec='black')
     plt.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
+
+def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
+    """
+    edges: dict[tuple[int], int] -- key is hyperedge (tuple of vertices), value is its weight
+    """
+    # 1. Group weights by edge size
+    size2weights = {}
+    for edge, weight in edges.items():
+        size = len(edge)
+        if min_size <= size <= max_size:
+            size2weights.setdefault(size, []).append(weight)
+
+    # 2. Plot distributions
+    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+    
+    fig, ax = plt.subplots()
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+    plt.xlabel("w")
+    plt.ylabel("count(w)")
+
+    plt.title(f"{title}\n")
+    ax.text(
+        0.5, 1.01,  # x, y in Axes coordinates (centered, just below the main title)
+        "The number of weights by hyperedge size",
+        ha='center', va='bottom',
+        transform=ax.transAxes,
+        fontsize=8, fontstyle='italic'
+    )
+    fig.text(
+        0.5, 0,                     
+        "The graph purposely keeps only the percentile range containing 80% of the weights,\n centered around the expected value, to exclude outliers.",
+        ha='center', va='top', fontsize=8
+    )
+
+    for idx, (size, weights) in enumerate(sorted(size2weights.items())):
+        if len(weights) == 0:
+            continue
+
+        # Calculate the percentile range containing 80% of the weights.
+        weight_count = np.zeros(max(weights) + 1)
+        for w in weights:
+            weight_count[w] += 1
+
+        weight_dist = weight_count/len(weights)
+
+        # Exclude outliers by focusing on central 80% around expected value
+        expected_value = 0
+        for w, p in enumerate(weight_dist):
+            expected_value += w * p
+
+        target_count = round(0.8 * len(weights)) # I want to include at least 80% of edges
+        current_count = weight_count[round(expected_value)] # Start from expected value
+        l = round(expected_value) - 1
+        r = round(expected_value) + 1
+
+        while current_count < target_count:
+            if l >= 0:
+                current_count += weight_count[l]
+                l -= 1
+            if r < len(weight_count):
+                current_count += weight_count[r]
+                r += 1
+        l=max(l,0)
+        print(f"{size} - |e|:{len(weights)} e: {expected_value} l:{l} r:{r}")
+
+        ax.plot(
+            range(l,r),
+            weight_count[l:r],
+            label=f"size={size}",
+            alpha=0.8,
+        )
+
+    plt.legend(title="Hyperedge size")
+    fig.savefig(f"{cfg.PLOT_OUT_DIR}/{title}_weights_by_size.pdf", bbox_inches="tight")
+    plt.close()
 
 def avg(motifs):
     result = []

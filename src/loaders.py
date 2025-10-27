@@ -2,7 +2,7 @@ import csv, random, pandas as pd
 
 from numpy import index_exp, nan
 
-from .utils import plot_dist_hyperedges, count
+from .utils import plot_dist_hyperedges_weights, plot_dist_hyperedges, count
 
 import config as cfg
 
@@ -540,8 +540,8 @@ def load_hospital_duplicates(N):
 
     fopen.close()
     
-    tot = []
-    edges = []
+    tot = {}
+    edges = {}
     
     for k in graph.keys():
         e_k = graph[k]
@@ -551,11 +551,17 @@ def load_hospital_duplicates(N):
             i = tuple(sorted(i))
 
             if len(i) <= N:
-                edges.append(i)
+                if i in edges:
+                    edges[i] += 1
+                else:
+                    edges[i] = 1
 
-            tot.append(i)
+            if i in tot:
+                tot[i] += 1
+            else:
+                tot[i] = 1
 
-    #plot_dist_hyperedges(tot, "hospital")
+    plot_dist_hyperedges_weights(tot, "hospital_wd")
     print(len(edges))
     return edges
 
