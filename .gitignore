@@ -1,6 +1,7 @@
 .DS_Store
 .venv/
-DatasetHigherOrder/
+dataset/
+plots/
 
 # Python cache / build
 __pycache__/

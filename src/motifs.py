@@ -2,9 +2,9 @@
 This file implements the baseline algorithm for motif discovery in hypergraphs.
 """
 
-from hypergraph import hypergraph
-from utils import *
-from loaders import *
+from .hypergraph import hypergraph
+from .utils import *
+from .loaders import *
 
 H_O = True
 L_O = []
@@ -131,32 +131,32 @@ def count_motifs(edges, N, TOT):
 
     return out
 
-N = 3
-results = []
-output = {}
-
-edges = load_high_school(N)
-m = count_motifs(edges, N, -1)
-output['motifs'] = m
-
-print(output['motifs'])
-
-STEPS = len(edges)*10
-ROUNDS = 10
-
-for i in range(ROUNDS):
-    if not H_O:
-        e1 = hypergraph(edges)
-    else:
-        e1 = hypergraph(L_O)
-    e1.MH(label='stub', n_steps=STEPS)
-    m1 = count_motifs(e1.C, N, i)
-
-    results.append(m1)
-
-output['config_model'] = results
-
-delta = diff_sum(output['motifs'], output['config_model'])
-norm_delta = norm_vector(delta)
-
-print(norm_delta)
+# N = 3
+# results = []
+# output = {}
+#
+# edges = load_high_school(N)
+# m = count_motifs(edges, N, -1)
+# output['motifs'] = m
+#
+# print(output['motifs'])
+#
+# STEPS = len(edges)*10
+# ROUNDS = 10
+#
+# for i in range(ROUNDS):
+#     if not H_O:
+#         e1 = hypergraph(edges)
+#     else:
+#         e1 = hypergraph(L_O)
+#     e1.MH(label='stub', n_steps=STEPS)
+#     m1 = count_motifs(e1.C, N, i)
+#
+#     results.append(m1)
+#
+# output['config_model'] = results
+#
+# delta = diff_sum(output['motifs'], output['config_model'])
+# norm_delta = norm_vector(delta)
+#
+# print(norm_delta)

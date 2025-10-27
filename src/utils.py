@@ -3,6 +3,8 @@ import itertools
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+import os
+import config as cfg
 
 def motifs_ho_not_full(edges, N, TOT, visited):
     mapping, labeling = generate_motifs(N)
@@ -82,7 +84,6 @@ def motifs_ho_not_full(edges, N, TOT, visited):
         #pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return out, visited
-
 
 def motifs_standard(edges, N, TOT, visited):
     mapping, labeling = generate_motifs(N)
@@ -301,6 +302,8 @@ def count(edges):
 
 
 def plot_dist_hyperedges(edges, title):
+    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+
     x = []
     for i in edges:
         if len(i) > 1 and len(i) < 20:
@@ -316,7 +319,7 @@ def plot_dist_hyperedges(edges, title):
     plt.ylabel("P(S)")
 
     ax.hist(x, bins=np.arange(M + 1)+0.5, density=True, alpha=0.5, histtype='bar', ec='black')
-    plt.savefig("distr/{}.pdf".format(title))
+    plt.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
 
 def avg(motifs):
     result = []
@@ -462,8 +465,3 @@ def generate_motifs(N):
 
 #out = len(isom_classes.keys())
 #print(out)
-    
-
-
-
-

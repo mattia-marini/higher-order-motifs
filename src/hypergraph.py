@@ -7,7 +7,7 @@ It is equipped with methods for computing hypergraph moments of interest and run
 '''
 
 from networkx.classes.function import nodes
-from utils import relabel
+from .utils import relabel
 import numpy as np
 import networkx as nx
 from collections import Counter 

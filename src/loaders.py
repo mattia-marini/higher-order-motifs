@@ -2,13 +2,15 @@ import csv, random, pandas as pd
 
 from numpy import index_exp, nan
 
-from utils import plot_dist_hyperedges, count
+from .utils import plot_dist_hyperedges, count
+
+import config as cfg
 
 def load_facebook_hs():
     import pandas as pd
     res = {}
 
-    d = pd.read_csv("DatasetHigherOrder/Facebook-known-pairs_data_2013.csv")
+    d = pd.read_csv("{}/Facebook-known-pairs_data_2013.csv".format(cfg.DATASET_DIR))
     for i in range(len(d)):
         a,b,c = list(map(int, d.iloc[i][0].split(' ')))
         if c == 1:
@@ -20,14 +22,14 @@ def load_friendship_hs():
     import pandas as pd
     res = {}
 
-    d = pd.read_csv("DatasetHigherOrder/Friendship-network_data_2013.csv")
+    d = pd.read_csv("{}/Friendship-network_data_2013.csv".format(cfg.DATASET_DIR))
     for i in range(len(d)):
         a,b = list(map(int, d.iloc[i][0].split(' ')))
         res[(a,b)] = 1
     return res
 
 def load_meta_hs(T = 'sex'):
-    tsv_file = open("DatasetHigherOrder/meta_hs.txt")
+    tsv_file = open("{}/meta_hs.txt".format(cfg.DATASET_DIR))
     data = csv.reader(tsv_file, delimiter="\t")
     res = {}
     for i in data:
@@ -41,7 +43,7 @@ def load_meta_hs(T = 'sex'):
     return res
 
 def load_meta_ps(T = 'sex'):
-    tsv_file = open("DatasetHigherOrder/metadata_ps.txt")
+    tsv_file = open("{}/metadata_ps.txt".format(cfg.DATASET_DIR))
     data = csv.reader(tsv_file, delimiter="\t")
     res = {}
     for i in data:
@@ -79,7 +81,7 @@ def load_gene_disease(N):
     diseases = {}
     idxG = 0
 
-    tsv_file = open("DatasetHigherOrder/curated_gene_disease_associations.tsv")
+    tsv_file = open("{}/curated_gene_disease_associations.tsv".format(cfg.DATASET_DIR))
     data = csv.reader(tsv_file, delimiter="\t")
 
     c = 0
@@ -127,7 +129,7 @@ def load_gene_disease(N):
 def pickle_PACS():
     import pandas as pd
 
-    tb = pd.read_csv("DatasetHigherOrder/PACS.csv")
+    tb = pd.read_csv("{}/PACS.csv".format(cfg.DATASET_DIR))
 
     tb = tb[['ArticleID', 'PACS', 'FullName']]
 
@@ -210,7 +212,7 @@ def load_PACS_single(N, S):
 
 def load_high_school_duplicates(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/High-School_data_2013.csv"
+    dataset = "{}/High-School_data_2013.csv".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -246,7 +248,7 @@ def load_high_school_duplicates(N):
 
 def load_high_school(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/High-School_data_2013.csv"
+    dataset = "{}/High-School_data_2013.csv".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -279,14 +281,14 @@ def load_high_school(N):
 
             tot.add(i)
 
-    #plot_dist_hyperedges(tot, "high_school")
+    # plot_dist_hyperedges(tot, "high_school")
     print(count(tot))
     print(len(edges))
     return edges
 
 def load_primary_school_duplicates(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/primaryschool.csv"
+    dataset = "{}/primaryschool.csv".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -322,7 +324,7 @@ def load_primary_school_duplicates(N):
 
 def load_primary_school(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/primaryschool.csv"
+    dataset = "{}/primaryschool.csv".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -362,7 +364,7 @@ def load_primary_school(N):
 
 def load_conference(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/conference.dat"
+    dataset = "{}/conference.dat".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -402,7 +404,7 @@ def load_conference(N):
 
 def load_conference_duplicates(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/conference.dat"
+    dataset = "{}/conference.dat".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -441,7 +443,7 @@ def load_conference_duplicates(N):
 
 def load_workplace(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/workspace.dat"
+    dataset = "{}/workspace.dat".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -481,7 +483,7 @@ def load_workplace(N):
 
 def load_workplace_duplicates(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/workspace.dat"
+    dataset = "{}/workspace.dat".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -520,7 +522,7 @@ def load_workplace_duplicates(N):
 
 def load_hospital_duplicates(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/hospital.dat"
+    dataset = "{}/hospital.dat".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -559,7 +561,7 @@ def load_hospital_duplicates(N):
 
 def load_hospital(N):
     import networkx as nx
-    dataset = "DatasetHigherOrder/hospital.dat"
+    dataset = "{}/hospital.dat".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -598,7 +600,7 @@ def load_hospital(N):
     return edges
 
 def load_DBLP(N):
-    dataset = "DatasetHigherOrder/dblp.csv"
+    dataset = "{}/dblp.csv".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -635,7 +637,7 @@ def load_DBLP(N):
     return edges
 
 def load_history(N):
-    dataset = "DatasetHigherOrder/history.csv"
+    dataset = "{}/history.csv".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -672,7 +674,7 @@ def load_history(N):
     return edges
 
 def load_geology(N):
-    dataset = "DatasetHigherOrder/geology.csv"
+    dataset = "{}/geology.csv".format(cfg.DATASET_DIR)
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -709,8 +711,8 @@ def load_geology(N):
     return edges
 
 def load_justice_ideo(N):
-    dataset = "DatasetHigherOrder/justice.csv"
-    ideo = "DatasetHigherOrder/justices_ideology.csv"
+    dataset = "{}/justice.csv".format(cfg.DATASET_DIR)
+    ideo = "{}/justices_ideology.csv".format(cfg.DATASET_DIR)
     
     df = pd.read_csv(dataset)
     df = df[['caseId', 'justiceName', 'vote', 'justice']]
@@ -767,7 +769,7 @@ def load_justice_ideo(N):
     return edges, dict_ideo
 
 def load_justice(N):
-    dataset = "DatasetHigherOrder/justice.csv"
+    dataset = "{}/justice.csv".format(cfg.DATASET_DIR)
     
     df = pd.read_csv(dataset)
     df = df[['caseId', 'justiceName', 'vote']]
@@ -821,7 +823,7 @@ def load_babbuini(N):
     import gzip
     import networkx as nx
 
-    f = gzip.open("DatasetHigherOrder/babbuini.txt", 'rb')
+    f = gzip.open("{}/babbuini.txt".format(cfg.DATASET_DIR), 'rb')
     lines = f.readlines()
 
     graph = {}
@@ -880,7 +882,7 @@ def load_babbuini(N):
     return edges
 
 def load_wiki(N):
-    fopen = open("DatasetHigherOrder/wiki.txt", 'r')
+    fopen = open("{}/wiki.txt".format(cfg.DATASET_DIR), 'r')
     lines = fopen.readlines()
 
     edges = set()
@@ -914,7 +916,7 @@ def load_wiki(N):
     return edges
 
 def load_NDC_substances(N):
-    p = "DatasetHigherOrder/NDC-substances/"
+    p = "{}/NDC-substances/".format(cfg.DATASET_DIR)
     a = open(p + 'NDC-substances-nverts.txt')
     b = open(p + 'NDC-substances-simplices.txt')
     v = list(map(int, a.readlines()))
@@ -942,7 +944,7 @@ def load_NDC_substances(N):
     return edges
 
 def load_NDC_classes(N):
-    p = "DatasetHigherOrder/NDC-classes/"
+    p = "{}/NDC-classes/".format(cfg.DATASET_DIR)
     a = open(p + 'NDC-classes-nverts.txt')
     b = open(p + 'NDC-classes-simplices.txt')
     v = list(map(int, a.readlines()))
@@ -971,7 +973,7 @@ def load_NDC_classes(N):
 
 def load_eu(N):
     name = "email-Eu"
-    p = "DatasetHigherOrder/{}/".format(name)
+    p = "{}/{}/".format(cfg.DATASET_DIR).format(name)
     a = open(p + '{}-nverts.txt'.format(name))
     b = open(p + '{}-simplices.txt'.format(name))
     v = list(map(int, a.readlines()))
@@ -1000,7 +1002,7 @@ def load_eu(N):
 
 def load_enron(N):
     name = "email-Enron"
-    p = "DatasetHigherOrder/{}/".format(name)
+    p = "{}/{}/".format(cfg.DATASET_DIR).format(name)
     a = open(p + '{}-nverts.txt'.format(name))
     b = open(p + '{}-simplices.txt'.format(name))
     v = list(map(int, a.readlines()))
