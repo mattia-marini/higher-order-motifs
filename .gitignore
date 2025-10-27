@@ -1,0 +1,9 @@
+.DS_Store
+.venv/
+DatasetHigherOrder/
+
+# Python cache / build
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd

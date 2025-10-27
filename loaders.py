@@ -1026,7 +1026,3 @@ def load_enron(N):
     print(len(edges))
     print(count(tot))
     return edges
-
-
-
-

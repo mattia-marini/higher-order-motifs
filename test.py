@@ -1,0 +1,3 @@
+from loaders import load_high_school_duplicates
+
+load_high_school_duplicates(4)
