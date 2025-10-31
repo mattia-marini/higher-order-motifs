@@ -365,25 +365,23 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
     # 2. Plot distributions
     os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
     
-    fig, ax = plt.subplots()
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    fig, ax = plt.subplots(2, 1, figsize=(5, 10),gridspec_kw={'height_ratios': [1, 1], 'hspace': 0.6})
+    ax[0].xaxis.set_major_locator(MaxNLocator(integer=True))
 
-    plt.xlabel("w")
-    plt.ylabel("count(w)")
+    ax[0].set_xlabel("w")
+    ax[0].set_ylabel("count(w)")
 
-    plt.title(f"{title}\n")
-    ax.text(
-        0.5, 1.01,  # x, y in Axes coordinates (centered, just below the main title)
+    ax[0].set_title(f"{title}\n")
+    ax[0].text(
+        0.5, 1.01,
         "The number of weights by hyperedge size",
         ha='center', va='bottom',
-        transform=ax.transAxes,
+        transform=ax[0].transAxes,
         fontsize=8, fontstyle='italic'
     )
-    fig.text(
-        0.5, 0,                     
-        "The graph purposely keeps only the percentile range containing 80% of the weights,\n centered around the expected value, to exclude outliers.",
-        ha='center', va='top', fontsize=8
-    )
+    ax[0].text(0.5, -0.2, "The graph purposely keeps only the percentile range containing 80% of the weights,\n centered around the expected value, to exclude outliers.", 
+           ha='center', va='center', transform=ax[0].transAxes, fontsize=8)
+
 
     # Calculate the percentile range containing 80% of the weights.
     total_weight_count = np.zeros(max(edges.values()) + 1)
@@ -412,7 +410,8 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
     l=max(l,0)
 
 
-    discarded_values = [[]] * (max(size2weights.keys()) + 1)
+    max_hyperedge_size = max(size2weights.keys()) + 1
+    discarded_values = [list() for _ in range(max_hyperedge_size)]
 
     for idx, (size, weights) in enumerate(sorted(size2weights.items())):
         if len(weights) == 0:
@@ -426,14 +425,38 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
                 discarded_values[size].append(w)
 
         # print(f"{size} - |e|:{len(weights)} e: {expected_value} l:{l} r:{r}")
-        ax.plot(
+        ax[0].plot(
             range(l,r),
             curr_weight_count[l:r],
             label=f"size={size}",
             alpha=0.8,
         )
 
-    plt.legend(title="Hyperedge size")
+    ax[0].legend(title="Hyperedge size")
+
+    ax[1].xaxis.set_major_locator(MaxNLocator(integer=True))
+
+    ax[1].set_xlabel("hyperedge size S")
+    ax[1].set_ylabel("count(outliers)")
+
+    ax[1].set_title(f"Outliers discarded from {title}\n")
+    ax[1].text(
+        0.5, 1.01,
+        "The number of edges discarded as outliers by hyperedge size",
+        ha='center', va='bottom',
+        transform=ax[1].transAxes,
+        fontsize=8, fontstyle='italic'
+    )
+
+    discarded_values_count = [len(dv) for dv in discarded_values]
+
+    ax[1].bar(
+        range(2,max_hyperedge_size),
+        discarded_values_count[2:],
+        alpha=0.5,
+    )
+    
+
     fig.savefig(f"{cfg.PLOT_OUT_DIR}/{title}_weights_by_size.pdf", bbox_inches="tight")
     plt.close()
 
