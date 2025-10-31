@@ -230,7 +230,8 @@ def load_high_school_duplicates(N):
 
     fopen.close()
     
-    edges = []
+    tot = {}
+    edges = {}
     
     for k in graph.keys():
         e_k = graph[k]
@@ -240,10 +241,19 @@ def load_high_school_duplicates(N):
             i = tuple(sorted(i))
 
             if len(i) <= N:
-                edges.append(i)
+                if i in edges:
+                    edges[i] += 1
+                else:
+                    edges[i] = 1
 
-    #plot_dist_hyperedges(tot, "high_school")
+            if i in tot:
+                tot[i] += 1
+            else:
+                tot[i] = 1
+
+    plot_dist_hyperedges_weights(tot, "high_school")
     print(len(edges))
+    count_weight(edges)
     return edges
 
 def load_high_school(N):
@@ -306,7 +316,8 @@ def load_primary_school_duplicates(N):
 
     fopen.close()
     
-    edges = []
+    tot = {}
+    edges = {}
     
     for k in graph.keys():
         e_k = graph[k]
@@ -316,10 +327,19 @@ def load_primary_school_duplicates(N):
             i = tuple(sorted(i))
 
             if len(i) <= N:
-                edges.append(i)
+                if i in edges:
+                    edges[i] += 1
+                else:
+                    edges[i] = 1
 
-    ##plot_dist_hyperedges(tot, "primary_school")
+            if i in tot:
+                tot[i] += 1
+            else:
+                tot[i] = 1
+
+    plot_dist_hyperedges_weights(tot, "primary_school")
     print(len(edges))
+    count_weight(edges)
     return edges
 
 def load_primary_school(N):
@@ -422,8 +442,8 @@ def load_conference_duplicates(N):
 
     fopen.close()
     
-    tot = []
-    edges = []
+    tot = {}
+    edges = {}
     
     for k in graph.keys():
         e_k = graph[k]
@@ -433,12 +453,19 @@ def load_conference_duplicates(N):
             i = tuple(sorted(i))
 
             if len(i) <= N:
-                edges.append(i)
+                if i in edges:
+                    edges[i] += 1
+                else:
+                    edges[i] = 1
 
-            tot.append(i)
+            if i in tot:
+                tot[i] += 1
+            else:
+                tot[i] = 1
 
-    #plot_dist_hyperedges(tot, "conference")
+    plot_dist_hyperedges_weights(tot, "conference")
     print(len(edges))
+    count_weight(edges)
     return edges
 
 def load_workplace(N):

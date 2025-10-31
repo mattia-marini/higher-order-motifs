@@ -385,40 +385,50 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
         ha='center', va='top', fontsize=8
     )
 
+    # Calculate the percentile range containing 80% of the weights.
+    total_weight_count = np.zeros(max(edges.values()) + 1)
+    for w in edges.values():
+        total_weight_count[w] += 1
+
+    weight_dist = total_weight_count/len(edges)
+
+    # Exclude outliers by focusing on central 80% around expected value
+    expected_value = 0
+    for w, p in enumerate(weight_dist):
+        expected_value += w * p
+
+    target_count = round(0.8 * len(edges)) # I want to include at least 80% of edges
+    current_count = total_weight_count[round(expected_value)] # Start from expected value
+    l = round(expected_value) - 1
+    r = round(expected_value) + 1
+
+    while current_count < target_count:
+        if l >= 0:
+            current_count += total_weight_count[l]
+            l -= 1
+        if r < len(total_weight_count):
+            current_count += total_weight_count[r]
+            r += 1
+    l=max(l,0)
+
+
+    discarded_values = [[]] * (max(size2weights.keys()) + 1)
+
     for idx, (size, weights) in enumerate(sorted(size2weights.items())):
         if len(weights) == 0:
             continue
 
-        # Calculate the percentile range containing 80% of the weights.
-        weight_count = np.zeros(max(weights) + 1)
+        curr_weight_count = np.zeros(r + 1)
         for w in weights:
-            weight_count[w] += 1
+            try:
+                curr_weight_count[w] += 1
+            except:
+                discarded_values[size].append(w)
 
-        weight_dist = weight_count/len(weights)
-
-        # Exclude outliers by focusing on central 80% around expected value
-        expected_value = 0
-        for w, p in enumerate(weight_dist):
-            expected_value += w * p
-
-        target_count = round(0.8 * len(weights)) # I want to include at least 80% of edges
-        current_count = weight_count[round(expected_value)] # Start from expected value
-        l = round(expected_value) - 1
-        r = round(expected_value) + 1
-
-        while current_count < target_count:
-            if l >= 0:
-                current_count += weight_count[l]
-                l -= 1
-            if r < len(weight_count):
-                current_count += weight_count[r]
-                r += 1
-        l=max(l,0)
         # print(f"{size} - |e|:{len(weights)} e: {expected_value} l:{l} r:{r}")
-
         ax.plot(
             range(l,r),
-            weight_count[l:r],
+            curr_weight_count[l:r],
             label=f"size={size}",
             alpha=0.8,
         )
