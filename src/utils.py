@@ -281,6 +281,12 @@ def norm_vector(a):
     return res
 
 def count(edges):
+    """
+    Prints information about the hypergraph: 
+    - number of nodes
+    - number of hyperedges
+    - count of hyperedges of sizes 2 to 5.
+    """
     d = {}
     n = set()
     for i in range(2, 6):
@@ -294,6 +300,36 @@ def count(edges):
             for j in i:
                 n.add(j)
     print("& {} & {} & {} & {} & {} & {}".format(len(n), len(edges), d[2], d[3], d[4], d[5]))
+
+def count_weight(edges):
+    """
+    Prints information about the hypergraph: 
+    - number of nodes
+    - number of hyperedges
+    - count of hyperedges of sizes 2 to 5 and the average weight
+    """
+    d = {}
+    w = {}
+    n = set()
+    for i in range(2, 6):
+        d[i] = 0
+        w[i] = 0
+    for edge, weight in edges.items():
+        try:
+            d[len(edge)] += 1
+            w[len(edge)] += weight
+        except:
+            pass
+        finally:
+            for j in edge:
+                n.add(j)
+
+    for i in range(2, 6):
+        if d[i] == 0:
+            w[i] = 0
+        else:
+            w[i] = w[i]/d[i]
+    print("& {} & {} & {}:{:.3f} & {}:{:.3f} & {}:{:.3f} & {}:{:.3f}".format(len(n), len(edges), d[2], w[2], d[3], w[3], d[4],w[4], d[5], w[5]))
 
 def plot_dist_hyperedges(edges, title):
     os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
@@ -378,7 +414,7 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
                 current_count += weight_count[r]
                 r += 1
         l=max(l,0)
-        print(f"{size} - |e|:{len(weights)} e: {expected_value} l:{l} r:{r}")
+        # print(f"{size} - |e|:{len(weights)} e: {expected_value} l:{l} r:{r}")
 
         ax.plot(
             range(l,r),

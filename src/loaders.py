@@ -2,7 +2,7 @@ import csv, random, pandas as pd
 
 from numpy import index_exp, nan
 
-from .utils import plot_dist_hyperedges_weights, plot_dist_hyperedges, count
+from .utils import plot_dist_hyperedges_weights, plot_dist_hyperedges, count, count_weight
 
 import config as cfg
 
@@ -561,8 +561,9 @@ def load_hospital_duplicates(N):
             else:
                 tot[i] = 1
 
-    plot_dist_hyperedges_weights(tot, "hospital_wd")
+    plot_dist_hyperedges_weights(tot, "hospital")
     print(len(edges))
+    count_weight(edges)
     return edges
 
 def load_hospital(N):
@@ -602,7 +603,7 @@ def load_hospital(N):
 
     #plot_dist_hyperedges(tot, "hospital")
     print(len(edges))
-    print(count(tot))
+    count(tot)
     return edges
 
 def load_DBLP(N):
