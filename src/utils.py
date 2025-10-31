@@ -602,5 +602,28 @@ def generate_motifs(N):
     
     return mapping, labeling
 
+def intensity(edges):
+    total = 0
+    for e, w in edges.items():
+        total *= w
+    return total
+
+def coherence(edges):
+    mean = sum(edges.values())/len(edges)
+    return intensity(edges) / mean
+
+def induced_subgraph(edges, nodes):
+    subgraph = {}
+    node_set = set(nodes)
+    for e, w in edges.items():
+        include = True
+        for n in e:
+            if n not in node_set:
+                include = False
+                break
+        if include:
+            subgraph[e] = w
+    return subgraph
+
 #out = len(isom_classes.keys())
 #print(out)
