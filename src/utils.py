@@ -2,10 +2,14 @@ from logging import currentframe
 import random, math
 import itertools
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from matplotlib.ticker import MaxNLocator
+from networkx import graph
 import numpy as np
 import os
 import config as cfg
+import hypergraphx as hx
+from hypergraphx.viz import draw_hypergraph
 
 def motifs_ho_not_full(edges, N, TOT, visited):
     """ Computes the motif count for hypergraph motifs of order N. The
@@ -514,6 +518,64 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
 
     fig.savefig(f"{cfg.PLOT_OUT_DIR}/{title}_weights_by_size.pdf", bbox_inches="tight")
     plt.close()
+
+def plot_dist_motifs(motifs, title, graphs_per_row = None):
+    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+    n = len(motifs)
+
+    if graphs_per_row is None:
+        graphs_per_row = n
+
+
+    counts = [c for (_, c) in motifs]
+    motifs_reprentations = [m for (m, _) in motifs]
+    m = math.ceil(n / graphs_per_row)
+
+    fig = plt.figure(figsize=(5, 5 + 5/graphs_per_row * m))
+    gs = gridspec.GridSpec(1 + m, graphs_per_row, height_ratios=[graphs_per_row] + [1] * m,  wspace=0)
+
+    ax0 = fig.add_subplot(gs[0, :])
+    ax0.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+    plt.title(title)
+    plt.xlabel("Motif id")
+    plt.ylabel("Count")
+
+    ax0.bar(range(len(counts)), counts, align='center', alpha=0.7)
+
+    for i, motif in enumerate(motifs_reprentations):
+        # if i == 10: 
+        #     break
+
+        nodes = set()
+        for e in motif:
+            for v in e:
+                nodes.add(v)
+
+        node_size=150
+        hyperedge_alpha=0.8
+        pos = {1:(-1,0), 2:(1,0), 3:(0,1.5)}
+
+        if len(nodes) == 4:
+            node_size = 50
+            hyperedge_alpha=0.3
+            pos = {1:(-1,-1), 2:(1,-1), 3:(1,1), 4:(-1, 1)}
+
+        # print(f"Plotting motif {i}")
+        ax = fig.add_subplot(gs[1 + math.floor(i/graphs_per_row), i % graphs_per_row])
+        ax.set_frame_on(False)
+        ax.set_xlabel(str(i), fontsize=8)
+        # ax.axis('off')
+
+        
+        hypergraph = hx.Hypergraph()
+        hypergraph.add_edges(list(motif))
+        draw_hypergraph(hypergraph, ax=ax, edge_color="black", pos=pos, node_size=node_size, hyperedge_alpha=hyperedge_alpha)
+        
+
+    plt.tight_layout()
+
+    fig.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
 
 def avg(motifs):
     result = []
