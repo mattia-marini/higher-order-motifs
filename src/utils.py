@@ -8,6 +8,24 @@ import os
 import config as cfg
 
 def motifs_ho_not_full(edges, N, TOT, visited):
+    """ Computes the motif count for hypergraph motifs of order N. The
+    subgraphs checked for motifs are the ones obtained by extending a hyperedge
+    of order N-1 with one of its neighboring hyperedges. The subgraphs
+    contained in the visited set are ignored
+
+    Args:
+        edges (list[tuple[int]]): List of hyperedges in the hypergraph.
+        N (int): The order of the motifs to be counted.
+        TOT (int): ??
+
+    Returns: 
+        out (list[tuple[tuple[tuple[int]], int]]): A list of tuples where each
+            tuple contains a motif (as a tuple of edges) and its corresponding
+            count in the hypergraph.
+        visited (dict[tuple[int], int]): A dictionary of visited hyperedges of
+            size N.
+        
+    """
     mapping, labeling = generate_motifs(N)
 
     T = {}
@@ -87,6 +105,23 @@ def motifs_ho_not_full(edges, N, TOT, visited):
     return out, visited
 
 def motifs_standard(edges, N, TOT, visited):
+    """
+    Computes the motif count for hypergraph motifs of order N, considering only
+    hyperedges of order 2. The subgraphs contained in the visited set are
+    ignored.
+
+    Args:
+        edges (list[tuple[int]]): List of hyperedges in the hypergraph.
+        N (int): The order of the motifs to be counted.
+        TOT (int): ??
+        visited (set[tuple[int]]): A set of subgraph (tuple of nodes) to ignore
+            in the computation of motifs
+
+    Returns:
+        out (list[tuple[tuple[tuple[int]], int]]): A list of tuples where each
+            tuple contains a motif (as a tuple of edges) and its corresponding
+            count in the hypergraph.
+    """
     mapping, labeling = generate_motifs(N)
 
     graph = {}
@@ -97,6 +132,7 @@ def motifs_standard(edges, N, TOT, visited):
         for n in e:
             z.add(n)
 
+    # Construct adjacency matrix for 2-edges
     for e in edges:
         if len(e) == 2:
             T[tuple(sorted(e))] = 1
@@ -198,6 +234,24 @@ def motifs_standard(edges, N, TOT, visited):
     return out
 
 def motifs_ho_full(edges, N, TOT):
+    """
+    Computes the motif counts for hypergraph motifs of order N. The subgraphs
+    checked for motifs are the one induced by the nodes in the hyperedges of
+    order N
+
+    Args:
+        edges (list[tuple[int]]): List of hyperedges in the hypergraph.
+        N (int): The order of the motifs to be counted.
+        TOT (int): ??
+
+    Returns: 
+        out (list[tuple[tuple[tuple[int]], int]]): A list of tuples where each
+            tuple contains a motif (as a tuple of edges) and its corresponding
+            count in the hypergraph.
+        visited (dict[tuple[int], int]): A dictionary of visited hyperedges of
+            size N.
+        
+    """
     mapping, labeling = generate_motifs(N)
 
     T = {}
@@ -211,6 +265,7 @@ def motifs_ho_full(edges, N, TOT):
         p_nodes = power_set(nodes)
         
         motif = []
+        # TODO make polinomial in number of verticies
         for edge in p_nodes:
             if len(edge) >= 2:
                 edge = tuple(sorted(list(edge)))
@@ -495,6 +550,16 @@ def z_score(original, null_models):
     return z_scores
 
 def power_set(A): 
+    """
+    Generate the power set of a given set A.
+
+    Args:
+        A (list): The input set.
+
+    Returns:
+        list: A list containing all subsets of A.
+    """
+
     subsets = []
     N = len(A)
 
@@ -549,6 +614,16 @@ def is_connected(edges, N):
     return conn
 
 def relabel(edges, relabeling):
+    """
+    Relabel the vertices of the edges according to the given relabeling.
+
+    Args:
+        edges (list[tuple[int]]): The list of edges to be relabeled.
+        relabeling (tuple[int]): A tuple representing the new labels for the vertices.
+
+    Returns:
+        list[tuple[int]]: The relabeled edges, sorted.
+    """
     res = []
     for edge in edges:
         new_edge = []
@@ -558,6 +633,21 @@ def relabel(edges, relabeling):
     return sorted(res)
 
 def generate_motifs(N):
+    """
+    Generate all isomorphism classes of connected motifs of size N.
+
+    Args:
+        N (int): The size of the motifs (number of nodes).
+
+    Returns:
+        mapping (dict[tuple[tuple[int]]: set[tuple[tuple[int]]]]): 
+            A dictionary mapping each isomorphism class representative 
+            to the set of all its possible labelings 
+            (as tuples of edges).
+        labeling (dict[tuple[tuple[int]], int]): 
+            A dictionary where each key is a possible labeling of motifs of size N,
+            and each value is initialized to 0.
+    """
     n = N
     assert n >= 2
 
