@@ -540,6 +540,42 @@ def plot_dist_motifs(motifs, title, graphs_per_row = None):
     fig.tight_layout()
     fig.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
 
+def plot_leading_motifs(motifs, title, graphs_per_row = None, percentile=1, limit=None):
+    """
+    Plots the more dominant motifs included in the given percentile
+
+    Args: 
+        motifs (list[tuple[tuple[int]]]): List of motifs to be plotted
+        title (str): Title of the plot
+        graphs_per_row (int, optional): Number of motifs per row. 
+            Defaults to None, meaning all motifs in one row.
+        percentile (float, optional): Percentile of motifs to be plotted.
+        limit (int, optional): Maximum number of motifs to be plotted.
+    """
+    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+
+    if graphs_per_row is None:
+        graphs_per_row = len(motifs)
+
+    sorted_motifs = sorted(motifs, key=lambda x: x[1], reverse=True)
+    total_count = sum(x[1] for x in motifs)
+    target_count = math.floor(total_count * percentile)
+
+    idx = 0
+    curr_sum = 0
+    while curr_sum < target_count  and idx < len(sorted_motifs):
+        curr_sum += sorted_motifs[idx][1]
+        idx += 1
+    if limit is not None:
+        idx = min(idx, limit)
+
+    motifs_to_plot = [x[0] for x in sorted_motifs[:idx]]
+    motifs_counts = [x[1] for x in sorted_motifs[:idx]]
+    fig, main_axes = get_bisected_motifs_layout(motifs_to_plot, graphs_per_row)
+    main_axes.bar(range(idx), motifs_counts, align='center', alpha=0.7)
+
+    fig.tight_layout()
+    fig.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
 
 def get_bisected_motifs_layout(motifs, graphs_per_row):
     """
@@ -569,7 +605,7 @@ def get_bisected_motifs_layout(motifs, graphs_per_row):
             for v in e:
                 nodes.add(v)
 
-        node_size=150
+        node_size=50
         hyperedge_alpha=0.8
         pos = {1:(-1,0), 2:(1,0), 3:(0,1.5)}
 
