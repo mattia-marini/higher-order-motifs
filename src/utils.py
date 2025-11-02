@@ -521,31 +521,48 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
 
 def plot_dist_motifs(motifs, title, graphs_per_row = None):
     os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
-    n = len(motifs)
 
     if graphs_per_row is None:
-        graphs_per_row = n
+        graphs_per_row = len(motifs)
 
 
     counts = [c for (_, c) in motifs]
     motifs_reprentations = [m for (m, _) in motifs]
-    m = math.ceil(n / graphs_per_row)
 
+    fig, main_axes = get_bisected_motifs_layout(motifs_reprentations, graphs_per_row)
+    main_axes.xaxis.set_major_locator(MaxNLocator(integer=True))
+    main_axes.set_title(title)
+    main_axes.set_xlabel("Motif id")
+    main_axes.set_ylabel("Count")
+
+    main_axes.bar(range(len(counts)), counts, align='center', alpha=0.7)
+
+    fig.tight_layout()
+    fig.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
+
+
+def get_bisected_motifs_layout(motifs, graphs_per_row):
+    """
+    Returns a matplotlib figure to achieve a 2 row layout. The first row is
+    left empty and returned whereas the second is filled with plots of the
+    given motifs
+
+    Args: 
+        motifs (list[tuple[tuple[int]]]): List of motifs to be plotted
+
+    Returns:
+        fig (matplotlib.figure.Figure): The matplotlib figure containing the
+            layout
+        main_axes (matplotlib.axes.Axes): The empty axes corresponding to the
+            first row of the layout
+    """
+    n = len(motifs)
+    m = math.ceil(n / graphs_per_row)
     fig = plt.figure(figsize=(5, 5 + 5/graphs_per_row * m))
     gs = gridspec.GridSpec(1 + m, graphs_per_row, height_ratios=[graphs_per_row] + [1] * m,  wspace=0)
 
-    ax0 = fig.add_subplot(gs[0, :])
-    ax0.xaxis.set_major_locator(MaxNLocator(integer=True))
-
-    plt.title(title)
-    plt.xlabel("Motif id")
-    plt.ylabel("Count")
-
-    ax0.bar(range(len(counts)), counts, align='center', alpha=0.7)
-
-    for i, motif in enumerate(motifs_reprentations):
-        # if i == 10: 
-        #     break
+    main_axes = fig.add_subplot(gs[0, :])
+    for i, motif in enumerate(motifs):
 
         nodes = set()
         for e in motif:
@@ -565,17 +582,13 @@ def plot_dist_motifs(motifs, title, graphs_per_row = None):
         ax = fig.add_subplot(gs[1 + math.floor(i/graphs_per_row), i % graphs_per_row])
         ax.set_frame_on(False)
         ax.set_xlabel(str(i), fontsize=8)
-        # ax.axis('off')
 
         
         hypergraph = hx.Hypergraph()
         hypergraph.add_edges(list(motif))
         draw_hypergraph(hypergraph, ax=ax, edge_color="black", pos=pos, node_size=node_size, hyperedge_alpha=hyperedge_alpha)
-        
 
-    plt.tight_layout()
-
-    fig.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
+    return fig, main_axes
 
 def avg(motifs):
     result = []
