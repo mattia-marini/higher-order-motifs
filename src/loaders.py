@@ -58,7 +58,6 @@ def load_meta_ps(T = 'sex'):
 
     return res
 
-
 def load_example(N):
     e = [(1,2,3), (2,4), (2,3), (2,5,6), (4,6), (1,2,3,7)]
     edges = []

@@ -6,10 +6,11 @@ from .hypergraph import hypergraph
 from .utils import *
 from .loaders import *
 
-def motifs_order_3(edges, TOT):
+def motifs_order_3(edges, weighted = False):
+    assert_hypergraph(edges, weighted=weighted)
     N = 3
-    full, visited = motifs_ho_full(edges, N, TOT)
-    standard = motifs_standard(edges, N, TOT, visited)
+    full, visited = motifs_ho_full(edges, N, weighted)
+    standard = motifs_standard(edges, N, visited, weighted)
 
     res = []
     for i in range(len(full)):
@@ -17,11 +18,12 @@ def motifs_order_3(edges, TOT):
 
     return res
 
-def motifs_order_4(edges, TOT):
+def motifs_order_4(edges, weighted = False):
+    assert_hypergraph(edges, weighted=weighted)
     N = 4
-    full, visited = motifs_ho_full(edges, N, TOT)
-    not_full, visited = motifs_ho_not_full(edges, N, TOT, visited)
-    standard = motifs_standard(edges, N, TOT, visited)
+    full, visited = motifs_ho_full(edges, N)
+    not_full, visited = motifs_ho_not_full(edges, N, visited)
+    standard = motifs_standard(edges, N, visited)
 
     res = []
     for i in range(len(full)):

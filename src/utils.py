@@ -10,8 +10,9 @@ import os
 import config as cfg
 import hypergraphx as hx
 from hypergraphx.viz import draw_hypergraph
+import numbers
 
-def motifs_ho_not_full(edges, N, TOT, visited):
+def motifs_ho_not_full(edges, N, visited, weighted = False):
     """ Computes the motif count for hypergraph motifs of order N. The
     subgraphs checked for motifs are the ones obtained by extending a hyperedge
     of order N-1 with one of its neighboring hyperedges. The subgraphs
@@ -20,7 +21,6 @@ def motifs_ho_not_full(edges, N, TOT, visited):
     Args:
         edges (list[tuple[int]]): List of hyperedges in the hypergraph.
         N (int): The order of the motifs to be counted.
-        TOT (int): ??
 
     Returns: 
         out (list[tuple[tuple[tuple[int]], int]]): A list of tuples where each
@@ -30,50 +30,24 @@ def motifs_ho_not_full(edges, N, TOT, visited):
             size N.
         
     """
+    assert_hypergraph(edges, weighted=weighted)
     mapping, labeling = generate_motifs(N)
 
-    T = {}
+    if not weighted:
+        edges = set([tuple(sorted(t)) for t in edges])
+    else:
+        edges = {tuple(sorted(k)): v for k, v in edges.items()}
+
     graph = {}
     for e in edges:
         if len(e) >= N:
             continue
-
-        T[tuple(sorted(e))] = 1
 
         for e_i in e:
             if e_i in graph:
                 graph[e_i].append(e)
             else:
                 graph[e_i] = [e]
-
-    def count_motif(nodes):
-        nodes = tuple(sorted(tuple(nodes)))
-        p_nodes = power_set(nodes)
-        
-        motif = []
-        for edge in p_nodes:
-            if len(edge) >= 2:
-                edge = tuple(sorted(list(edge)))
-                if edge in T:
-                    motif.append(edge)
-
-        m = {}
-        idx = 1
-        for i in nodes:
-            m[i] = idx
-            idx += 1
-
-        labeled_motif = []
-        for e in motif:
-            new_e = []
-            for node in e:
-                new_e.append(m[node])
-            new_e = tuple(sorted(new_e))
-            labeled_motif.append(new_e)
-        labeled_motif = tuple(sorted(labeled_motif))
-
-        if labeled_motif in labeling:
-            labeling[labeled_motif] += 1
 
     for e in edges:
         if len(e) == N - 1:
@@ -85,8 +59,8 @@ def motifs_ho_not_full(edges, N, TOT, visited):
                     tmp.extend(e_i)
                     tmp = list(set(tmp))
                     if len(tmp) == N and not (tuple(sorted(tmp)) in visited):
+                        count_motif(edges, tmp, labeling, visited, weighted)
                         visited[tuple(sorted(tmp))] = 1
-                        count_motif(tmp)
 
     out = []
 
@@ -98,17 +72,17 @@ def motifs_ho_not_full(edges, N, TOT, visited):
         out.append((motif, count))
 
     out = list(sorted(out))
-
-    D = {}
-    for i in range(len(out)):
-        D[i] = out[i][0]
+    
+    # D = {}
+    # for i in range(len(out)):
+    #     D[i] = out[i][0]
     
     #with open('motifs_{}.pickle'.format(N), 'wb') as handle:
         #pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return out, visited
 
-def motifs_standard(edges, N, TOT, visited):
+def motifs_standard(edges, N, visited, weighted = False):
     """
     Computes the motif count for hypergraph motifs of order N, considering only
     hyperedges of order 2. The subgraphs contained in the visited set are
@@ -117,7 +91,6 @@ def motifs_standard(edges, N, TOT, visited):
     Args:
         edges (list[tuple[int]]): List of hyperedges in the hypergraph.
         N (int): The order of the motifs to be counted.
-        TOT (int): ??
         visited (set[tuple[int]]): A set of subgraph (tuple of nodes) to ignore
             in the computation of motifs
 
@@ -126,20 +99,24 @@ def motifs_standard(edges, N, TOT, visited):
             tuple contains a motif (as a tuple of edges) and its corresponding
             count in the hypergraph.
     """
+    assert_hypergraph(edges, weighted=weighted)
     mapping, labeling = generate_motifs(N)
 
-    graph = {}
-    T = {}
+    if not weighted:
+        edges = set([tuple(sorted(t)) for t in edges])
+    else:
+        edges = {tuple(sorted(k)): v for k, v in edges.items()}
 
-    z = set()
-    for e in edges:
-        for n in e:
-            z.add(n)
+    graph = {}
+
+    # z = set()
+    # for e in edges:
+    #     for n in e:
+    #         z.add(n)
 
     # Construct adjacency matrix for 2-edges
     for e in edges:
         if len(e) == 2:
-            T[tuple(sorted(e))] = 1
             a, b = e
             if a in graph:
                 graph[a].append(b)
@@ -151,42 +128,11 @@ def motifs_standard(edges, N, TOT, visited):
             else:
                 graph[b] = [a]
 
-    def count_motif(nodes):
-        nodes = tuple(sorted(tuple(nodes)))
-
-        if nodes in visited:
-            return
-
-        p_nodes = power_set(nodes)
-        
-        motif = []
-        for edge in p_nodes:
-            edge = tuple(sorted(list(edge)))
-            if edge in T:
-                motif.append(edge)
-
-        m = {}
-        idx = 1
-        for i in nodes:
-            m[i] = idx
-            idx += 1
-
-        labeled_motif = []
-        for e in motif:
-            new_e = []
-            for node in e:
-                new_e.append(m[node])
-            new_e = tuple(sorted(new_e))
-            labeled_motif.append(new_e)
-        labeled_motif = tuple(sorted(labeled_motif))
-
-        if labeled_motif in labeling:
-            labeling[labeled_motif] += 1
 
     def graph_extend(sub, ext, v, n_sub):
 
         if len(sub) == N:
-            count_motif(sub)
+            count_motif(edges, sub, labeling, visited, weighted)
             return
 
         while len(ext) > 0:
@@ -212,7 +158,8 @@ def motifs_standard(edges, N, TOT, visited):
                 v_ext.add(u)
         k += 1
         if k % 5 == 0:
-            print(k, len(z), TOT)
+            print(f"Vertex {k}")
+            # print(k, len(z), TOT)
 
         graph_extend(set([v]), v_ext, v, set(graph[v]))
         c += 1
@@ -220,33 +167,33 @@ def motifs_standard(edges, N, TOT, visited):
     out = []
 
     for motif in mapping.keys():
-        count = 0
+        sum = 0
         for label in mapping[motif]:
-            count += labeling[label]
+            sum += labeling[label]
             
-        out.append((motif, count))
+        out.append((motif, sum))
 
     out = list(sorted(out))
 
-    D = {}
-    for i in range(len(out)):
-        D[i] = out[i][0]
+    # D = {}
+    # for i in range(len(out)):
+    #     D[i] = out[i][0]
     
     #with open('motifs_{}.pickle'.format(N), 'wb') as handle:
         #pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return out
 
-def motifs_ho_full(edges, N, TOT):
+def motifs_ho_full(edges, N, weighted = False):
     """
     Computes the motif counts for hypergraph motifs of order N. The subgraphs
     checked for motifs are the one induced by the nodes in the hyperedges of
-    order N
+    order N. If weighted is True, the intensity of each motif is returned
+    instead of its count
 
     Args:
         edges (list[tuple[int]]): List of hyperedges in the hypergraph.
         N (int): The order of the motifs to be counted.
-        TOT (int): ??
 
     Returns: 
         out (list[tuple[tuple[tuple[int]], int]]): A list of tuples where each
@@ -256,70 +203,93 @@ def motifs_ho_full(edges, N, TOT):
             size N.
         
     """
+    assert_hypergraph(edges, weighted=weighted)
     mapping, labeling = generate_motifs(N)
 
-    T = {}
-    for e in edges:
-        T[tuple(sorted(e))] = 1
+    if not weighted:
+        edges = set([tuple(sorted(t)) for t in edges])
+    else:
+        edges = {tuple(sorted(k)): v for k, v in edges.items()}
 
     visited = {}
-
-    def count_motif(nodes):
-        nodes = tuple(sorted(tuple(nodes)))
-        p_nodes = power_set(nodes)
-        
-        motif = []
-        # TODO make polinomial in number of verticies
-        for edge in p_nodes:
-            if len(edge) >= 2:
-                edge = tuple(sorted(list(edge)))
-                if edge in T:
-                    motif.append(edge)
-
-        m = {}
-        idx = 1
-        for i in nodes:
-            m[i] = idx
-            idx += 1
-
-        labeled_motif = []
-        for e in motif:
-            new_e = []
-            for node in e:
-                new_e.append(m[node])
-            new_e = tuple(sorted(new_e))
-            labeled_motif.append(new_e)
-        labeled_motif = tuple(sorted(labeled_motif))
-
-        if labeled_motif in labeling:
-            labeling[labeled_motif] += 1
-
     for e in edges:
         if len(e) == N:
-            #print(e)
-            visited[e] = 1
             nodes = list(e)
-            count_motif(nodes)
+            count_motif(edges, nodes, labeling, visited, weighted)
+            visited[e] = 1
 
     out = []
 
     for motif in mapping.keys():
-        count = 0
+        sum = 0
         for label in mapping[motif]:
-            count += labeling[label]
+            sum += labeling[label]
             
-        out.append((motif, count))
+        out.append((motif, sum))
 
     out = list(sorted(out))
 
-    D = {}
-    for i in range(len(out)):
-        D[i] = out[i][0]
+    # D = {}
+    # for i in range(len(out)):
+    #     D[i] = out[i][0]
     
     #with open('motifs_{}.pickle'.format(N), 'wb') as handle:
         #pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     return out, visited
+
+def count_motif(edges, nodes, labeling, visited = {}, weighted = False):
+    """
+    Increments the count of the motif induced by the given nodes in the specified hypergraph
+
+    Args: 
+        edges (set[tuple[int]] | dict[tuple[int], numbers.Number]): The list of
+            hyperedges in the hypergraph.
+        nodes (list[int]): The list of nodes inducing the motif.
+        labeling (dict[tuple[tuple[int]], int]): A dictionary where each key is
+            a possible labeling of motifs of size N, and each value is initialized
+            to 0.
+        visited (dict[tuple[int], int]): A dictionary of visited hyperedges of
+        weighted (bool): Whether the hypergraph is weighted or not.
+    """
+    nodes = tuple(sorted(tuple(nodes)))
+
+    if nodes in visited:
+        return
+
+    p_nodes = power_set(nodes)
+    
+    motif = []
+    for edge in p_nodes:
+        if len(edge) >= 2:
+            edge = tuple(sorted(list(edge)))
+            if edge in edges:
+                motif.append(edge)
+
+    m = {}
+    idx = 1
+    for i in nodes:
+        m[i] = idx
+        idx += 1
+
+    labeled_motif = []
+    for e in motif:
+        new_e = []
+        for node in e:
+            new_e.append(m[node])
+        new_e = tuple(sorted(new_e))
+        labeled_motif.append(new_e)
+    labeled_motif = tuple(sorted(labeled_motif))
+
+    if labeled_motif in labeling:
+        increment = 1
+        if weighted:
+            weighted_edges = {}
+            for e in labeled_motif:
+                weighted_edges[e] = edges[e]
+            increment = intensity(weighted_edges)
+
+        labeling[labeled_motif] += increment
 
 def diff_sum(original, null_models):
     u_null = avg(null_models)
@@ -568,7 +538,7 @@ def generate_motifs(N):
     return mapping, labeling
 
 def intensity(edges):
-    total = 0
+    total = 1
     for e, w in edges.items():
         total *= w
     return total
@@ -589,6 +559,26 @@ def induced_subgraph(edges, nodes):
         if include:
             subgraph[e] = w
     return subgraph
+
+def assert_hypergraph(edges, weighted):
+    """
+    Checks if the given edges represent a weighted/unweighted hypergraph.
+    """
+    if weighted:
+        if not isinstance(edges, dict):
+            raise TypeError("Weighted hypergraph should be represented as a dict[tuple[int],numbers.Number]")
+
+        for edge, weight in edges.items():
+            if not (isinstance(edge, tuple) and all(isinstance(k, int) for k in edge)):
+                raise TypeError("Each edge must be a tuple of integers")
+            if not isinstance(weight, numbers.Number):
+                raise TypeError("Weights must be numeric values")
+    else: 
+        if not isinstance(edges, set):
+            raise TypeError("Unweighted hypergraph should be represented as a set[tuple[int]]")
+        for edge in edges:
+            if not (isinstance(edge, tuple) and all(isinstance(k, int) for k in edge)):
+                raise TypeError("Each edge must be a tuple of integers")
 
 #out = len(isom_classes.keys())
 #print(out)

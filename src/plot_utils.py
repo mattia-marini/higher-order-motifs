@@ -192,6 +192,7 @@ def plot_leading_motifs(motifs, title, graphs_per_row = None, percentile=1, limi
 
     motifs_to_plot = [x[0] for x in sorted_motifs[:idx]]
     motifs_counts = [x[1] for x in sorted_motifs[:idx]]
+    print(sorted_motifs[:idx])
     fig, main_axes = get_bisected_motifs_layout(motifs_to_plot, graphs_per_row)
     main_axes.set_title(title)
     main_axes.set_xlabel("Motif id")
