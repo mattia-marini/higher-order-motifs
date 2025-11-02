@@ -17,7 +17,7 @@ def order_3():
     print(f"Classi isomorfismo: {len(output['motifs'])}")
     print(output['motifs'])
     # app.utils.plot_dist_motifs(output['motifs'], "hospital_motifs_3", 6)
-    app.utils.plot_leading_motifs(output['motifs'], "hospital_leading_motifs_3", 6, limit=10)
+    app.plot_utils.plot_leading_motifs(output['motifs'], "hospital_leading_motifs_3", 6, limit=10)
     print("")
 
 def order_4():
@@ -28,7 +28,7 @@ def order_4():
     print(f"Classi isomorfismo: {len(output['motifs'])}")
     print(output['motifs'])
     # app.utils.plot_dist_motifs(output['motifs'], "hospital_motifs_4", 5)
-    app.utils.plot_leading_motifs(output['motifs'], "hospital_leading_motifs_4", 5, limit=10)
+    app.plot_utils.plot_leading_motifs(output['motifs'], "hospital_leading_motifs_4", 5, limit=10)
     print("")
 
 

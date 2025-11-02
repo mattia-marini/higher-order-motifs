@@ -2,7 +2,9 @@ import csv, random, pandas as pd
 
 from numpy import index_exp, nan
 
-from .utils import plot_dist_hyperedges_weights, plot_dist_hyperedges, count, count_weight
+from .utils import  count, count_weight
+
+from .plot_utils import plot_dist_hyperedges_weights, plot_dist_hyperedges
 
 import config as cfg
 
