@@ -285,7 +285,7 @@ def count_motif(edges, nodes, labeling, visited = {}, weighted = False):
         increment = 1
         if weighted:
             weighted_edges = {}
-            for e in labeled_motif:
+            for e in motif:
                 weighted_edges[e] = edges[e]
             increment = intensity(weighted_edges)
 
@@ -579,6 +579,11 @@ def assert_hypergraph(edges, weighted):
         for edge in edges:
             if not (isinstance(edge, tuple) and all(isinstance(k, int) for k in edge)):
                 raise TypeError("Each edge must be a tuple of integers")
+
+def normalize_weights(edges):
+    max_val = max(edges.values())
+    for k in edges:
+        edges[k] = edges[k]/max_val
 
 #out = len(isom_classes.keys())
 #print(out)

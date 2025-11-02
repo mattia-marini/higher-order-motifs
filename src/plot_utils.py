@@ -179,12 +179,12 @@ def plot_leading_motifs(motifs, title, graphs_per_row = None, percentile=1, limi
         graphs_per_row = len(motifs)
 
     sorted_motifs = sorted(motifs, key=lambda x: x[1], reverse=True)
-    total_count = sum(x[1] for x in motifs)
-    target_count = math.floor(total_count * percentile)
+    total_weight = sum(x[1] for x in motifs)
+    target_weight = total_weight * percentile
 
     idx = 0
     curr_sum = 0
-    while curr_sum < target_count  and idx < len(sorted_motifs):
+    while curr_sum < target_weight  and idx < len(sorted_motifs):
         curr_sum += sorted_motifs[idx][1]
         idx += 1
     if limit is not None:

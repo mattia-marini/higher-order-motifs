@@ -21,9 +21,9 @@ def motifs_order_3(edges, weighted = False):
 def motifs_order_4(edges, weighted = False):
     assert_hypergraph(edges, weighted=weighted)
     N = 4
-    full, visited = motifs_ho_full(edges, N)
-    not_full, visited = motifs_ho_not_full(edges, N, visited)
-    standard = motifs_standard(edges, N, visited)
+    full, visited = motifs_ho_full(edges, N, weighted)
+    not_full, visited = motifs_ho_not_full(edges, N, visited, weighted)
+    standard = motifs_standard(edges, N, visited, weighted)
 
     res = []
     for i in range(len(full)):

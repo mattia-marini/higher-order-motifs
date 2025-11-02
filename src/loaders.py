@@ -589,10 +589,10 @@ def load_hospital_duplicates(N):
             else:
                 tot[i] = 1
 
-    plot_dist_hyperedges_weights(tot, "hospital")
+    # plot_dist_hyperedges_weights(tot, "hospital")
     print(len(edges))
     count_weight(edges)
-    return edges
+    return edges, tot
 
 def load_hospital(N):
     import networkx as nx
@@ -1063,3 +1063,4 @@ def load_enron(N):
     print(len(edges))
     print(count(tot))
     return edges
+
