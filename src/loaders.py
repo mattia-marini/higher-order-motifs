@@ -124,7 +124,7 @@ def load_gene_disease(N):
 
     tsv_file.close()
     #plot_dist_hyperedges(tot, "gene_disease")
-    print(count(tot))
+    #print(count(tot))
     return list(edges)
 
 def pickle_PACS():
@@ -186,7 +186,7 @@ def load_PACS(N):
         tot.append(tuple(sorted(authors)))
 
     #plot_dist_hyperedges(tot, "PACS")
-    print(len(edges))
+    #print(len(edges))
     return edges
 
 def load_PACS_single(N, S):
@@ -207,8 +207,8 @@ def load_PACS_single(N, S):
         tot.append(tuple(sorted(authors)))
 
     ##plot_dist_hyperedges(tot, "PACS")
-    print(count(tot))
-    print(len(edges))
+    #print(count(tot))
+    #print(len(edges))
     return edges
 
 def load_high_school_duplicates(N):
@@ -252,10 +252,10 @@ def load_high_school_duplicates(N):
             else:
                 tot[i] = 1
 
-    plot_dist_hyperedges_weights(tot, "high_school")
-    print(len(edges))
-    count_weight(edges)
-    return edges
+    # plot_dist_hyperedges_weights(tot, "high_school")
+    #print(len(edges))
+    # count_weight(edges)
+    return edges, tot
 
 def load_high_school(N):
     import networkx as nx
@@ -293,8 +293,8 @@ def load_high_school(N):
             tot.add(i)
 
     # plot_dist_hyperedges(tot, "high_school")
-    print(count(tot))
-    print(len(edges))
+    #print(count(tot))
+    #print(len(edges))
     return edges
 
 def load_primary_school_duplicates(N):
@@ -338,10 +338,10 @@ def load_primary_school_duplicates(N):
             else:
                 tot[i] = 1
 
-    plot_dist_hyperedges_weights(tot, "primary_school")
-    print(len(edges))
-    count_weight(edges)
-    return edges
+    # plot_dist_hyperedges_weights(tot, "primary_school")
+    #print(len(edges))
+    # count_weight(edges)
+    return edges, tot
 
 def load_primary_school(N):
     import networkx as nx
@@ -379,8 +379,8 @@ def load_primary_school(N):
             tot.add(i)
 
     ##plot_dist_hyperedges(tot, "primary_school")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_conference(N):
@@ -419,8 +419,8 @@ def load_conference(N):
             tot.add(i)
 
     #plot_dist_hyperedges(tot, "conference")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_conference_duplicates(N):
@@ -464,10 +464,10 @@ def load_conference_duplicates(N):
             else:
                 tot[i] = 1
 
-    plot_dist_hyperedges_weights(tot, "conference")
-    print(len(edges))
-    count_weight(edges)
-    return edges
+    # plot_dist_hyperedges_weights(tot, "conference")
+    #print(len(edges))
+    # count_weight(edges)
+    return edges, tot
 
 def load_workplace(N):
     import networkx as nx
@@ -505,8 +505,8 @@ def load_workplace(N):
             tot.add(i)
 
     #plot_dist_hyperedges(tot, "workplace")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_workplace_duplicates(N):
@@ -545,7 +545,7 @@ def load_workplace_duplicates(N):
             tot.append(i)
 
     #plot_dist_hyperedges(tot, "workplace")
-    print(len(edges))
+    #print(len(edges))
     return edges
 
 def load_hospital_duplicates(N):
@@ -590,8 +590,8 @@ def load_hospital_duplicates(N):
                 tot[i] = 1
 
     # plot_dist_hyperedges_weights(tot, "hospital")
-    print(len(edges))
-    count_weight(edges)
+    #print(len(edges))
+    # count_weight(edges)
     return edges, tot
 
 def load_hospital(N):
@@ -630,8 +630,8 @@ def load_hospital(N):
             tot.add(i)
 
     #plot_dist_hyperedges(tot, "hospital")
-    print(len(edges))
-    count(tot)
+    #print(len(edges))
+    # count(tot)
     return edges
 
 def load_DBLP(N):
@@ -667,8 +667,8 @@ def load_DBLP(N):
             edges.add(p)
 
     #plot_dist_hyperedges(tot, "dblp")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_history(N):
@@ -704,8 +704,8 @@ def load_history(N):
             edges.add(p)
 
     #plot_dist_hyperedges(tot, "history")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_geology(N):
@@ -741,8 +741,8 @@ def load_geology(N):
             edges.add(p)
 
     #plot_dist_hyperedges(tot, "geology")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_justice_ideo(N):
@@ -800,7 +800,7 @@ def load_justice_ideo(N):
 
 
     #plot_dist_hyperedges(tot, "justice")
-    print(len(edges))
+    #print(len(edges))
     return edges, dict_ideo
 
 def load_justice(N):
@@ -849,8 +849,8 @@ def load_justice(N):
 
 
     #plot_dist_hyperedges(tot, "justice")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 
@@ -912,8 +912,8 @@ def load_babbuini(N):
             tot.add(i)
 
     ##plot_dist_hyperedges(tot, "babbuini")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_wiki(N):
@@ -946,8 +946,8 @@ def load_wiki(N):
             votes[vote] = [u_id]
     
     ##plot_dist_hyperedges(tot, "wiki")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_NDC_substances(N):
@@ -974,8 +974,8 @@ def load_NDC_substances(N):
         tot.add(e)
 
     #plot_dist_hyperedges(tot, "NDC_substances")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_NDC_classes(N):
@@ -1002,8 +1002,8 @@ def load_NDC_classes(N):
         tot.add(e)
 
     #plot_dist_hyperedges(tot, "NDC_classes")
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_eu(N):
@@ -1031,8 +1031,8 @@ def load_eu(N):
         tot.add(e)
 
     #plot_dist_hyperedges(tot, "{}".format(name))
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
 def load_enron(N):
@@ -1060,7 +1060,7 @@ def load_enron(N):
         tot.add(e)
 
     #plot_dist_hyperedges(tot, "{}".format(name))
-    print(len(edges))
-    print(count(tot))
+    #print(len(edges))
+    #print(count(tot))
     return edges
 
