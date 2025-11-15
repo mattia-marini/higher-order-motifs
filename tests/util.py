@@ -1,5 +1,6 @@
 from networkx import edges
 import _context
+import numpy as np
 import src as app
 import pickle
 import json
@@ -75,6 +76,11 @@ class TestBuilder:
 
     def plot_dist_hyperedges_weights(self, plot):
         self._plot_dist_hyperedges_weights = plot
+        return self
+
+    def ignore_cache(self, ignore = True):
+        self._ignore_cache = ignore
+        return self
 
     def run(self):
         print(f"Loading {Colors.BOLD}\"{self._dataset}\"{Colors.RESET} dataset")
@@ -120,21 +126,52 @@ class TestBuilder:
 
 
     def get_motifs_cached(self, order, edges):
-        cache_file = f"{cfg.MOTIFS_CACHE_DIR}/{self._dataset}_{order}{"w" if self._weighted else ""}_{hash_dataset(edges)}.pkl"
+        cache_file = f"{cfg.MOTIFS_CACHE_DIR}/{self._dataset}_{order}{"w" if self._weighted else ""}_{hash_dataset(edges)}.npz"
         motifs = None
 
         if os.path.exists(cache_file) and not self._ignore_cache:
             print(f"{Colors.YELLOW}Loading cached motifs{Colors.RESET}")
-            with open(cache_file, "rb") as f:
-                motifs = pickle.load(f)
+            motifs = self.load_cache(cache_file)
         else:
             print(f"{Colors.BLUE}Computing motifs{Colors.RESET}")
             motifs = self.motifs_function[order](edges, weighted=self._weighted)
             os.makedirs(cfg.MOTIFS_CACHE_DIR, exist_ok=True)
-            with open(cache_file, "wb") as f:
-                pickle.dump(motifs, f)
+            self.save_cache(motifs, cache_file)
 
         return motifs
+
+
+    def save_cache(self, motifs, filename):
+        motifs = [x[1] for x in motifs]  # Extract only the motifs instances
+        flat = np.array([node for motif in motifs for instance in motif for node in instance], dtype=np.int32)
+        infos = np.array([(len(motif), 0 if len(motif) == 0 else len(motif[0])) for motif in motifs], dtype=np.int32)
+        np.savez(
+            filename,
+            motifs=flat,
+            infos=infos
+        )
+    
+    def load_cache(self, filename):
+        data = np.load(filename)
+    
+        infos = data["infos"]
+        data = data["motifs"]
+    
+        idx = 0
+        rv = []
+        for count, size in infos:
+            motif = []
+            for _ in range(count):
+                motif_instance = []
+    
+                for _ in range(size):
+                    motif_instance.append(data[idx].item())
+                    idx += 1
+    
+                motif.append(tuple(motif_instance))
+            rv.append(motif)
+    
+        return rv
 
 
 def hash_dataset(edges):

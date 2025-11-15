@@ -12,9 +12,13 @@ def motifs_order_3(edges, weighted = False):
     full, visited = motifs_ho_full(edges, N, weighted)
     standard = motifs_standard(edges, N, visited, weighted)
 
+    for i in range(len(full)):
+        print(full[i][0], full[i][1])
+        print(standard[i][0], standard[i][1])
+
     res = []
     for i in range(len(full)):
-        res.append((full[i][0], max(full[i][1], standard[i][1])))
+        res.append((full[i][0],  full[i][1]+standard[i][1]))
 
     return res
 
@@ -27,7 +31,7 @@ def motifs_order_4(edges, weighted = False):
 
     res = []
     for i in range(len(full)):
-        res.append((full[i][0], max([full[i][1], not_full[i][1], standard[i][1]])))
+        res.append(( full[i][0], full[i][1] + not_full[i][1] + standard[i][1] ))
 
     return res
 

@@ -62,17 +62,6 @@ def motifs_ho_not_full(edges, N, visited, weighted = False):
                         count_motif(edges, tmp, labeling, visited, weighted)
                         visited[tuple(sorted(tmp))] = 1
 
-    out = []
-
-    for motif in mapping.keys():
-        count = 0
-        for label in mapping[motif]:
-            count += labeling[label]
-            
-        out.append((motif, count))
-
-    out = list(sorted(out))
-    
     # D = {}
     # for i in range(len(out)):
     #     D[i] = out[i][0]
@@ -80,6 +69,7 @@ def motifs_ho_not_full(edges, N, visited, weighted = False):
     #with open('motifs_{}.pickle'.format(N), 'wb') as handle:
         #pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    out = combine_labelings(mapping, labeling)
     return out, visited
 
 def motifs_standard(edges, N, visited, weighted = False):
@@ -164,16 +154,6 @@ def motifs_standard(edges, N, visited, weighted = False):
         graph_extend(set([v]), v_ext, v, set(graph[v]))
         c += 1
 
-    out = []
-
-    for motif in mapping.keys():
-        sum = 0
-        for label in mapping[motif]:
-            sum += labeling[label]
-            
-        out.append((motif, sum))
-
-    out = list(sorted(out))
 
     # D = {}
     # for i in range(len(out)):
@@ -181,6 +161,7 @@ def motifs_standard(edges, N, visited, weighted = False):
     
     #with open('motifs_{}.pickle'.format(N), 'wb') as handle:
         #pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    out = combine_labelings(mapping, labeling)
 
     return out
 
@@ -196,7 +177,7 @@ def motifs_ho_full(edges, N, weighted = False):
         N (int): The order of the motifs to be counted.
 
     Returns: 
-        out (list[tuple[tuple[tuple[int]], int]]): A list of tuples where each
+        out (list[tuple[tuple[tuple[int]], int|float]]): A list of tuples where each
             tuple contains a motif (as a tuple of edges) and its corresponding
             count in the hypergraph.
         visited (dict[tuple[int], int]): A dictionary of visited hyperedges of
@@ -218,17 +199,6 @@ def motifs_ho_full(edges, N, weighted = False):
             count_motif(edges, nodes, labeling, visited, weighted)
             visited[e] = 1
 
-    out = []
-
-    for motif in mapping.keys():
-        sum = 0
-        for label in mapping[motif]:
-            sum += labeling[label]
-            
-        out.append((motif, sum))
-
-    out = list(sorted(out))
-
     # D = {}
     # for i in range(len(out)):
     #     D[i] = out[i][0]
@@ -236,6 +206,7 @@ def motifs_ho_full(edges, N, weighted = False):
     #with open('motifs_{}.pickle'.format(N), 'wb') as handle:
         #pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    out = combine_labelings(mapping, labeling)
     return out, visited
 
 def count_motif(edges, nodes, labeling, visited = {}, weighted = False):
@@ -246,7 +217,7 @@ def count_motif(edges, nodes, labeling, visited = {}, weighted = False):
         edges (set[tuple[int]] | dict[tuple[int], numbers.Number]): The list of
             hyperedges in the hypergraph.
         nodes (list[int]): The list of nodes inducing the motif.
-        labeling (dict[tuple[tuple[int]], int]): A dictionary where each key is
+        labeling (dict[tuple[tuple[int]], [tuple[int]]]): A dictionary where each key is
             a possible labeling of motifs of size N, and each value is initialized
             to 0.
         visited (dict[tuple[int], int]): A dictionary of visited hyperedges of
@@ -282,14 +253,27 @@ def count_motif(edges, nodes, labeling, visited = {}, weighted = False):
     labeled_motif = tuple(sorted(labeled_motif))
 
     if labeled_motif in labeling:
-        increment = 1
-        if weighted:
-            weighted_edges = {}
-            for e in motif:
-                weighted_edges[e] = edges[e]
-            increment = intensity(weighted_edges)
+        labeling[labeled_motif].append(nodes)
+        # increment = 1
+        # if weighted:
+        #     weighted_edges = {}
+        #     for e in motif:
+        #         weighted_edges[e] = edges[e]
+        #     increment = intensity(weighted_edges)
+        #
+        # labeling[labeled_motif] += increment
 
-        labeling[labeled_motif] += increment
+def combine_labelings(mapping, labeling):
+    out = []
+    for motif in mapping.keys():
+        motifs = []
+        for label in mapping[motif]:
+            motifs.extend(labeling[label])
+        
+        out.append((motif, motifs))
+
+    out = list(sorted(out))
+    return out
 
 def diff_sum(original, null_models):
     u_null = avg(null_models)
@@ -489,9 +473,10 @@ def generate_motifs(N):
             A dictionary mapping each isomorphism class representative 
             to the set of all its possible labelings 
             (as tuples of edges).
-        labeling (dict[tuple[tuple[int]], int]): 
-            A dictionary where each key is a possible labeling of motifs of size N,
-            and each value is initialized to 0.
+        labeling (dict[tuple[tuple[int]], [tuple[int]]]): 
+            A dictionary where each key is a possible labeling of motifs of
+            size N, and each value is an empty list, to be filled with the
+            motifs found in the hypergraph.
     """
     n = N
     assert n >= 2
@@ -532,7 +517,7 @@ def generate_motifs(N):
         relabeling_list = list(itertools.permutations([j for j in range(1, n + 1)]))
         for relabeling in relabeling_list:
             relabeling_i = relabel(k, relabeling)
-            labeling[tuple(sorted(relabeling_i))] = 0
+            labeling[tuple(sorted(relabeling_i))] = []
             mapping[k].add(tuple(sorted(relabeling_i)))
     
     return mapping, labeling
