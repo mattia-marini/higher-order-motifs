@@ -2,6 +2,7 @@
 .venv/
 dataset/
 plots/
+motifs_cache/
 
 # Python cache / build
 __pycache__/
