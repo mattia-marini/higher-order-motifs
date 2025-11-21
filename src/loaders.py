@@ -589,6 +589,7 @@ def load_hospital_duplicates(N):
             else:
                 tot[i] = 1
 
+    # print(edges)
     # plot_dist_hyperedges_weights(tot, "hospital")
     #print(len(edges))
     # count_weight(edges)

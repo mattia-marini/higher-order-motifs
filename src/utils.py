@@ -523,12 +523,19 @@ def generate_motifs(N):
     return mapping, labeling
 
 def intensity(edges):
+    # print(edges)
+    if isinstance(edges, set):
+        return 1.0
+
     weights = [w for _, w in edges.items()]
 
     log_sum = sum(math.log(n) for n in weights)
     return math.exp(log_sum / len(weights))
 
 def coherence(edges):
+    if isinstance(edges, set):
+        return 1.0
+
     mean = sum(edges.values())/len(edges)
     return intensity(edges) / mean
 
