@@ -2,11 +2,66 @@ import csv, random, pandas as pd
 
 from numpy import index_exp, nan
 
+from src.graph import Hyperedge, Hypergraph
+
 from .utils import  count, count_weight
 
 from .plot_utils import plot_dist_hyperedges_weights, plot_dist_hyperedges
 
 import config as cfg
+
+from typing import Tuple, Optional, Iterable, Set, Union, Any, Callable
+from enum import Enum
+from dataclasses import dataclass
+
+class NormalizationMethod(Enum): 
+    NONE = 1
+    DEFAULT = 2
+    BY_ORDER = 3
+    RANKING = 4
+
+@dataclass
+class StandardConstructionMethod:
+    """Standard construction method."""
+    weighted: bool = False
+    normalization_method: NormalizationMethod = NormalizationMethod.NONE
+
+@dataclass
+class TimeWindowConstructionMethod:
+    """Time window-based construction method."""
+    time_window: float = 1.0
+    weighted: bool = False
+    normalization_method: NormalizationMethod = NormalizationMethod.NONE
+
+@dataclass
+class TemporalPathConstructionMethod:
+    """Placeholder for temporal path-based method."""
+    # Add fields as needed in the future
+    pass  # TODO: implement
+
+class ConstructionMethod:
+    """Factory for construction method instances."""
+
+    @staticmethod
+    def standard(
+        weighted: bool = False, 
+        normalization_method: NormalizationMethod = NormalizationMethod.NONE
+    ) -> StandardConstructionMethod:
+        return StandardConstructionMethod(weighted, normalization_method)
+
+    @staticmethod
+    def time_window(
+        time_window: float, 
+        weighted: bool = False, 
+        normalization_method: NormalizationMethod = NormalizationMethod.NONE
+    ) -> TimeWindowConstructionMethod:
+        return TimeWindowConstructionMethod(time_window, weighted, normalization_method)
+
+    @staticmethod
+    def temporal_path() -> TemporalPathConstructionMethod:
+        return TemporalPathConstructionMethod()
+
+AnyConstructionMethod = StandardConstructionMethod | TimeWindowConstructionMethod | TemporalPathConstructionMethod
 
 def load_facebook_hs():
     import pandas as pd
@@ -595,7 +650,7 @@ def load_hospital_duplicates(N):
     # count_weight(edges)
     return edges, tot
 
-def load_hospital(N: int, construction_method: ConstructionMethod = ConstructionMethod.standard()):
+def load_hospital(N: int, construction_method: AnyConstructionMethod = ConstructionMethod.standard()):
     import networkx as nx
     dataset = f"{cfg.DATASET_DIR}/hospital.dat"
 
@@ -616,9 +671,10 @@ def load_hospital(N: int, construction_method: ConstructionMethod = Construction
     fopen.close()
     
     def standard_construction():
-        tot = set()
-        edges = set()
         
+        tot_hg = set()
+        hg = Hypergraph()
+
         for k in graph.keys():
             e_k = graph[k]
             G = nx.Graph(e_k, directed=False)
@@ -628,9 +684,9 @@ def load_hospital(N: int, construction_method: ConstructionMethod = Construction
 
                 
                 if len(i) <= N:
-                    edges.add(i)
+                    hg.add_edge(Hyperedge(i))
 
-                tot.add(i)
+                tot_hg.add(i)
  
     def time_window_construction():
         raise NotImplementedError()
@@ -649,8 +705,6 @@ def load_hospital(N: int, construction_method: ConstructionMethod = Construction
     #print(len(edges))
     # count(tot)
     return edges
-
-
 
 def load_DBLP(N):
     dataset = "{}/dblp.csv".format(cfg.DATASET_DIR)
@@ -871,7 +925,6 @@ def load_justice(N):
     #print(count(tot))
     return edges
 
-
 def load_babbuini(N):
     import gzip
     import networkx as nx
@@ -1084,54 +1137,6 @@ def load_enron(N):
 
 
 
-class NormalizationMethod(Enum): 
-    NONE = 1
-    DEFAULT = 2
-    BY_ORDER = 3
-    RANKING = 4
-
-@dataclass
-class StandardConstructionMethod:
-    """Standard construction method."""
-    weighted: bool = False
-    normalization_method: NormalizationMethod = NormalizationMethod.NONE
-
-@dataclass
-class TimeWindowConstructionMethod:
-    """Time window-based construction method."""
-    time_window: float = 1.0
-    weighted: bool = False
-    normalization_method: NormalizationMethod = NormalizationMethod.NONE
-
-@dataclass
-class TemporalPathConstructionMethod:
-    """Placeholder for temporal path-based method."""
-    # Add fields as needed in the future
-    pass  # TODO: implement
-
-class ConstructionMethod:
-    """Factory for construction method instances."""
-
-    @staticmethod
-    def standard(
-        weighted: bool = False, 
-        normalization_method: NormalizationMethod = NormalizationMethod.NONE
-    ) -> StandardConstructionMethod:
-        return StandardConstructionMethod(weighted, normalization_method)
-
-    @staticmethod
-    def time_window(
-        time_window: float, 
-        weighted: bool = False, 
-        normalization_method: NormalizationMethod = NormalizationMethod.NONE
-    ) -> TimeWindowConstructionMethod:
-        return TimeWindowConstructionMethod(time_window, weighted, normalization_method)
-
-    @staticmethod
-    def temporal_path() -> TemporalPathConstructionMethod:
-        return TemporalPathConstructionMethod()
-
-ConstructionMethod = StandardConstructionMethod | TimeWindowConstructionMethod | TemporalPathConstructionMethod
 # Example usage
 # ConstructionMethod.standard(False, NormalizationMethod.DEFAULT)
 # ConstructionMethod.time_window(10.0, True, NormalizationMethod.RANKING)

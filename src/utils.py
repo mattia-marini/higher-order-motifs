@@ -1,15 +1,5 @@
-from logging import currentframe
-import random, math
+import  math
 import itertools
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.ticker import MaxNLocator
-from networkx import graph
-import numpy as np
-import os
-import config as cfg
-import hypergraphx as hx
-from hypergraphx.viz import draw_hypergraph
 import numbers
 
 def motifs_ho_not_full(edges, N, visited, weighted = False):
