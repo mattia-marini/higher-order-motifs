@@ -77,7 +77,8 @@ class hypergraph:
     
     def node_dimension_matrix(self):
         '''
-        Return a matrix in which the i,j entry gives the number of dimension j edges incident on node i. 
+        Return a matrix in which the i,j entry gives the number of dimension j
+        edges incident on node i. 
         '''
         A = np.zeros((self.n, max([len(f) for f in self.C])+1))
         for f in self.C:
@@ -88,8 +89,9 @@ class hypergraph:
     
     def line_graph(self):
         '''
-        Return a networkx Graph() in which each node corresponds to a hyperedge 
-        and two nodes are linked if the corresponding edges intersect in the primal hypergraph. 
+        Return a networkx Graph() in which each node corresponds to a hyperedge
+        and two nodes are linked if the corresponding edges intersect in the
+        primal hypergraph. 
         '''
         H = nx.Graph()
 

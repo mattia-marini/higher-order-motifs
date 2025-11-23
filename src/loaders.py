@@ -595,7 +595,7 @@ def load_hospital_duplicates(N):
     # count_weight(edges)
     return edges, tot
 
-def load_hospital(N):
+def load_hospital(N: int, construction_method: ConstructionMethod = ConstructionMethod.standard()):
     import networkx as nx
     dataset = f"{cfg.DATASET_DIR}/hospital.dat"
 
@@ -615,20 +615,35 @@ def load_hospital(N):
 
     fopen.close()
     
-    tot = set()
-    edges = set()
-    
-    for k in graph.keys():
-        e_k = graph[k]
-        G = nx.Graph(e_k, directed=False)
-        c = list(nx.find_cliques(G))
-        for i in c:
-            i = tuple(sorted(i))
+    def standard_construction():
+        tot = set()
+        edges = set()
+        
+        for k in graph.keys():
+            e_k = graph[k]
+            G = nx.Graph(e_k, directed=False)
+            c = list(nx.find_cliques(G))
+            for i in c:
+                i = tuple(sorted(i))
 
-            if len(i) <= N:
-                edges.add(i)
+                
+                if len(i) <= N:
+                    edges.add(i)
 
-            tot.add(i)
+                tot.add(i)
+ 
+    def time_window_construction():
+        raise NotImplementedError()
+
+    def temporal_path_construction():
+        raise NotImplementedError()
+
+    if isinstance(construction_method, StandardConstructionMethod):
+        return standard_construction()
+    elif isinstance(construction_method, TimeWindowConstructionMethod):
+        return time_window_construction()
+    elif isinstance(construction_method, TemporalPathConstructionMethod):
+        return temporal_path_construction()
 
     #plot_dist_hyperedges(tot, "hospital")
     #print(len(edges))
@@ -1067,3 +1082,56 @@ def load_enron(N):
     #print(count(tot))
     return edges
 
+
+
+class NormalizationMethod(Enum): 
+    NONE = 1
+    DEFAULT = 2
+    BY_ORDER = 3
+    RANKING = 4
+
+@dataclass
+class StandardConstructionMethod:
+    """Standard construction method."""
+    weighted: bool = False
+    normalization_method: NormalizationMethod = NormalizationMethod.NONE
+
+@dataclass
+class TimeWindowConstructionMethod:
+    """Time window-based construction method."""
+    time_window: float = 1.0
+    weighted: bool = False
+    normalization_method: NormalizationMethod = NormalizationMethod.NONE
+
+@dataclass
+class TemporalPathConstructionMethod:
+    """Placeholder for temporal path-based method."""
+    # Add fields as needed in the future
+    pass  # TODO: implement
+
+class ConstructionMethod:
+    """Factory for construction method instances."""
+
+    @staticmethod
+    def standard(
+        weighted: bool = False, 
+        normalization_method: NormalizationMethod = NormalizationMethod.NONE
+    ) -> StandardConstructionMethod:
+        return StandardConstructionMethod(weighted, normalization_method)
+
+    @staticmethod
+    def time_window(
+        time_window: float, 
+        weighted: bool = False, 
+        normalization_method: NormalizationMethod = NormalizationMethod.NONE
+    ) -> TimeWindowConstructionMethod:
+        return TimeWindowConstructionMethod(time_window, weighted, normalization_method)
+
+    @staticmethod
+    def temporal_path() -> TemporalPathConstructionMethod:
+        return TemporalPathConstructionMethod()
+
+ConstructionMethod = StandardConstructionMethod | TimeWindowConstructionMethod | TemporalPathConstructionMethod
+# Example usage
+# ConstructionMethod.standard(False, NormalizationMethod.DEFAULT)
+# ConstructionMethod.time_window(10.0, True, NormalizationMethod.RANKING)
