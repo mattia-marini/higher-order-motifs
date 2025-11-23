@@ -597,7 +597,7 @@ def load_hospital_duplicates(N):
 
 def load_hospital(N):
     import networkx as nx
-    dataset = "{}/hospital.dat".format(cfg.DATASET_DIR)
+    dataset = f"{cfg.DATASET_DIR}/hospital.dat"
 
     fopen = open(dataset, 'r')
     lines = fopen.readlines()
@@ -634,6 +634,8 @@ def load_hospital(N):
     #print(len(edges))
     # count(tot)
     return edges
+
+
 
 def load_DBLP(N):
     dataset = "{}/dblp.csv".format(cfg.DATASET_DIR)

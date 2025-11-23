@@ -7,6 +7,7 @@ import json
 import os
 import hashlib
 import config as cfg
+import time
 
 import _context
 import src as app
@@ -31,7 +32,7 @@ class Loader:
     def order(self, order):
         if order not in [3, 4]:
             raise ValueError("Order must be 3 or 4")
-        self._orders = order
+        self._order = order
         return self
 
     def weight_type(self, weight_type):
@@ -147,6 +148,18 @@ def hash_dataset(edges):
     encoded = json.dumps(data_array).encode()
     return hashlib.sha1(encoded).hexdigest()
 
+
+def time_function(func, *args, **kwargs):
+    """
+    Times how long 'func' takes to run with the provided arguments.
+    Returns (result, elapsed_time).
+    """
+    start = time.time()
+    result = func(*args, **kwargs)
+    end = time.time()
+    print(Colors.DIM + Colors.BRIGHT_CYAN + f"Time elapsed: {end - start:.4f} seconds" + Colors.RESET)
+    elapsed = end - start
+    return result, elapsed
 
 class Colors:
     RESET = "\033[0m"
