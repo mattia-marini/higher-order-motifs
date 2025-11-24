@@ -11,8 +11,11 @@ edge1 = g.get_edge_by_id(id2)
 edge2 = g.get_edge_by_id(id2)
 edge1.nodes = (1,2,3)
 
+
+print(g._edges)
+print(g.get_edges_by_nodes((1,2,3)))
+print(g.get_first_edges_by_nodes((1,2,3)))
+
 print(edge1)
 print(edge2)
 g.remove_edge(id2)
-
-print(g._edges)

@@ -55,6 +55,8 @@ class HyperedgeHandle:
     def __str__(self) -> str:
         return f"HyperedgeHandle(id={self._id}, edge={self._edge})"
 
+    __repr__ = __str__
+
     @property
     def nodes(self) -> Tuple[int, ...]:
         return self._edge.nodes
@@ -117,5 +119,10 @@ class Hypergraph:
         rv = []
         for edge_id in self._nodes_map[nodes]:
             rv.append(self._handles[edge_id])
-
         return rv
+
+    def get_first_edges_by_nodes(self, nodes: Iterable[int]) -> HyperedgeHandle:
+        rv = self.get_edges_by_nodes(nodes)
+        if len(rv) == 0: 
+            raise KeyError(f"No edge with nodes {nodes}")
+        return rv[0]
