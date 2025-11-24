@@ -10,7 +10,7 @@ from .plot_utils import plot_dist_hyperedges_weights, plot_dist_hyperedges
 
 import config as cfg
 
-from typing import Tuple, Optional, Iterable, Set, Union, Any, Callable
+from typing import Tuple, Optional, Iterable, Set, Union, Any, Callable, cast
 from enum import Enum
 from dataclasses import dataclass
 
@@ -671,8 +671,8 @@ def load_hospital(N: int, construction_method: AnyConstructionMethod = Construct
     fopen.close()
     
     def standard_construction():
-        
-        tot_hg = set()
+        cm = cast(StandardConstructionMethod, construction_method)
+        tot_hg = Hypergraph()
         hg = Hypergraph()
 
         for k in graph.keys():
@@ -682,16 +682,32 @@ def load_hospital(N: int, construction_method: AnyConstructionMethod = Construct
             for i in c:
                 i = tuple(sorted(i))
 
-                
-                if len(i) <= N:
-                    hg.add_edge(Hyperedge(i))
+                if cm.weighted:
+                    if len(i) < N and hg.has_edge_with_nodes(i):
+                        handle = hg.get_first_edges_by_nodes(i)
+                        handle.weight += 1.0
+                    else:
+                        hg.add_edge(Hyperedge(i, 1.0))
 
-                tot_hg.add(i)
+                    if tot_hg.has_edge_with_nodes(i):
+                        handle = tot_hg.get_first_edges_by_nodes(i)
+                        handle.weight += 1.0
+                    else:
+                        tot_hg.add_edge(Hyperedge(i, 1.0))
+                else: 
+                    if len(i) <= N:
+                        hg.add_edge(Hyperedge(i))
+                    tot_hg.add_edge(Hyperedge(i))
+
+        hg.normalize_weights(cm.normalization_method)
+        tot_hg.normalize_weights(cm.normalization_method)
  
     def time_window_construction():
+        cm = cast(TimeWindowConstructionMethod, construction_method)
         raise NotImplementedError()
 
     def temporal_path_construction():
+        cm = cast(TemporalPathConstructionMethod, construction_method)
         raise NotImplementedError()
 
     if isinstance(construction_method, StandardConstructionMethod):

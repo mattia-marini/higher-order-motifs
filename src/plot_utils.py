@@ -6,7 +6,6 @@ import numpy as np
 import os
 import config as cfg
 import hypergraphx as hx
-from hypergraphx.viz import draw_hypergraph
 
 def plot_dist_hyperedges(edges, title):
     os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
@@ -214,6 +213,7 @@ def get_bisected_motifs_layout(motifs, graphs_per_row):
         main_axes (matplotlib.axes.Axes): The empty axes corresponding to the
             first row of the layout
     """
+    from hypergraphx.viz import draw_hypergraph
     n = len(motifs)
     m = math.ceil(n / graphs_per_row)
     fig = plt.figure(figsize=(5, 5 + 5/graphs_per_row * m))
