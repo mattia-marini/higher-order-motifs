@@ -1,14 +1,50 @@
 """
 This file contains a series of classes representing hypergraphs and edges
 """
-from __future__ import annotations
-from typing import Dict, Tuple, Optional, Iterable, Set, Union, Any, Callable, List
-from enum import Enum
-from dataclasses import dataclass
-from .loaders import NormalizationMethod
 
-class Hyperedge: 
-    def __init__(self, nodes: Iterable[int], weight: Optional[float] = None, payload: Optional[Any] = None):
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+
+
+class NormalizationMethod(Enum):
+    NONE = 1
+    DEFAULT = 2
+    BY_ORDER = 3
+    RANKING = 4
+
+
+@dataclass
+class ConstructionMethodBase:
+    limit_edge_size: Optional[int] = None
+    normalization_method: NormalizationMethod = NormalizationMethod.NONE
+    weighted: bool = False
+
+
+@dataclass
+class StandardConstructionMethod(ConstructionMethodBase):
+    pass
+
+
+@dataclass
+class TimeWindowConstructionMethod(ConstructionMethodBase):
+    time_window: float = 1.0
+
+
+@dataclass
+class TemporalPathConstructionMethod(ConstructionMethodBase):
+    pass
+
+
+class Hyperedge:
+    def __init__(
+        self,
+        nodes: Iterable[int],
+        weight: Optional[float] = None,
+        payload: Optional[Any] = None,
+    ):
         self.nodes: Tuple[int, ...] = tuple(sorted(nodes))
         self._weight: Optional[float] = weight
         self.payload: Optional[Any] = payload
@@ -18,6 +54,7 @@ class Hyperedge:
             return f"({self.nodes})"
         else:
             return f"({self.nodes}, {self._weight})"
+
     __repr__ = __str__
 
     def weighted(self) -> bool:
@@ -43,18 +80,20 @@ class Hyperedge:
         else:
             return default
 
-    def weight_or_else(self, default: Callable[['Hyperedge'], float]) -> float:
+    def weight_or_else(self, default: Callable[["Hyperedge"], float]) -> float:
         if self._weight is not None:
             return self._weight
         else:
             return default(self)
 
-class HyperedgeHandle: 
+
+class HyperedgeHandle:
     """
     This class serves as a wrapper around an Hyperedge in the moment it is
     inserted into a graph. This allows for safe modification
     """
-    def __init__(self, graph: Hypergraph, edge: Hyperedge, id : int):
+
+    def __init__(self, graph: Hypergraph, edge: Hyperedge, id: int):
         self._graph = graph
         self._id = id
         self._edge = edge
@@ -76,7 +115,6 @@ class HyperedgeHandle:
             self._graph._nodes_map[nodes].add(self._id)
 
         self._edge.nodes = nodes
-    
 
     def order(self) -> int:
         return self._edge.order()
@@ -98,10 +136,13 @@ class HyperedgeHandle:
     def weighted(self) -> bool:
         return self._edge.weighted()
 
+
 class Hypergraph:
     def __init__(self):
         self._edges: Dict[int, Hyperedge] = {}
-        self._nodes_map: Dict[tuple[int,...], Set[int]] = {} # For constant time access from nodes
+        self._nodes_map: Dict[
+            tuple[int, ...], Set[int]
+        ] = {}  # For constant time access from nodes
         self._handles: Dict[int, HyperedgeHandle] = {}
         self._next_edge_id: int = 0
         self._weighted: Optional[bool] = None
@@ -109,7 +150,6 @@ class Hypergraph:
 
     def __str__(self) -> str:
         return f"Hypergraph(num_edges={len(self._edges)})"
-
 
     @property
     def n(self) -> int:
@@ -184,7 +224,7 @@ class Hypergraph:
 
     def get_first_edges_by_nodes(self, nodes: Iterable[int]) -> HyperedgeHandle:
         rv = self.get_edges_by_nodes(nodes)
-        if len(rv) == 0: 
+        if len(rv) == 0:
             raise KeyError(f"No edge with nodes {nodes}")
         return rv[0]
 
@@ -196,19 +236,19 @@ class Hypergraph:
             rv[handle.order()].append(handle)
         return rv
 
-        
-
-    def normalize_weights(self, normalization_method: NormalizationMethod = NormalizationMethod.DEFAULT):
+    def normalize_weights(
+        self, normalization_method: NormalizationMethod = NormalizationMethod.DEFAULT
+    ):
         if self._weighted is False:
             raise ValueError("Cannot normalize weights of unweighted graph")
 
         if normalization_method == NormalizationMethod.NONE:
-             pass
+            pass
 
         elif normalization_method == NormalizationMethod.DEFAULT:
             max_weight = max(edge.weight for edge in self._edges.values())
             for _, edge in self._edges.items():
-                edge.weight =  edge.weight / max_weight
+                edge.weight = edge.weight / max_weight
 
         elif normalization_method == NormalizationMethod.BY_ORDER:
             order_map = self.get_order_map()
@@ -219,6 +259,3 @@ class Hypergraph:
 
         elif normalization_method == NormalizationMethod.RANKING:
             raise NotImplementedError("Ranking normalization not implemented yet")
-
-
-

@@ -2,12 +2,12 @@
 This file implements the baseline algorithm for motif discovery in hypergraphs.
 """
 
-from .hypergraph import hypergraph
-from .utils import *
 from .loaders import *
+from .utils import *
 
 H_O = True
 L_O = []
+
 
 def count_motifs(edges, N, TOT):
     print(len(edges))
@@ -27,12 +27,12 @@ def count_motifs(edges, N, TOT):
             T[tuple(e)] = 1
 
         for I in range(len(e)):
-            for J in range(I+1, len(e)):
+            for J in range(I + 1, len(e)):
                 i = e[I]
                 j = e[J]
 
                 if not H_O:
-                    T[tuple(sorted([i,j]))] = 1
+                    T[tuple(sorted([i, j]))] = 1
 
                 if i in graph:
                     graph[i].add(j)
@@ -49,16 +49,16 @@ def count_motifs(edges, N, TOT):
     def count_motif(nodes):
         nodes = tuple(sorted(tuple(nodes)))
         p_nodes = power_set(nodes)
-        
+
         motif = []
         for edge in p_nodes:
             if len(edge) >= 2:
                 edge = tuple(sorted(list(edge)))
                 if edge in T:
                     motif.append(edge)
-        
+
         conn = is_connected(motif, N)
-        
+
         if not conn:
             return
 
@@ -81,7 +81,6 @@ def count_motifs(edges, N, TOT):
             labeling[labeled_motif] += 1
 
     def graph_extend(sub, ext, v, n_sub):
-
         if len(sub) == N:
             count_motif(sub)
             return
@@ -100,7 +99,7 @@ def count_motifs(edges, N, TOT):
             graph_extend(new_sub, tmp, v, new_n_sub)
 
     c = 0
-    
+
     k = 0
     for v in graph.keys():
         v_ext = set()
@@ -120,7 +119,7 @@ def count_motifs(edges, N, TOT):
         count = 0
         for label in mapping[motif]:
             count += labeling[label]
-            
+
         out.append((motif, count))
 
     out = list(sorted(out))
@@ -130,6 +129,7 @@ def count_motifs(edges, N, TOT):
         D[i] = out[i][0]
 
     return out
+
 
 # N = 3
 # results = []

@@ -2,11 +2,11 @@
 This file implements the efficient algorithm for motif discovery in hypergraphs.
 """
 
-from .hypergraph import hypergraph
-from .utils import *
 from .loaders import *
+from .utils import *
 
-def motifs_order_3(edges, weighted = False):
+
+def motifs_order_3(edges, weighted=False):
     assert_hypergraph(edges, weighted=weighted)
     N = 3
     full, visited = motifs_ho_full(edges, N, weighted)
@@ -18,11 +18,12 @@ def motifs_order_3(edges, weighted = False):
 
     res = []
     for i in range(len(full)):
-        res.append((full[i][0],  full[i][1]+standard[i][1]))
+        res.append((full[i][0], full[i][1] + standard[i][1]))
 
     return res
 
-def motifs_order_4(edges, weighted = False):
+
+def motifs_order_4(edges, weighted=False):
     assert_hypergraph(edges, weighted=weighted)
     N = 4
     full, visited = motifs_ho_full(edges, N, weighted)
@@ -31,9 +32,10 @@ def motifs_order_4(edges, weighted = False):
 
     res = []
     for i in range(len(full)):
-        res.append(( full[i][0], full[i][1] + not_full[i][1] + standard[i][1] ))
+        res.append((full[i][0], full[i][1] + not_full[i][1] + standard[i][1]))
 
     return res
+
 
 # N = 3
 #

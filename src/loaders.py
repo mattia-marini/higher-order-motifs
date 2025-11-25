@@ -1,134 +1,85 @@
-import csv, random, pandas as pd
-
-from numpy import index_exp, nan
-
+import csv
+import random
+import pandas as pd
 from src.graph import Hyperedge, Hypergraph
-
-from .utils import  count, count_weight
-
-from .plot_utils import plot_dist_hyperedges_weights, plot_dist_hyperedges
-
 import config as cfg
+from typing import cast
 
-from typing import Tuple, Optional, Iterable, Set, Union, Any, Callable, cast
-from enum import Enum
-from dataclasses import dataclass
-
-class NormalizationMethod(Enum): 
-    NONE = 1
-    DEFAULT = 2
-    BY_ORDER = 3
-    RANKING = 4
-
-@dataclass
-class StandardConstructionMethod:
-    """Standard construction method."""
-    weighted: bool = False
-    normalization_method: NormalizationMethod = NormalizationMethod.NONE
-
-@dataclass
-class TimeWindowConstructionMethod:
-    """Time window-based construction method."""
-    time_window: float = 1.0
-    weighted: bool = False
-    normalization_method: NormalizationMethod = NormalizationMethod.NONE
-
-@dataclass
-class TemporalPathConstructionMethod:
-    """Placeholder for temporal path-based method."""
-    # Add fields as needed in the future
-    pass  # TODO: implement
-
-class ConstructionMethod:
-    """Factory for construction method instances."""
-
-    @staticmethod
-    def standard(
-        weighted: bool = False, 
-        normalization_method: NormalizationMethod = NormalizationMethod.NONE
-    ) -> StandardConstructionMethod:
-        return StandardConstructionMethod(weighted, normalization_method)
-
-    @staticmethod
-    def time_window(
-        time_window: float, 
-        weighted: bool = False, 
-        normalization_method: NormalizationMethod = NormalizationMethod.NONE
-    ) -> TimeWindowConstructionMethod:
-        return TimeWindowConstructionMethod(time_window, weighted, normalization_method)
-
-    @staticmethod
-    def temporal_path() -> TemporalPathConstructionMethod:
-        return TemporalPathConstructionMethod()
-
-AnyConstructionMethod = StandardConstructionMethod | TimeWindowConstructionMethod | TemporalPathConstructionMethod
 
 def load_facebook_hs():
     import pandas as pd
+
     res = {}
 
     d = pd.read_csv("{}/Facebook-known-pairs_data_2013.csv".format(cfg.DATASET_DIR))
     for i in range(len(d)):
-        a,b,c = list(map(int, d.iloc[i][0].split(' ')))
+        a, b, c = list(map(int, d.iloc[i][0].split(" ")))
         if c == 1:
-            res[(a,b)] = 1
-            res[(b,a)] = 1
+            res[(a, b)] = 1
+            res[(b, a)] = 1
     return res
+
 
 def load_friendship_hs():
     import pandas as pd
+
     res = {}
 
     d = pd.read_csv("{}/Friendship-network_data_2013.csv".format(cfg.DATASET_DIR))
     for i in range(len(d)):
-        a,b = list(map(int, d.iloc[i][0].split(' ')))
-        res[(a,b)] = 1
+        a, b = list(map(int, d.iloc[i][0].split(" ")))
+        res[(a, b)] = 1
     return res
 
-def load_meta_hs(T = 'sex'):
+
+def load_meta_hs(T="sex"):
     tsv_file = open("{}/meta_hs.txt".format(cfg.DATASET_DIR))
     data = csv.reader(tsv_file, delimiter="\t")
     res = {}
     for i in data:
         a, b, c = i
         a = int(a)
-        if T == 'sex' and c != 'Unknown':
+        if T == "sex" and c != "Unknown":
             res[a] = c
-        elif T == 'class':
+        elif T == "class":
             res[a] = b
 
     return res
 
-def load_meta_ps(T = 'sex'):
+
+def load_meta_ps(T="sex"):
     tsv_file = open("{}/metadata_ps.txt".format(cfg.DATASET_DIR))
     data = csv.reader(tsv_file, delimiter="\t")
     res = {}
     for i in data:
         a, b, c = i
         a = int(a)
-        if T == 'sex' and c != 'Unknown':
+        if T == "sex" and c != "Unknown":
             res[a] = c
-        elif T == 'class':
+        elif T == "class":
             res[a] = b
 
     return res
 
+
 def load_example(N):
-    e = [(1,2,3), (2,4), (2,3), (2,5,6), (4,6), (1,2,3,7)]
+    e = [(1, 2, 3), (2, 4), (2, 3), (2, 5, 6), (4, 6), (1, 2, 3, 7)]
     edges = []
     for i in e:
         if len(i) <= N:
             edges.append(i)
     return edges
 
+
 def random_hypergraph(N, E):
     graph = []
     for _ in range(E):
         s = random.randint(2, 3)
-        graph.append(tuple(sorted(random.sample([i for i in range(1, N+1)], s))))
+        graph.append(tuple(sorted(random.sample([i for i in range(1, N + 1)], s))))
 
     graph = list(set(graph))
     return graph
+
 
 def load_gene_disease(N):
     name2id_gene = {}
@@ -141,7 +92,7 @@ def load_gene_disease(N):
     data = csv.reader(tsv_file, delimiter="\t")
 
     c = 0
-    
+
     for row in data:
         c += 1
         if c == 1:
@@ -174,20 +125,21 @@ def load_gene_disease(N):
             discarded_1 += 1
         else:
             discarded += 1
-        
+
         tot.append(diseases[d])
 
     tsv_file.close()
-    #plot_dist_hyperedges(tot, "gene_disease")
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "gene_disease")
+    # print(count(tot))
     return list(edges)
+
 
 def pickle_PACS():
     import pandas as pd
 
     tb = pd.read_csv("{}/PACS.csv".format(cfg.DATASET_DIR))
 
-    tb = tb[['ArticleID', 'PACS', 'FullName']]
+    tb = tb[["ArticleID", "PACS", "FullName"]]
 
     papers = {}
 
@@ -197,9 +149,9 @@ def pickle_PACS():
     nidx = 0
 
     for _, row in tb.iterrows():
-        idx = str(row['ArticleID'])
-        a = str(row['PACS'])
-        b = str(row['FullName'])
+        idx = str(row["ArticleID"])
+        a = str(row["PACS"])
+        b = str(row["FullName"])
 
         if b in names:
             b = names[b]
@@ -207,70 +159,75 @@ def pickle_PACS():
             names[b] = nidx
             nidx += 1
             b = names[b]
-        
+
         if idx in papers:
-            papers[idx]['authors'].append(b)
+            papers[idx]["authors"].append(b)
         else:
             papers[idx] = {}
-            papers[idx]['authors'] = [b]
-            papers[idx]['PACS'] = a
+            papers[idx]["authors"] = [b]
+            papers[idx]["PACS"] = a
 
-        c+=1
+        c += 1
         if c % 1000 == 0:
             print(c, tb.shape)
 
     import pickle
-    pickle.dump(papers, open("PACS.pickle", "wb" ))
 
-    #for k in papers:
+    pickle.dump(papers, open("PACS.pickle", "wb"))
+
+    # for k in papers:
     #    print(papers[k])
 
-def load_PACS(N):
-    import pickle, math
 
-    papers = pickle.load(open("PACS.pickle", "rb" ))
+def load_PACS(N):
+    import pickle
+
+    papers = pickle.load(open("PACS.pickle", "rb"))
 
     edges = []
 
     tot = []
 
     for k in papers:
-        authors = papers[k]['authors']
+        authors = papers[k]["authors"]
         if len(authors) > 1 and len(authors) <= N:
             edges.append(tuple(sorted(authors)))
         tot.append(tuple(sorted(authors)))
 
-    #plot_dist_hyperedges(tot, "PACS")
-    #print(len(edges))
+    # plot_dist_hyperedges(tot, "PACS")
+    # print(len(edges))
     return edges
+
 
 def load_PACS_single(N, S):
     import pickle
 
-    papers = pickle.load(open("PACS.pickle", "rb" ))
+    papers = pickle.load(open("PACS.pickle", "rb"))
 
     edges = []
 
     tot = []
 
     for k in papers:
-        if int(papers[k]['PACS']) != S:
+        if int(papers[k]["PACS"]) != S:
             continue
-        authors = papers[k]['authors']
+        authors = papers[k]["authors"]
         if len(authors) > 1 and len(authors) <= N:
             edges.append(tuple(sorted(authors)))
         tot.append(tuple(sorted(authors)))
 
     ##plot_dist_hyperedges(tot, "PACS")
-    #print(count(tot))
-    #print(len(edges))
+    # print(count(tot))
+    # print(len(edges))
     return edges
+
 
 def load_high_school_duplicates(N):
     import networkx as nx
+
     dataset = "{}/High-School_data_2013.csv".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -280,15 +237,15 @@ def load_high_school_duplicates(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = {}
     edges = {}
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -308,15 +265,17 @@ def load_high_school_duplicates(N):
                 tot[i] = 1
 
     # plot_dist_hyperedges_weights(tot, "high_school")
-    #print(len(edges))
+    # print(len(edges))
     # count_weight(edges)
     return edges, tot
 
+
 def load_high_school(N):
     import networkx as nx
+
     dataset = "{}/High-School_data_2013.csv".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -326,15 +285,15 @@ def load_high_school(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = set()
     edges = set()
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -348,15 +307,17 @@ def load_high_school(N):
             tot.add(i)
 
     # plot_dist_hyperedges(tot, "high_school")
-    #print(count(tot))
-    #print(len(edges))
+    # print(count(tot))
+    # print(len(edges))
     return edges
+
 
 def load_primary_school_duplicates(N):
     import networkx as nx
+
     dataset = "{}/primaryschool.csv".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -366,15 +327,15 @@ def load_primary_school_duplicates(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = {}
     edges = {}
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -394,15 +355,17 @@ def load_primary_school_duplicates(N):
                 tot[i] = 1
 
     # plot_dist_hyperedges_weights(tot, "primary_school")
-    #print(len(edges))
+    # print(len(edges))
     # count_weight(edges)
     return edges, tot
 
+
 def load_primary_school(N):
     import networkx as nx
+
     dataset = "{}/primaryschool.csv".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -412,15 +375,15 @@ def load_primary_school(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = set()
     edges = set()
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -434,15 +397,17 @@ def load_primary_school(N):
             tot.add(i)
 
     ##plot_dist_hyperedges(tot, "primary_school")
-    #print(len(edges))
-    #print(count(tot))
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_conference(N):
     import networkx as nx
+
     dataset = "{}/conference.dat".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -452,15 +417,15 @@ def load_conference(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = set()
     edges = set()
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -473,16 +438,18 @@ def load_conference(N):
 
             tot.add(i)
 
-    #plot_dist_hyperedges(tot, "conference")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "conference")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_conference_duplicates(N):
     import networkx as nx
+
     dataset = "{}/conference.dat".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -492,15 +459,15 @@ def load_conference_duplicates(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = {}
     edges = {}
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -520,15 +487,17 @@ def load_conference_duplicates(N):
                 tot[i] = 1
 
     # plot_dist_hyperedges_weights(tot, "conference")
-    #print(len(edges))
+    # print(len(edges))
     # count_weight(edges)
     return edges, tot
 
+
 def load_workplace(N):
     import networkx as nx
+
     dataset = "{}/workspace.dat".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -538,15 +507,15 @@ def load_workplace(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = set()
     edges = set()
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -559,16 +528,18 @@ def load_workplace(N):
 
             tot.add(i)
 
-    #plot_dist_hyperedges(tot, "workplace")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "workplace")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_workplace_duplicates(N):
     import networkx as nx
+
     dataset = "{}/workspace.dat".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -578,15 +549,15 @@ def load_workplace_duplicates(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = []
     edges = []
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -599,15 +570,17 @@ def load_workplace_duplicates(N):
 
             tot.append(i)
 
-    #plot_dist_hyperedges(tot, "workplace")
-    #print(len(edges))
+    # plot_dist_hyperedges(tot, "workplace")
+    # print(len(edges))
     return edges
+
 
 def load_hospital_duplicates(N):
     import networkx as nx
+
     dataset = "{}/hospital.dat".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -617,15 +590,15 @@ def load_hospital_duplicates(N):
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     tot = {}
     edges = {}
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -646,15 +619,19 @@ def load_hospital_duplicates(N):
 
     # print(edges)
     # plot_dist_hyperedges_weights(tot, "hospital")
-    #print(len(edges))
+    # print(len(edges))
     # count_weight(edges)
     return edges, tot
 
-def load_hospital(N: int, construction_method: AnyConstructionMethod = ConstructionMethod.standard()):
+
+def load_hospital(
+    N: int, construction_method: ConstructionMethodBase = StandardConstructionMethod()
+):
     import networkx as nx
+
     dataset = f"{cfg.DATASET_DIR}/hospital.dat"
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -664,12 +641,12 @@ def load_hospital(N: int, construction_method: AnyConstructionMethod = Construct
         a = int(a)
         b = int(b)
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
+            graph[t] = [(a, b)]
 
     fopen.close()
-    
+
     def standard_construction():
         cm = cast(StandardConstructionMethod, construction_method)
         tot_hg = Hypergraph()
@@ -694,14 +671,14 @@ def load_hospital(N: int, construction_method: AnyConstructionMethod = Construct
                         handle.weight += 1.0
                     else:
                         tot_hg.add_edge(Hyperedge(i, 1.0))
-                else: 
+                else:
                     if len(i) <= N:
                         hg.add_edge(Hyperedge(i))
                     tot_hg.add_edge(Hyperedge(i))
 
         hg.normalize_weights(cm.normalization_method)
         tot_hg.normalize_weights(cm.normalization_method)
- 
+
     def time_window_construction():
         cm = cast(TimeWindowConstructionMethod, construction_method)
         raise NotImplementedError()
@@ -717,15 +694,16 @@ def load_hospital(N: int, construction_method: AnyConstructionMethod = Construct
     elif isinstance(construction_method, TemporalPathConstructionMethod):
         return temporal_path_construction()
 
-    #plot_dist_hyperedges(tot, "hospital")
-    #print(len(edges))
+    # plot_dist_hyperedges(tot, "hospital")
+    # print(len(edges))
     # count(tot)
     return edges
+
 
 def load_DBLP(N):
     dataset = "{}/dblp.csv".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -735,7 +713,7 @@ def load_DBLP(N):
             continue
 
         l = lines[i]
-        l = l.split(',')
+        l = l.split(",")
         paper, author, y = l
         y = int(y)
 
@@ -743,7 +721,7 @@ def load_DBLP(N):
             graph[paper].append(author)
         else:
             graph[paper] = [author]
-    
+
     fopen.close()
 
     edges = set()
@@ -754,15 +732,16 @@ def load_DBLP(N):
         if len(p) > 1 and len(p) <= N:
             edges.add(p)
 
-    #plot_dist_hyperedges(tot, "dblp")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "dblp")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_history(N):
     dataset = "{}/history.csv".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -772,7 +751,7 @@ def load_history(N):
             continue
 
         l = lines[i]
-        l = l.split(',')
+        l = l.split(",")
         paper, author, y = l
         y = int(y)
 
@@ -791,15 +770,16 @@ def load_history(N):
         if len(p) > 1 and len(p) <= N:
             edges.add(p)
 
-    #plot_dist_hyperedges(tot, "history")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "history")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_geology(N):
     dataset = "{}/geology.csv".format(cfg.DATASET_DIR)
 
-    fopen = open(dataset, 'r')
+    fopen = open(dataset, "r")
     lines = fopen.readlines()
 
     graph = {}
@@ -809,7 +789,7 @@ def load_geology(N):
             continue
 
         l = lines[i]
-        l = l.split(',')
+        l = l.split(",")
         paper, author, y = l
         y = int(y)
 
@@ -828,33 +808,34 @@ def load_geology(N):
         if len(p) > 1 and len(p) <= N:
             edges.add(p)
 
-    #plot_dist_hyperedges(tot, "geology")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "geology")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_justice_ideo(N):
     dataset = "{}/justice.csv".format(cfg.DATASET_DIR)
     ideo = "{}/justices_ideology.csv".format(cfg.DATASET_DIR)
-    
+
     df = pd.read_csv(dataset)
-    df = df[['caseId', 'justiceName', 'vote', 'justice']]
+    df = df[["caseId", "justiceName", "vote", "justice"]]
 
     I = pd.read_csv(ideo)
-    I = I[['spaethid', 'ideo']]
-    
+    I = I[["spaethid", "ideo"]]
+
     cases = {}
     nodes = {}
     idx = 0
     dict_ideo = {}
 
     for _, row in df.iterrows():
-        c, _, v, n = row['caseId'], row['justiceName'], row['vote'], row['justice']
+        c, _, v, n = row["caseId"], row["justiceName"], row["vote"], row["justice"]
 
         try:
-            v = int(v) # valid vote
+            v = int(v)  # valid vote
         except:
-            continue # not voted
+            continue  # not voted
 
         n = int(n)
 
@@ -867,14 +848,13 @@ def load_justice_ideo(N):
             cases[c] = {}
             cases[c][v] = [n]
     for _, row in I.iterrows():
-        ID, v = row[['spaethid', 'ideo']]
+        ID, v = row[["spaethid", "ideo"]]
         try:
             ID = int(ID)
             v = float(v)
         except:
             continue
         dict_ideo[ID] = v
-
 
     tot = set()
     edges = set()
@@ -886,28 +866,28 @@ def load_justice_ideo(N):
             if len(e) > 1 and len(e) <= N:
                 edges.add(e)
 
-
-    #plot_dist_hyperedges(tot, "justice")
-    #print(len(edges))
+    # plot_dist_hyperedges(tot, "justice")
+    # print(len(edges))
     return edges, dict_ideo
+
 
 def load_justice(N):
     dataset = "{}/justice.csv".format(cfg.DATASET_DIR)
-    
+
     df = pd.read_csv(dataset)
-    df = df[['caseId', 'justiceName', 'vote']]
-    
+    df = df[["caseId", "justiceName", "vote"]]
+
     cases = {}
     nodes = {}
     idx = 0
 
     for _, row in df.iterrows():
-        c, n, v = row['caseId'], row['justiceName'], row['vote']
+        c, n, v = row["caseId"], row["justiceName"], row["vote"]
 
         try:
-            v = int(v) # valid vote
+            v = int(v)  # valid vote
         except:
-            continue # not voted
+            continue  # not voted
 
         if n in nodes:
             n = nodes[n]
@@ -935,17 +915,17 @@ def load_justice(N):
             if len(e) > 1 and len(e) <= N:
                 edges.add(e)
 
-
-    #plot_dist_hyperedges(tot, "justice")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "justice")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_babbuini(N):
     import gzip
     import networkx as nx
 
-    f = gzip.open("{}/babbuini.txt".format(cfg.DATASET_DIR), 'rb')
+    f = gzip.open("{}/babbuini.txt".format(cfg.DATASET_DIR), "rb")
     lines = f.readlines()
 
     graph = {}
@@ -977,15 +957,15 @@ def load_babbuini(N):
             names[b] = idx
             b = idx
             idx += 1
-        
+
         if t in graph:
-            graph[t].append((a,b))
+            graph[t].append((a, b))
         else:
-            graph[t] = [(a,b)]
-    
+            graph[t] = [(a, b)]
+
     tot = set()
     edges = set()
-    
+
     for k in graph.keys():
         e_k = graph[k]
         G = nx.Graph(e_k, directed=False)
@@ -999,12 +979,13 @@ def load_babbuini(N):
             tot.add(i)
 
     ##plot_dist_hyperedges(tot, "babbuini")
-    #print(len(edges))
-    #print(count(tot))
+    # print(len(edges))
+    # print(count(tot))
     return edges
 
+
 def load_wiki(N):
-    fopen = open("{}/wiki.txt".format(cfg.DATASET_DIR), 'r')
+    fopen = open("{}/wiki.txt".format(cfg.DATASET_DIR), "r")
     lines = fopen.readlines()
 
     edges = set()
@@ -1022,8 +1003,8 @@ def load_wiki(N):
                     edges.add(e)
             votes = {}
             continue
-        
-        if l[0] != 'V':
+
+        if l[0] != "V":
             continue
 
         _, vote, u_id, _, _, _ = l
@@ -1031,16 +1012,17 @@ def load_wiki(N):
             votes[vote].append(u_id)
         else:
             votes[vote] = [u_id]
-    
+
     ##plot_dist_hyperedges(tot, "wiki")
-    #print(len(edges))
-    #print(count(tot))
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_NDC_substances(N):
     p = "{}/NDC-substances/".format(cfg.DATASET_DIR)
-    a = open(p + 'NDC-substances-nverts.txt')
-    b = open(p + 'NDC-substances-simplices.txt')
+    a = open(p + "NDC-substances-nverts.txt")
+    b = open(p + "NDC-substances-simplices.txt")
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1060,15 +1042,16 @@ def load_NDC_substances(N):
             edges.add(e)
         tot.add(e)
 
-    #plot_dist_hyperedges(tot, "NDC_substances")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "NDC_substances")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_NDC_classes(N):
     p = "{}/NDC-classes/".format(cfg.DATASET_DIR)
-    a = open(p + 'NDC-classes-nverts.txt')
-    b = open(p + 'NDC-classes-simplices.txt')
+    a = open(p + "NDC-classes-nverts.txt")
+    b = open(p + "NDC-classes-simplices.txt")
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1088,16 +1071,17 @@ def load_NDC_classes(N):
             edges.add(e)
         tot.add(e)
 
-    #plot_dist_hyperedges(tot, "NDC_classes")
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "NDC_classes")
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_eu(N):
     name = "email-Eu"
     p = "{}/{}/".format(cfg.DATASET_DIR).format(name)
-    a = open(p + '{}-nverts.txt'.format(name))
-    b = open(p + '{}-simplices.txt'.format(name))
+    a = open(p + "{}-nverts.txt".format(name))
+    b = open(p + "{}-simplices.txt".format(name))
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1117,16 +1101,17 @@ def load_eu(N):
             edges.add(e)
         tot.add(e)
 
-    #plot_dist_hyperedges(tot, "{}".format(name))
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "{}".format(name))
+    # print(len(edges))
+    # print(count(tot))
     return edges
+
 
 def load_enron(N):
     name = "email-Enron"
     p = "{}/{}/".format(cfg.DATASET_DIR).format(name)
-    a = open(p + '{}-nverts.txt'.format(name))
-    b = open(p + '{}-simplices.txt'.format(name))
+    a = open(p + "{}-nverts.txt".format(name))
+    b = open(p + "{}-simplices.txt".format(name))
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1146,11 +1131,10 @@ def load_enron(N):
             edges.add(e)
         tot.add(e)
 
-    #plot_dist_hyperedges(tot, "{}".format(name))
-    #print(len(edges))
-    #print(count(tot))
+    # plot_dist_hyperedges(tot, "{}".format(name))
+    # print(len(edges))
+    # print(count(tot))
     return edges
-
 
 
 # Example usage
