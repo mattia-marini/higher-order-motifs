@@ -8,6 +8,7 @@ import config as cfg
 import src.loaders as loaders
 from src.graph import *
 from src.motifs.motifs2 import motifs_order_3, motifs_order_4
+from src.motifs.motifs_base import generate_motifs
 
 
 class Loader:
@@ -71,8 +72,8 @@ class Loader:
             # raise NotImplementedError("Motif computation is disabled.")
             print(f"{Colors.BLUE}Computing motifs{Colors.RESET}")
             motifs = self.motifs_function[order](hg)
-            # os.makedirs(cfg.MOTIFS_CACHE_DIR, exist_ok=True)
-            # self.save_cache(motifs, cache_file)
+            os.makedirs(cfg.MOTIFS_CACHE_DIR, exist_ok=True)
+            self.save_cache(motifs, cache_file)
 
         return motifs
 
@@ -108,7 +109,15 @@ class Loader:
                 motif.append(tuple(motif_instance))
             rv.append(motif)
 
-        return rv
+        mapping, _ = generate_motifs(self._order)
+
+        zipped = []
+        index = 0
+        for motif, _ in mapping.items():
+            zipped.append((motif, rv[index]))
+            index += 1
+
+        return zipped
 
 
 def time_function(func, *args, **kwargs):

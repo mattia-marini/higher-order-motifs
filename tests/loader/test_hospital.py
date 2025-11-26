@@ -11,39 +11,34 @@ hg, motifs = (
             normalization_method=NormalizationMethod.NONE,
         )
     )
-    .ignore_cache()
+    # .ignore_cache()
     .load()
 )
+for motif, instances in motifs:
+    print(motif, len(instances))
 
-print(hg.has_multiedge())
-# for edge in hg.get_order_map().get(3, []):
-#     print(edge)
+for order, edges in hg.get_order_map().items():
+    print(order, len(edges))
+
+hg, motifs = (
+    Loader("hospital")
+    .order(4)
+    .construction_method(
+        StandardConstructionMethod(
+            limit_edge_size=4,
+            weighted=True,
+            normalization_method=NormalizationMethod.NONE,
+        )
+    )
+    .load()
+)
 
 for motif, instances in motifs:
     print(motif, len(instances))
 
-
 # for order, edges in hg.get_order_map().items():
 #     print(order, len(edges))
 
-# print(hg)
-# print(motifs)
-
-# hg, motifs = (
-#     Loader("hospital")
-#     .order(3)
-#     .construction_method(
-#         StandardConstructionMethod(
-#             limit_edge_size=4,
-#             weighted=True,
-#             normalization_method=NormalizationMethod.DEFAULT,
-#         )
-#     )
-#     .load()
-# )
-# print(hg)
-# print(motifs)
-#
 # hg, motifs = (
 #     Loader("hospital")
 #     .order(4)

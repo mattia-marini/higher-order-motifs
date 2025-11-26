@@ -13,12 +13,6 @@ def motifs_order_3(hg: Hypergraph):
     full, visited = motifs_ho_full(hg, N)
     standard = motifs_standard(hg, N, visited)
 
-    # print(full)
-    # print(standard)
-    # for i in range(len(full)):
-    #     print(full[i][0], full[i][1])
-    #     print(standard[i][0], standard[i][1])
-
     res = []
     for i in range(len(full)):
         res.append((full[i][0], full[i][1] + standard[i][1]))
@@ -26,7 +20,7 @@ def motifs_order_3(hg: Hypergraph):
     return res
 
 
-def motifs_order_4(hg):
+def motifs_order_4(hg: Hypergraph):
     # assert_hypergraph(edges, weighted=weighted)
     N = 4
     full, visited = motifs_ho_full(hg, N)
