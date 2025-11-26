@@ -7,7 +7,7 @@ import numpy as np
 import config as cfg
 import src.loaders as loaders
 from src.graph import *
-from src.motifs2 import motifs_order_3, motifs_order_4
+from src.motifs.motifs2 import motifs_order_3, motifs_order_4
 
 
 class Loader:
@@ -33,7 +33,7 @@ class Loader:
         self._ignore_cache = ignore
         return self
 
-    def load(self) -> tuple[Hypergraph, Any]:
+    def load(self) -> Tuple[Hypergraph, Any]:
         print(f'Loading {Colors.BOLD}"{self._dataset}"{Colors.RESET} dataset')
 
         # Dynamically call the appropriate loader function
@@ -71,8 +71,8 @@ class Loader:
             # raise NotImplementedError("Motif computation is disabled.")
             print(f"{Colors.BLUE}Computing motifs{Colors.RESET}")
             motifs = self.motifs_function[order](hg)
-            os.makedirs(cfg.MOTIFS_CACHE_DIR, exist_ok=True)
-            self.save_cache(motifs, cache_file)
+            # os.makedirs(cfg.MOTIFS_CACHE_DIR, exist_ok=True)
+            # self.save_cache(motifs, cache_file)
 
         return motifs
 

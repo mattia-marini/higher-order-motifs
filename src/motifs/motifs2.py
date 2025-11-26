@@ -2,21 +2,22 @@
 This file implements the efficient algorithm for motif discovery in hypergraphs.
 """
 
-from .loaders import *
-from .utils import *
+from src.loaders import *
+from src.motifs.motifs_base import motifs_ho_full, motifs_ho_not_full, motifs_standard
+from src.utils import *
 
 
-def motifs_order_3(hg):
+def motifs_order_3(hg: Hypergraph):
     # assert_hypergraph(edges, weighted=weighted)
     N = 3
     full, visited = motifs_ho_full(hg, N)
-    print(full)
-    
     standard = motifs_standard(hg, N, visited)
 
-    for i in range(len(full)):
-        print(full[i][0], full[i][1])
-        print(standard[i][0], standard[i][1])
+    # print(full)
+    # print(standard)
+    # for i in range(len(full)):
+    #     print(full[i][0], full[i][1])
+    #     print(standard[i][0], standard[i][1])
 
     res = []
     for i in range(len(full)):

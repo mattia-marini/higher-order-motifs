@@ -14,8 +14,20 @@ hg, motifs = (
     .ignore_cache()
     .load()
 )
-print(hg)
-print(motifs)
+
+print(hg.has_multiedge())
+# for edge in hg.get_order_map().get(3, []):
+#     print(edge)
+
+for motif, instances in motifs:
+    print(motif, len(instances))
+
+
+# for order, edges in hg.get_order_map().items():
+#     print(order, len(edges))
+
+# print(hg)
+# print(motifs)
 
 # hg, motifs = (
 #     Loader("hospital")

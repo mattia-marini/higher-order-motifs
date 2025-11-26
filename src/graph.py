@@ -397,3 +397,9 @@ class Hypergraph:
             adjacency_method()
 
         return rv
+
+    def has_multiedge(self) -> bool:
+        for edge_ids in self._nodes_map.values():
+            if len(edge_ids) > 1:
+                return True
+        return False

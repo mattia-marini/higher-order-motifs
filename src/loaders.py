@@ -668,7 +668,8 @@ def load_hospital(
                         else:
                             hg.add_edge(Hyperedge(i, 1.0))
                     else:
-                        hg.add_edge(Hyperedge(i))
+                        if not hg.has_edge_with_nodes(i):
+                            hg.add_edge(Hyperedge(i))
 
         hg.normalize_weights(cm.normalization_method)
         return hg
