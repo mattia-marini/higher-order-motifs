@@ -1,9 +1,11 @@
 import csv
 import random
-import pandas as pd
-from src.graph import Hyperedge, Hypergraph
-import config as cfg
 from typing import cast
+
+import pandas as pd
+
+import config as cfg
+from src.graph import *
 
 
 def load_facebook_hs():
@@ -625,7 +627,7 @@ def load_hospital_duplicates(N):
 
 
 def load_hospital(
-    N: int, construction_method: ConstructionMethodBase = StandardConstructionMethod()
+    construction_method: ConstructionMethodBase = StandardConstructionMethod(),
 ):
     import networkx as nx
 
@@ -649,7 +651,6 @@ def load_hospital(
 
     def standard_construction():
         cm = cast(StandardConstructionMethod, construction_method)
-        tot_hg = Hypergraph()
         hg = Hypergraph()
 
         for k in graph.keys():
@@ -659,25 +660,17 @@ def load_hospital(
             for i in c:
                 i = tuple(sorted(i))
 
-                if cm.weighted:
-                    if len(i) < N and hg.has_edge_with_nodes(i):
-                        handle = hg.get_first_edges_by_nodes(i)
-                        handle.weight += 1.0
+                if not (cm.limit_edge_size and len(i) > cm.limit_edge_size):
+                    if cm.weighted:
+                        if hg.has_edge_with_nodes(i):
+                            handle = hg.get_first_edges_by_nodes(i)
+                            handle.weight += 1.0
+                        else:
+                            hg.add_edge(Hyperedge(i, 1.0))
                     else:
-                        hg.add_edge(Hyperedge(i, 1.0))
-
-                    if tot_hg.has_edge_with_nodes(i):
-                        handle = tot_hg.get_first_edges_by_nodes(i)
-                        handle.weight += 1.0
-                    else:
-                        tot_hg.add_edge(Hyperedge(i, 1.0))
-                else:
-                    if len(i) <= N:
                         hg.add_edge(Hyperedge(i))
-                    tot_hg.add_edge(Hyperedge(i))
 
         hg.normalize_weights(cm.normalization_method)
-        tot_hg.normalize_weights(cm.normalization_method)
 
     def time_window_construction():
         cm = cast(TimeWindowConstructionMethod, construction_method)
@@ -697,7 +690,7 @@ def load_hospital(
     # plot_dist_hyperedges(tot, "hospital")
     # print(len(edges))
     # count(tot)
-    return edges
+    # return edges
 
 
 def load_DBLP(N):
@@ -923,6 +916,7 @@ def load_justice(N):
 
 def load_babbuini(N):
     import gzip
+
     import networkx as nx
 
     f = gzip.open("{}/babbuini.txt".format(cfg.DATASET_DIR), "rb")

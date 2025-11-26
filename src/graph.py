@@ -4,6 +4,8 @@ This file contains a series of classes representing hypergraphs and edges
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
@@ -12,7 +14,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 class NormalizationMethod(Enum):
     NONE = 1
     DEFAULT = 2
-    BY_ORDER = 3
+    ORDER = 3
     RANKING = 4
 
 
@@ -21,6 +23,9 @@ class ConstructionMethodBase:
     limit_edge_size: Optional[int] = None
     normalization_method: NormalizationMethod = NormalizationMethod.NONE
     weighted: bool = False
+
+    def description(self) -> str:
+        return f"{self.limit_edge_size}{'W' if self.weighted else 'w'}n{self.normalization_method.name.lower()}"
 
 
 @dataclass
@@ -31,6 +36,10 @@ class StandardConstructionMethod(ConstructionMethodBase):
 @dataclass
 class TimeWindowConstructionMethod(ConstructionMethodBase):
     time_window: float = 1.0
+
+    def description(self) -> str:
+        super_desc = super().description()
+        return f"{super_desc}tw{self.time_window:.2f}"
 
 
 @dataclass
@@ -56,6 +65,17 @@ class Hyperedge:
             return f"({self.nodes}, {self._weight})"
 
     __repr__ = __str__
+
+    def to_tuple(
+        self,
+    ) -> tuple[
+        tuple[int, ...],
+        Optional[float],
+    ]:
+        return (
+            self.nodes,
+            self._weight,
+        )
 
     def weighted(self) -> bool:
         return self._weight is not None
@@ -115,6 +135,14 @@ class HyperedgeHandle:
             self._graph._nodes_map[nodes].add(self._id)
 
         self._edge.nodes = nodes
+
+    def to_tuple(
+        self,
+    ) -> tuple[
+        tuple[int, ...],
+        Optional[float],
+    ]:
+        return self._edge.to_tuple()
 
     def order(self) -> int:
         return self._edge.order()
@@ -250,7 +278,7 @@ class Hypergraph:
             for _, edge in self._edges.items():
                 edge.weight = edge.weight / max_weight
 
-        elif normalization_method == NormalizationMethod.BY_ORDER:
+        elif normalization_method == NormalizationMethod.ORDER:
             order_map = self.get_order_map()
             for order, nodes in order_map.items():
                 max_weight = max(edge.weight for edge in nodes)
@@ -259,3 +287,14 @@ class Hypergraph:
 
         elif normalization_method == NormalizationMethod.RANKING:
             raise NotImplementedError("Ranking normalization not implemented yet")
+
+    def hash(self):
+        """
+        Returns a SHA-1 hash of a dictionary.
+        """
+
+        data_array = [edge.to_tuple() for edge in self._edges.values()]
+        data_array.sort()
+
+        encoded = json.dumps(data_array).encode()
+        return hashlib.sha1(encoded).hexdigest()
