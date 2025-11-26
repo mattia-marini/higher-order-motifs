@@ -25,15 +25,15 @@ class Loader:
         self._order = order
         return self
 
-    def weight_type(self, weight_type: ConstructionMethodBase):
-        self._weight_type = weight_type
+    def construction_method(self, construction_method: ConstructionMethodBase):
+        self._construction_method = construction_method
         return self
 
     def ignore_cache(self, ignore=True):
         self._ignore_cache = ignore
         return self
 
-    def load(self):
+    def load(self) -> tuple[Hypergraph, Any]:
         print(f'Loading {Colors.BOLD}"{self._dataset}"{Colors.RESET} dataset')
 
         # Dynamically call the appropriate loader function
@@ -58,7 +58,7 @@ class Loader:
 
         print(f"{Colors.GREEN}Fetched motifs for dataset {self._dataset}{Colors.RESET}")
 
-        # return edges, motifs
+        return hg, motifs
 
     def get_motifs_cached(self, order: int, hg: Hypergraph):
         cache_file = f"{cfg.MOTIFS_CACHE_DIR}/{self._dataset}_{order}_{self._construction_method.description()}_{hg.hash()}.npz"
@@ -68,13 +68,11 @@ class Loader:
             print(f"{Colors.YELLOW}Loading cached motifs{Colors.RESET}")
             motifs = self.load_cache(cache_file)
         else:
-            raise NotImplementedError("Motif computation is disabled.")
-            # print(f"{Colors.BLUE}Computing motifs{Colors.RESET}")
-            # motifs = self.motifs_function[order](
-            #     hg, weighted=self._weight_type != WeightType.UNWEIGHTED
-            # )
-            # os.makedirs(cfg.MOTIFS_CACHE_DIR, exist_ok=True)
-            # self.save_cache(motifs, cache_file)
+            # raise NotImplementedError("Motif computation is disabled.")
+            print(f"{Colors.BLUE}Computing motifs{Colors.RESET}")
+            motifs = self.motifs_function[order](hg)
+            os.makedirs(cfg.MOTIFS_CACHE_DIR, exist_ok=True)
+            self.save_cache(motifs, cache_file)
 
         return motifs
 

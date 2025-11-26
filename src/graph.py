@@ -8,7 +8,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, cast
 
 
 class NormalizationMethod(Enum):
@@ -123,6 +123,14 @@ class HyperedgeHandle:
 
     __repr__ = __str__
 
+    def __hash__(self) -> int:
+        return hash(self._id)
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, HyperedgeHandle):
+            return False
+        return self._id == other._id
+
     @property
     def nodes(self) -> Tuple[int, ...]:
         return self._edge.nodes
@@ -175,6 +183,7 @@ class Hypergraph:
         self._next_edge_id: int = 0
         self._weighted: Optional[bool] = None
         self._nodes: Set[int] = set()
+        self._adjacency: Optional[Dict[int, List[HyperedgeHandle]]] = None
 
     def __str__(self) -> str:
         return f"Hypergraph(num_edges={len(self._edges)})"
@@ -220,14 +229,25 @@ class Hypergraph:
         self._nodes_map[edge.nodes].add(id)
         self._handles[id] = HyperedgeHandle(self, edge, id)
         self._next_edge_id += 1
+        if self._adjacency is not None:
+            for node in edge.nodes:
+                if node not in self._adjacency:
+                    self._adjacency[node] = []
+                self._adjacency[node].append(self._handles[id])
         return id
 
     def remove_edge(self, id: int) -> Hyperedge:
         if id not in self._edges:
             raise KeyError(f"Edge id {id} not found in graph")
+
+        edge_handle = self._handles.pop(id)
+        if self._adjacency is not None:
+            for n in edge_handle.nodes:
+                self._adjacency[n].remove(edge_handle)
         self._nodes_map[self._edges[id].nodes].remove(id)
-        self._handles.pop(id)
-        return self._edges.pop(id)
+        edge = self._edges.pop(id)
+
+        return edge
 
     def get_edge_by_id(self, edge_id: int) -> HyperedgeHandle:
         if edge_id not in self._edges:
@@ -267,7 +287,7 @@ class Hypergraph:
     def normalize_weights(
         self, normalization_method: NormalizationMethod = NormalizationMethod.DEFAULT
     ):
-        if self._weighted is False:
+        if self._weighted is False and normalization_method != NormalizationMethod.NONE:
             raise ValueError("Cannot normalize weights of unweighted graph")
 
         if normalization_method == NormalizationMethod.NONE:
@@ -298,3 +318,58 @@ class Hypergraph:
 
         encoded = json.dumps(data_array).encode()
         return hashlib.sha1(encoded).hexdigest()
+
+    def compute_adjacency(self):
+        """
+        This function computes the adjacency list of the hypergraph. Enables
+        efficient executions for certain methods, such as induced subgraph
+        computation
+        """
+        if self._adjacency is not None:
+            return
+
+        self._adjacency = {}
+        for edge_handle in self._handles.values():
+            for node in edge_handle.nodes:
+                if node not in self._adjacency:
+                    self._adjacency[node] = []
+                self._adjacency[node].append(edge_handle)
+
+    def get_adjacency_copy(self) -> Dict[int, List[HyperedgeHandle]]:
+        self.compute_adjacency()
+        if self._adjacency is None:
+            raise ValueError("Adjacency not computed")
+        return self._adjacency.copy()
+
+    def get_adjacency_mut(self) -> Dict[int, List[HyperedgeHandle]]:
+        """
+        One should not modify the returned adjacency directly, as it would mess
+        with the internal logic of the graph
+        """
+        self.compute_adjacency()
+        if self._adjacency is None:
+            raise ValueError("Adjacency not computed")
+        return self._adjacency
+
+    def get_induced_subgraph(self, nodes: Iterable[int]) -> Set[HyperedgeHandle]:
+        nodes = set(nodes)
+        rv = set()
+        if self._adjacency is None:
+            raise ValueError("Adjacency not computed")
+
+        for n in nodes:
+            if n not in self._adjacency:
+                raise ValueError(
+                    f"Cannot get induced subgraph. Node {n} is not in graph"
+                )
+
+            for edge_handle in self._adjacency[n]:
+                contained = True
+                for en in edge_handle.nodes:
+                    if en not in nodes:
+                        contained = False
+                        break
+                if contained:
+                    rv.add(edge_handle)
+
+        return rv

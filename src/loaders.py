@@ -671,6 +671,7 @@ def load_hospital(
                         hg.add_edge(Hyperedge(i))
 
         hg.normalize_weights(cm.normalization_method)
+        return hg
 
     def time_window_construction():
         cm = cast(TimeWindowConstructionMethod, construction_method)

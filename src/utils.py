@@ -2,8 +2,10 @@ import itertools
 import math
 import numbers
 
+from src.graph import Hypergraph
 
-def motifs_ho_not_full(edges, N, visited, weighted=False):
+
+def motifs_ho_not_full(hg: Hypergraph, N, visited):
     """Computes the motif count for hypergraph motifs of order N. The
     subgraphs checked for motifs are the ones obtained by extending a hyperedge
     of order N-1 with one of its neighboring hyperedges. The subgraphs
@@ -21,36 +23,34 @@ def motifs_ho_not_full(edges, N, visited, weighted=False):
             size N.
 
     """
-    assert_hypergraph(edges, weighted=weighted)
+    # assert_hypergraph(hg, weighted=weighted)
     mapping, labeling = generate_motifs(N)
 
-    if not weighted:
-        edges = set([tuple(sorted(t)) for t in edges])
-    else:
-        edges = {tuple(sorted(k)): v for k, v in edges.items()}
+    # if not weighted:
+    #     hg = set([tuple(sorted(t)) for t in hg])
+    # else:
+    #     hg = {tuple(sorted(k)): v for k, v in hg.items()}
 
-    graph = {}
-    for e in edges:
-        if len(e) >= N:
-            continue
+    # graph = {}
+    # for e in hg.edges:
+    #     if e.order >= N:
+    #         continue
+    #
+    #     for e_i in e.nodes:
+    #         if e_i not in graph:
+    #             graph[e_i] = []
+    #         graph[e_i].append(e)
 
-        for e_i in e:
-            if e_i in graph:
-                graph[e_i].append(e)
-            else:
-                graph[e_i] = [e]
-
-    for e in edges:
-        if len(e) == N - 1:
-            nodes = list(e)
-
-            for n in nodes:
-                for e_i in graph[n]:
-                    tmp = list(nodes)
-                    tmp.extend(e_i)
+    adjacency = hg.get_adjacency_mut()
+    for e in hg.edges:
+        if e.order == N - 1:
+            for n in e.nodes:
+                for e_i in adjacency[n]:
+                    tmp = list(e.nodes)
+                    tmp.extend(e_i.nodes)
                     tmp = list(set(tmp))
                     if len(tmp) == N and tuple(sorted(tmp)) not in visited:
-                        count_motif(edges, tmp, labeling, visited, weighted)
+                        count_motif(hg, tmp, labeling, visited)
                         visited[tuple(sorted(tmp))] = 1
 
     # D = {}
@@ -64,7 +64,7 @@ def motifs_ho_not_full(edges, N, visited, weighted=False):
     return out, visited
 
 
-def motifs_standard(edges, N, visited, weighted=False):
+def motifs_standard(hg: Hypergraph, N, visited):
     """
     Computes the motif count for hypergraph motifs of order N, considering only
     hyperedges of order 2. The subgraphs contained in the visited set are
@@ -81,13 +81,12 @@ def motifs_standard(edges, N, visited, weighted=False):
             tuple contains a motif (as a tuple of edges) and its corresponding
             count in the hypergraph.
     """
-    assert_hypergraph(edges, weighted=weighted)
     mapping, labeling = generate_motifs(N)
 
-    if not weighted:
-        edges = set([tuple(sorted(t)) for t in edges])
-    else:
-        edges = {tuple(sorted(k)): v for k, v in edges.items()}
+    # if not weighted:
+    #     hg = set([tuple(sorted(t)) for t in hg])
+    # else:
+    #     hg = {tuple(sorted(k)): v for k, v in hg.items()}
 
     graph = {}
 
@@ -97,22 +96,20 @@ def motifs_standard(edges, N, visited, weighted=False):
     #         z.add(n)
 
     # Construct adjacency matrix for 2-edges
-    for e in edges:
-        if len(e) == 2:
-            a, b = e
-            if a in graph:
-                graph[a].append(b)
-            else:
-                graph[a] = [b]
+    for e in hg.edges:
+        if e.order == 2:
+            a, b = e.nodes
+            if a not in graph:
+                graph[a] = []
+            graph[a].append(b)
 
-            if b in graph:
-                graph[b].append(a)
-            else:
-                graph[b] = [a]
+            if b not in graph:
+                graph[b] = []
+            graph[b].append(a)
 
     def graph_extend(sub, ext, v, n_sub):
         if len(sub) == N:
-            count_motif(edges, sub, labeling, visited, weighted)
+            count_motif(hg, sub, labeling, visited)
             return
 
         while len(ext) > 0:
@@ -155,7 +152,7 @@ def motifs_standard(edges, N, visited, weighted=False):
     return out
 
 
-def motifs_ho_full(edges, N, weighted=False):
+def motifs_ho_full(hg: Hypergraph, N):
     """
     Computes the motif counts for hypergraph motifs of order N. The subgraphs
     checked for motifs are the one induced by the nodes in the hyperedges of
@@ -174,19 +171,17 @@ def motifs_ho_full(edges, N, weighted=False):
             size N.
 
     """
-    assert_hypergraph(edges, weighted=weighted)
     mapping, labeling = generate_motifs(N)
 
-    if not weighted:
-        edges = set([tuple(sorted(t)) for t in edges])
-    else:
-        edges = {tuple(sorted(k)): v for k, v in edges.items()}
+    # if not hg.weighted:
+    #     hg = set([tuple(sorted(t)) for t in hg])
+    # else:
+    #     hg = {tuple(sorted(k)): v for k, v in hg.items()}
 
     visited = {}
-    for e in edges:
-        if len(e) == N:
-            nodes = list(e)
-            count_motif(edges, nodes, labeling, visited, weighted)
+    for e in hg.edges:
+        if e.order == N:
+            count_motif(hg, e.nodes, labeling, visited)
             visited[e] = 1
 
     # D = {}
@@ -200,7 +195,7 @@ def motifs_ho_full(edges, N, weighted=False):
     return out, visited
 
 
-def count_motif(edges, nodes, labeling, visited={}, weighted=False):
+def count_motif(hg: Hypergraph, nodes, labeling, visited={}):
     """
     Increments the count of the motif induced by the given nodes in the specified hypergraph
 
@@ -219,14 +214,14 @@ def count_motif(edges, nodes, labeling, visited={}, weighted=False):
     if nodes in visited:
         return
 
-    p_nodes = power_set(nodes)
-
-    motif = []
-    for edge in p_nodes:
-        if len(edge) >= 2:
-            edge = tuple(sorted(list(edge)))
-            if edge in edges:
-                motif.append(edge)
+    # p_nodes = power_set(nodes)
+    # motif = []
+    # for edge in p_nodes:
+    #     if len(edge) >= 2:
+    #         edge = tuple(sorted(list(edge)))
+    #         if edge in edges:
+    #             motif.append(edge)
+    motif = hg.get_induced_subgraph(nodes)
 
     m = {}
     idx = 1
@@ -237,7 +232,7 @@ def count_motif(edges, nodes, labeling, visited={}, weighted=False):
     labeled_motif = []
     for e in motif:
         new_e = []
-        for node in e:
+        for node in e.nodes:
             new_e.append(m[node])
         new_e = tuple(sorted(new_e))
         labeled_motif.append(new_e)
