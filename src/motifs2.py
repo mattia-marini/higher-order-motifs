@@ -10,6 +10,8 @@ def motifs_order_3(hg):
     # assert_hypergraph(edges, weighted=weighted)
     N = 3
     full, visited = motifs_ho_full(hg, N)
+    print(full)
+    
     standard = motifs_standard(hg, N, visited)
 
     for i in range(len(full)):

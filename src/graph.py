@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, cast
 
+from src.utils import power_set
+
 
 class NormalizationMethod(Enum):
     NONE = 1
@@ -80,8 +82,13 @@ class Hyperedge:
     def weighted(self) -> bool:
         return self._weight is not None
 
+    @property
     def order(self) -> int:
         return len(self.nodes)
+
+    @order.setter
+    def order(self, value: int):
+        pass
 
     @property
     def weight(self) -> float:
@@ -152,8 +159,13 @@ class HyperedgeHandle:
     ]:
         return self._edge.to_tuple()
 
+    @property
     def order(self) -> int:
-        return self._edge.order()
+        return self._edge.order
+
+    @order.setter
+    def order(self, value: int):
+        pass
 
     @property
     def weight(self) -> float:
@@ -279,9 +291,9 @@ class Hypergraph:
     def get_order_map(self) -> Dict[int, List[HyperedgeHandle]]:
         rv = {}
         for handle in self._handles.values():
-            if handle.order() not in rv:
-                rv[handle.order()] = []
-            rv[handle.order()].append(handle)
+            if handle.order not in rv:
+                rv[handle.order] = []
+            rv[handle.order].append(handle)
         return rv
 
     def normalize_weights(
@@ -354,22 +366,34 @@ class Hypergraph:
     def get_induced_subgraph(self, nodes: Iterable[int]) -> Set[HyperedgeHandle]:
         nodes = set(nodes)
         rv = set()
+
+        def power_set_method():
+            p_nodes = power_set(nodes)
+            for edge in p_nodes:
+                if len(edge) >= 2:
+                    rv.update(self.get_edges_by_nodes(edge))
+
+        def adjacency_method():
+            if self._adjacency is None:
+                raise ValueError("Adjacency not computed")
+            for n in nodes:
+                if n not in self._adjacency:
+                    raise ValueError(
+                        f"Cannot get induced subgraph. Node {n} is not in graph"
+                    )
+
+                for edge_handle in self._adjacency[n]:
+                    contained = True
+                    for en in edge_handle.nodes:
+                        if en not in nodes:
+                            contained = False
+                            break
+                    if contained:
+                        rv.add(edge_handle)
+
         if self._adjacency is None:
-            raise ValueError("Adjacency not computed")
-
-        for n in nodes:
-            if n not in self._adjacency:
-                raise ValueError(
-                    f"Cannot get induced subgraph. Node {n} is not in graph"
-                )
-
-            for edge_handle in self._adjacency[n]:
-                contained = True
-                for en in edge_handle.nodes:
-                    if en not in nodes:
-                        contained = False
-                        break
-                if contained:
-                    rv.add(edge_handle)
+            power_set_method()
+        else:
+            adjacency_method()
 
         return rv

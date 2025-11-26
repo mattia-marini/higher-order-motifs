@@ -210,6 +210,7 @@ def count_motif(hg: Hypergraph, nodes, labeling, visited={}):
         weighted (bool): Whether the hypergraph is weighted or not.
     """
     nodes = tuple(sorted(tuple(nodes)))
+    print(f"Count motifs: {nodes}")
 
     if nodes in visited:
         return
