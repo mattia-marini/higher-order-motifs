@@ -8,7 +8,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, cast
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from src.utils import power_set
 
@@ -26,13 +26,18 @@ class ConstructionMethodBase:
     normalization_method: NormalizationMethod = NormalizationMethod.NONE
     weighted: bool = False
 
+    # Not all attributes included in description as they would result in a
+    # graph with the same esdges and different weights, so motifs would be
+    # computed in the same way before aggregation
     def description(self) -> str:
-        return f"{self.limit_edge_size}{'W' if self.weighted else 'w'}n{self.normalization_method.name.lower()}"
+        return f"l{self.limit_edge_size}"
 
 
 @dataclass
 class StandardConstructionMethod(ConstructionMethodBase):
-    pass
+    def description(self) -> str:
+        super_desc = super().description()
+        return f"standard.{super_desc}"
 
 
 @dataclass
@@ -41,12 +46,14 @@ class TimeWindowConstructionMethod(ConstructionMethodBase):
 
     def description(self) -> str:
         super_desc = super().description()
-        return f"{super_desc}tw{self.time_window:.2f}"
+        return f"timewin.{super_desc}.tw{self.time_window:.2f}"
 
 
 @dataclass
 class TemporalPathConstructionMethod(ConstructionMethodBase):
-    pass
+    def description(self) -> str:
+        super_desc = super().description()
+        return f"temporal.{super_desc}"
 
 
 class Hyperedge:

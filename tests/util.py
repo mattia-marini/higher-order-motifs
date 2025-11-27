@@ -1,6 +1,6 @@
 import os
 import time
-from enum import Enum
+from typing import cast
 
 import numpy as np
 
@@ -52,8 +52,8 @@ class Loader:
         #     edges, tot = loader(4)
         # else:
         #     edges = loader(4)
-
-        hg = loader(self._construction_method)
+        hg = cast(Hypergraph, loader(self._construction_method))
+        hg.compute_adjacency()
 
         motifs = self.get_motifs_cached(self._order, hg)
 

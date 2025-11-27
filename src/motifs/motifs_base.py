@@ -1,8 +1,10 @@
 import itertools
-from typing import Iterable
+from typing import Iterable, List
 
 from src.graph import Hypergraph
 from src.utils import is_connected, power_set, relabel
+
+MotifsRv = List[tuple[tuple[tuple[int, ...]], List[tuple[int, ...]]]]
 
 
 def motifs_ho_not_full(hg: Hypergraph, N, visited):

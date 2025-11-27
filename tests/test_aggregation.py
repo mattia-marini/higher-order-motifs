@@ -1,5 +1,18 @@
+from src.aggregate import aggregate
 from src.graph import NormalizationMethod, StandardConstructionMethod
-from tests.util import Loader, time_function
+from tests.util import Colors, Loader, time_function
+
+
+def time_aggregate(hg, motifs):
+    print(f"{Colors.BLUE}Aggregating... {Colors.RESET}")
+
+    def aggregate_wrapper():
+        aggregated = aggregate(hg, motifs)
+        for i in range(len(aggregated)):
+            print(f"Motif {i}", aggregated[i])
+
+    time_function(aggregate_wrapper)
+
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -13,9 +26,7 @@ from tests.util import Loader, time_function
     )
     .load()
 )
-for motif, instances in motifs:
-    print(motif, len(instances))
-
+time_aggregate(hg, motifs)
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -29,9 +40,8 @@ for motif, instances in motifs:
     )
     .load()
 )
+time_aggregate(hg, motifs)
 
-for motif, instances in motifs:
-    print(motif, len(instances))
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -45,9 +55,8 @@ for motif, instances in motifs:
     )
     .load()
 )
+time_aggregate(hg, motifs)
 
-for motif, instances in motifs:
-    print(motif, len(instances))
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -61,6 +70,4 @@ for motif, instances in motifs:
     )
     .load()
 )
-
-for motif, instances in motifs:
-    print(motif, len(instances))
+time_aggregate(hg, motifs)

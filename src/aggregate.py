@@ -1,12 +1,17 @@
+from dataclasses import dataclass
+
+from src.graph import Hypergraph
+from src.motifs.motifs_base import MotifsRv
+
 from . import utils
 
 
+@dataclass()
 class AggregatedInfos:
-    def __init__(self, count, total_intensity, mean_coherence, actual_intensity):
-        self.count = count
-        self.intensity = total_intensity
-        self.mean_coherence = mean_coherence
-        self.actual_intensity = actual_intensity
+    count: int
+    intensity: float
+    mean_coherence: float
+    actual_intensity: float
 
     def __str__(self):
         return (
@@ -21,38 +26,21 @@ class AggregatedInfos:
     __repr__ = __str__
 
 
-def aggregate(edges, motifs):
-    adj = {}
-    for e in edges:
-        for node in e:
-            if node not in adj:
-                adj[node] = []
-
-            adj[node].append(e)
-
-    def induced_subgraph(nodes):
-        if len(nodes) == 0:
-            return []
-        rv = set()
-        nodes = set(nodes)
-
-        for n in nodes:
-            for e in adj.get(n, []):
-                if all(x in nodes for x in e):
-                    rv.add(e)
-        return rv
-
+def aggregate(hg: Hypergraph, motifs: MotifsRv):
     aggregated = []
-    for motif in motifs:
+    hg.compute_adjacency()
+
+    for motif, instances in motifs:
         count = len(motif)
         total_intensity = 0
         total_coherence = 0
         total_actual_intensity = 0
 
-        for motif_instance in motif:
-            induced_subgraph_t = induced_subgraph(motif_instance)
-            intensity = utils.intensity(induced_subgraph_t)
-            coherence = utils.coherence(induced_subgraph_t)
+        for motif_instance in instances:
+            induced_subgraph = hg.get_induced_subgraph(motif_instance)
+            intensity = utils.intensity(induced_subgraph)
+            coherence = utils.coherence(induced_subgraph)
+
             total_intensity += intensity
             total_coherence += coherence
             total_actual_intensity += intensity * coherence
