@@ -6,11 +6,12 @@ An object of class hypergraph is a list of tuples on a specified node set, which
 It is equipped with methods for computing hypergraph moments of interest and running Markov Chain Monte Carlo.
 """
 
-import numpy as np
-import networkx as nx
-from collections import Counter
-import random
 import itertools
+import random
+from collections import Counter
+
+import networkx as nx
+import numpy as np
 
 
 class hypergraph:

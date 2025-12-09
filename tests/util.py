@@ -53,7 +53,7 @@ class Loader:
         # else:
         #     edges = loader(4)
         hg = cast(Hypergraph, loader(self._construction_method))
-        hg.compute_adjacency()
+        # hg.compute_adjacency()
 
         motifs = self.get_motifs_cached(self._order, hg)
 

@@ -628,7 +628,7 @@ def load_hospital_duplicates(N):
 
 def load_hospital(
     construction_method: ConstructionMethodBase = StandardConstructionMethod(),
-):
+) -> Hypergraph:
     import networkx as nx
 
     dataset = f"{cfg.DATASET_DIR}/hospital.dat"
@@ -688,6 +688,8 @@ def load_hospital(
         return time_window_construction()
     elif isinstance(construction_method, TemporalPathConstructionMethod):
         return temporal_path_construction()
+    else:
+        raise ValueError("Unknown construction method")
 
     # plot_dist_hyperedges(tot, "hospital")
     # print(len(edges))

@@ -1,5 +1,5 @@
 from src.graph import NormalizationMethod, StandardConstructionMethod
-from tests.util import Loader, time_function
+from tests.util import Colors, Loader, time_function
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -11,11 +11,16 @@ from tests.util import Loader, time_function
             normalization_method=NormalizationMethod.NONE,
         )
     )
+    .ignore_cache(True)
     .load()
 )
+total = 0
 for motif, instances in motifs:
     print(motif, len(instances))
-
+    total += len(instances)
+print(
+    f"{Colors.BOLD}{Colors.GREEN}Total instances: {Colors.RESET}{Colors.GREEN}{total}{Colors.RESET}"
+)
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -27,11 +32,16 @@ for motif, instances in motifs:
             normalization_method=NormalizationMethod.NONE,
         )
     )
+    .ignore_cache(True)
     .load()
 )
-
+total = 0
 for motif, instances in motifs:
     print(motif, len(instances))
+    total += len(instances)
+print(
+    f"{Colors.BOLD}{Colors.GREEN}Total instances: {Colors.RESET}{Colors.GREEN}{total}{Colors.RESET}"
+)
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -43,11 +53,16 @@ for motif, instances in motifs:
             normalization_method=NormalizationMethod.NONE,
         )
     )
+    .ignore_cache(True)
     .load()
 )
-
+total = 0
 for motif, instances in motifs:
     print(motif, len(instances))
+    total += len(instances)
+print(
+    f"{Colors.BOLD}{Colors.GREEN}Total instances: {Colors.RESET}{Colors.GREEN}{total}{Colors.RESET}"
+)
 
 (hg, motifs), _ = time_function(
     lambda: Loader("hospital")
@@ -59,8 +74,13 @@ for motif, instances in motifs:
             normalization_method=NormalizationMethod.NONE,
         )
     )
+    .ignore_cache(True)
     .load()
 )
-
+total = 0
 for motif, instances in motifs:
     print(motif, len(instances))
+    total += len(instances)
+print(
+    f"{Colors.BOLD}{Colors.GREEN}Total instances: {Colors.RESET}{Colors.GREEN}{total}{Colors.RESET}"
+)

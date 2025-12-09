@@ -1,5 +1,6 @@
 """
-This file contains a series of classes representing hypergraphs and edges
+This file contains a series of classes representing hypergraphs hyperedges and
+hypergraph contruction methods starting from temportal graphs
 """
 
 from __future__ import annotations
@@ -9,6 +10,9 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+
+import numpy as np
+from numpy.typing import NDArray
 
 from src.utils import power_set
 
@@ -224,6 +228,14 @@ class Hypergraph:
         pass
 
     @property
+    def nodes(self) -> Set[int]:
+        return self._nodes
+
+    @nodes.setter
+    def nodes(self, value: Set[int]):
+        pass
+
+    @property
     def edges(self) -> Iterable[HyperedgeHandle]:
         return [handle for handle in self._handles.values()]
 
@@ -410,3 +422,45 @@ class Hypergraph:
             if len(edge_ids) > 1:
                 return True
         return False
+
+    def filter_orders(
+        self, orders: Iterable[int], retain=True, delete=False
+    ) -> Hypergraph:
+        if retain and delete:
+            raise ValueError("Cannot both retain and delete orders")
+        if not retain and not delete:
+            raise ValueError("Must either retain or delete orders")
+
+        orders = frozenset(orders)
+        rv = Hypergraph()
+        for edge in self._edges.values():
+            if (edge.order in orders) == retain:
+                rv.add_edge(edge)
+
+        return rv
+
+    def get_flattened_np_matrix(self) -> NDArray[np.bool_]:
+        """
+        Returns a NumPy representation of the flattened hypergraph, flattened.
+        All hyperedges will form cliques
+        """
+
+        # Mapping ids so that they start from 0
+        idx = 0
+        mapping = {}
+        dyadic_edges = self.get_order_map().get(2, [])
+        for e in dyadic_edges:
+            for n in e.nodes:
+                if n not in mapping:
+                    mapping[n] = idx
+                    idx += 1
+
+        n = len(mapping)
+        rv = np.zeros((n, n), dtype=np.bool_)
+
+        for e in dyadic_edges:
+            a, b = e.nodes
+            rv[mapping[a], mapping[b]] = True
+            rv[mapping[b], mapping[a]] = True
+
+        return rv
