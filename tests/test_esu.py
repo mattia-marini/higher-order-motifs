@@ -12,7 +12,7 @@ def esu(hg: Hypergraph, order: int) -> int:
     count = 0
 
     # building adjacency list to reuse mtofis base method
-    graph = {}
+    graph = [[] for _ in range(n)]
     for i in range(n):
         neighbors = np.where(np_graph[i] == 1)[0]
         graph[i] = neighbors.tolist()
@@ -40,7 +40,7 @@ def esu(hg: Hypergraph, order: int) -> int:
             new_n_sub = set(n_sub).union(set(graph[w]))
             graph_extend(new_sub, tmp, v, new_n_sub)
 
-    for v in graph.keys():
+    for v in range(n):
         v_ext = set()
         for u in graph[v]:
             if u > v:
@@ -207,8 +207,39 @@ def np_esu(hg: Hypergraph, order: int) -> int:
     return count
 
 
-def gpu_esu(hg: Hypergraph, order: int) -> int:
-    return -1
+def ad_hoc(hg: Hypergraph, order: int) -> int:
+    if order != 3:
+        raise NotImplementedError("Ad-hoc method only implemented for order 3")
+
+    graph = hg.get_digraph_adj_list()
+    # print(graph)
+
+    def count(vertex: int) -> int:
+        total = 0
+
+        # straight patterns
+        neighbors_count = len(graph[vertex])
+        # print(neighbors_count)
+        total += neighbors_count * (neighbors_count - 1) // 2
+
+        # print(f"Vertex {vertex}: {total}")
+        # triangle patterns
+
+        neighbors_set = set(graph[vertex])
+        for u in graph[vertex]:
+            for w in graph[u]:
+                if w in neighbors_set and w > u:
+                    if not (u < vertex and w < vertex):
+                        total -= 1
+
+        return total
+
+    total = 0
+    for node in range(len(graph)):
+        total += count(node)
+        # print(node)
+
+    return total
 
 
 # hg = Hypergraph()
@@ -240,3 +271,8 @@ print()
 
 print("Running np esu")
 print(f"Found {time_function(lambda: np_esu(hg, 3))[0]} connected subgraphs")
+
+print()
+
+print("Running ad hoc esu")
+print(f"Found {time_function(lambda: ad_hoc(hg, 3))[0]} connected subgraphs")

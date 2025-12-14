@@ -187,10 +187,10 @@ class HyperedgeHandle:
         self._edge.weight = weight
 
     def weight_or(self, default: float = 1.0) -> float:
-        return self.weight_or(default)
+        return self._edge.weight_or(default)
 
     def weight_or_else(self, default: Callable[[Hyperedge], float]) -> float:
-        return self.weight_or_else(default)
+        return self._edge.weight_or_else(default)
 
     def weighted(self) -> bool:
         return self._edge.weighted()
@@ -238,6 +238,11 @@ class Hypergraph:
     @property
     def edges(self) -> Iterable[HyperedgeHandle]:
         return [handle for handle in self._handles.values()]
+
+    def is_weighted(self) -> bool:
+        if self._weighted is None:
+            return False
+        return self._weighted
 
     @edges.setter
     def edges(self, value: Iterable[HyperedgeHandle]):
@@ -464,3 +469,55 @@ class Hypergraph:
             rv[mapping[b], mapping[a]] = True
 
         return rv
+
+    def get_digraph_adj_list(self) -> List[List[int]]:
+        edges = self.get_order_map()[2]
+        map = {}
+        nodes = set()
+        for edge in edges:
+            nodes.add(edge.nodes[0])
+            nodes.add(edge.nodes[1])
+        for i, n in enumerate(sorted(nodes)):
+            map[n] = i
+        n = len(map)
+        rv = [[] for _ in range(n)]
+        for edge in edges:
+            a, b = edge.nodes
+            a = map[a]
+            b = map[b]
+            rv[a].append(b)
+            rv[b].append(a)
+
+        return rv
+
+
+# TODO: remove
+def dump_digraph_to_file(hg: Hypergraph, file: str, map_vertices: bool = False):
+    """
+    Dumps a hypergraph as a directed graph, considering only diadic
+    interactions. The format is the follwoing:
+    e w|u
+    a b [w]
+    ...
+    """
+    with open(file, "w") as f:
+        edges = hg.get_order_map()[2]
+        f.write(f"{len(edges)} {'w' if hg.is_weighted() else 'u'}\n")
+        if len(edges) == 0:
+            return
+
+        map = {}
+        nodes = set()
+        for edge in edges:
+            nodes.add(edge.nodes[0])
+            nodes.add(edge.nodes[1])
+        for i, n in enumerate(sorted(nodes)):
+            map[n] = i
+
+        for edge in edges:
+            a, b = edge.nodes
+            a = map[a] if map_vertices else a
+            b = map[b] if map_vertices else b
+
+            w = edge.weight_or(1) if edge.weighted() else ""
+            f.write(f"{a} {b} {w}\n")
