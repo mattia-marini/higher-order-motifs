@@ -224,6 +224,7 @@ def count_motif(hg: Hypergraph, nodes: Iterable[int], labeling, visited={}):
     #         if edge in edges:
     #             motif.append(edge)
     motif = hg.get_induced_subgraph(nodes)
+    # print(f"Motif edges: {[e.nodes for e in motif]}")
 
     m = {}
     idx = 1

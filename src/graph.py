@@ -490,6 +490,26 @@ class Hypergraph:
 
         return rv
 
+    def get_digraph_matrix(self) -> List[List[bool]]:
+        edges = self.get_order_map()[2]
+        map = {}
+        nodes = set()
+        for edge in edges:
+            nodes.add(edge.nodes[0])
+            nodes.add(edge.nodes[1])
+        for i, n in enumerate(sorted(nodes)):
+            map[n] = i
+        n = len(map)
+        rv = [[False] * n for _ in range(n)]
+        for edge in edges:
+            a, b = edge.nodes
+            a = map[a]
+            b = map[b]
+            rv[a][b] = True
+            rv[b][a] = True
+
+        return rv
+
 
 # TODO: remove
 def dump_digraph_to_file(hg: Hypergraph, file: str, map_vertices: bool = False):

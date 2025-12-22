@@ -1,30 +1,71 @@
 import numpy as np
-from numba import cuda
 
 from src.graph import Hyperedge, Hypergraph
 from src.loaders import load_hospital
+from src.motifs.motifs_base import combine_labelings, count_motif, generate_motifs
 from tests.util import time_function
 
+motif_mapping_3 = {}
+motif_mapping_4 = {
+    # Order 3
+    ((1, 2), (1, 3)): 0,
+    ((1, 2), (1, 3), (2, 3)): 1,
+    # Order 4
+    ((1, 2), (1, 3), (1, 4)): 0,
+    ((1, 2), (1, 3), (1, 4), (2, 3)): 1,
+    ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4)): 2,
+    ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4)): 3,
+    ((1, 2), (1, 4), (2, 3)): 4,
+    ((1, 3), (1, 4), (2, 3), (2, 4)): 5,
+}
 
-def esu(hg: Hypergraph, order: int) -> int:
+
+def esu(hg: Hypergraph, order: int) -> tuple[int]:
     np_graph = hg.get_flattened_np_matrix()
+    hg.compute_adjacency()
     n = np_graph.shape[0]
     count = 0
+    mapping, labeling = generate_motifs(order)
+    labeling = {k: 0 for k in labeling}
 
     # building adjacency list to reuse mtofis base method
-    graph = [[] for _ in range(n)]
-    for i in range(n):
-        neighbors = np.where(np_graph[i] == 1)[0]
-        graph[i] = neighbors.tolist()
+    adj = hg.get_adjacency_copy()
+    graph = {}
+    for a, l in adj.items():
+        graph[a] = []
+        for e in l:
+            if e.order == 2:
+                b = e.nodes[1] if e.nodes[0] == a else e.nodes[0]
+                graph[a].append(b)
 
     def graph_extend(sub, ext, v, n_sub):
         # print("Sub:", sub)
         # print("Ext:", ext)
         # print("N_Sub:", n_sub)
-        nonlocal count
+        # nonlocal count
         if len(sub) == order:
-            # print(sub)
-            count += 1
+            motif = hg.get_induced_subgraph(sub)
+            motif = set([m for m in motif if m.order == 2])
+
+            m = {}
+            idx = 1
+            for i in sub:
+                m[i] = idx
+                idx += 1
+
+            labeled_motif = []
+            for e in motif:
+                new_e = []
+                for node in e.nodes:
+                    new_e.append(m[node])
+                new_e = tuple(sorted(new_e))
+                labeled_motif.append(new_e)
+            labeled_motif = tuple(sorted(labeled_motif))
+
+            if labeled_motif in labeling:
+                labeling[labeled_motif] += 1
+            # count_motif(hg, sub, labeling)
+            # count += 1
             return
 
         while len(ext) > 0:
@@ -40,7 +81,7 @@ def esu(hg: Hypergraph, order: int) -> int:
             new_n_sub = set(n_sub).union(set(graph[w]))
             graph_extend(new_sub, tmp, v, new_n_sub)
 
-    for v in range(n):
+    for v in graph:
         v_ext = set()
         for u in graph[v]:
             if u > v:
@@ -48,7 +89,24 @@ def esu(hg: Hypergraph, order: int) -> int:
 
         graph_extend(set([v]), v_ext, v, set(graph[v]).union({v}))
 
-    return count
+    # print(labeling)
+    rv = []
+    for motif in mapping.keys():
+        count = 0
+        for label in mapping[motif]:
+            count += labeling[label]
+
+        rv.append((motif, count))
+
+    rv = list(sorted(rv))
+    # print(rv)
+    rv = [t for t in rv if len([e for e in t[0] if len(e) > 2]) == 0]  # filtro diedges
+    rv = [(t[0], t[1]) for t in rv]  # considero solo count dei motifs
+
+    rv = [(mapping[motif], count) for motif, count in rv]
+    rv = [count for _, count in sorted(rv)]
+
+    return tuple(rv)
 
 
 def np_esu(hg: Hypergraph, order: int) -> int:
@@ -207,39 +265,82 @@ def np_esu(hg: Hypergraph, order: int) -> int:
     return count
 
 
-def ad_hoc(hg: Hypergraph, order: int) -> int:
-    if order != 3:
-        raise NotImplementedError("Ad-hoc method only implemented for order 3")
+def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
+    # if order != 3:
+    #     raise NotImplementedError("Ad-hoc method only implemented for order 3")
 
-    graph = hg.get_digraph_adj_list()
+    adj = hg.get_digraph_adj_list()
+    adj_set = [set(neighbors) for neighbors in adj]
+    n = hg.n
+    mat = hg.get_digraph_matrix()
     # print(graph)
 
-    def count(vertex: int) -> int:
-        total = 0
+    def count_3(vertex: int) -> list[int]:
+        total = [0] * 2
 
         # straight patterns
-        neighbors_count = len(graph[vertex])
+        neighbors_count = len(adj[vertex])
         # print(neighbors_count)
-        total += neighbors_count * (neighbors_count - 1) // 2
 
+        cross_edges = set()
+        for u in adj[vertex]:
+            for w in adj[u]:
+                if w in adj_set[vertex] and w > u:
+                    cross_edges.add((u, w))
+
+        total[0] = (neighbors_count * (neighbors_count - 1) // 2) - len(cross_edges)
+
+        total[1] = sum(1 for x in cross_edges if x[0] < vertex and x[1] < vertex)
         # print(f"Vertex {vertex}: {total}")
-        # triangle patterns
 
-        neighbors_set = set(graph[vertex])
-        for u in graph[vertex]:
-            for w in graph[u]:
-                if w in neighbors_set and w > u:
-                    if not (u < vertex and w < vertex):
-                        total -= 1
+        # triangle patterns
 
         return total
 
-    total = 0
-    for node in range(len(graph)):
-        total += count(node)
+    def count_4(vertex: int) -> list[int]:
+        total = [0] * 6
+
+        # I motif simmetrici van contati solo a partire dal vertice maggiore
+
+        for distal in adj[vertex]:
+            # Vicini in comune a distal e vertex
+            # tipo 3,4: simmetrici
+            if distal < vertex:
+                common = adj_set[distal].intersection(adj_set[vertex])
+                common_less = set([c for c in common if c < vertex])
+
+                cross_edges_tot_count = 0
+                cross_edges_less_count = 0
+                for c in common:
+                    for u in adj[c]:
+                        # u != vertex and u != distal and
+                        if c < u and u in common:
+                            if u < vertex and u < distal:
+                                cross_edges_less_count += 1
+                            cross_edges_tot_count += 1
+                            # cross_edges_tot.add(tuple(sorted((c, u))))
+
+                # I cross_edges originano motifs di tipo 3, tutte le altre coppie di vertici motifs di tipo 2
+
+                # print(f"{vertex}-{distal} common {common}")
+                # print(f"len(common){len(common)}")
+                # print(f"cross_edges_tot_count {cross_edges_tot_count}")
+                total[2] += (
+                    len(common) * (len(common) - 1) // 2
+                ) - cross_edges_tot_count
+                total[3] += cross_edges_less_count
+
+        return total
+
+    total = [0] * 2 if order == 3 else [0] * 6
+    for node in range(len(adj)):
+        if order == 4:
+            total = [x + y for x, y in zip(total, count_4(node))]
+        elif order == 3:
+            total = [x + y for x, y in zip(total, count_3(node))]
         # print(node)
 
-    return total
+    return tuple(total)
 
 
 # hg = Hypergraph()
@@ -263,16 +364,25 @@ def ad_hoc(hg: Hypergraph, order: int) -> int:
 # hg.add_edge(Hyperedge([0, 4]))
 
 hg = load_hospital()
+# (76994, 154238, 85214, 33450, 93458, 12982)
 
-print("Running motifs base esu")
-print(f"Found {time_function(lambda: esu(hg, 3))[0]} connected subgraphs")
+# hg = Hypergraph()
+# hg.add_edge(Hyperedge([0, 1]))
+# hg.add_edge(Hyperedge([0, 2]))
+# hg.add_edge(Hyperedge([0, 3]))
+# hg.add_edge(Hyperedge([1, 3]))
+# hg.add_edge(Hyperedge([2, 3]))
+# hg.add_edge(Hyperedge([1, 2]))
 
-print()
+# print("Running motifs base esu")
+# print(f"Found {time_function(lambda: esu(hg, 4))[0]} connected subgraphs")
 
-print("Running np esu")
-print(f"Found {time_function(lambda: np_esu(hg, 3))[0]} connected subgraphs")
+# print()
+
+# print("Running np esu")
+# print(f"Found {time_function(lambda: np_esu(hg, 3))[0]} connected subgraphs")
 
 print()
 
 print("Running ad hoc esu")
-print(f"Found {time_function(lambda: ad_hoc(hg, 3))[0]} connected subgraphs")
+print(f"Found {time_function(lambda: ad_hoc(hg, 4))[0]} connected subgraphs")
