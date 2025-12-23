@@ -307,50 +307,58 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
 
             # tipo 2, 3: simmetrici
             common = adj_set[distal].intersection(adj_set[vertex])
-            common_less = set([c for c in common if c < vertex])
+            non_common = adj_set[vertex] - common - {distal}
+            # common_less = set([c for c in common if c < vertex])
 
-            cross_infra = 0
-            cross_infra_less = 0
+            common_cross = 0
+            common_cross_less = 0
             for c in common:
                 for u in adj[c]:
-                    # u != vertex and u != distal and
                     if c < u and u in common:
                         if u < vertex and u < distal:
-                            cross_infra_less += 1
-                        cross_infra += 1
-                        # cross_edges_tot.add(tuple(sorted((c, u))))
+                            common_cross_less += 1
+                        common_cross += 1
 
-            cross_inter = 0
-            cross_inter_less = 0
-            for c in common:
-                for u in adj[c]:
+            non_common_cross = 0
+            for nc in non_common:
+                for u in adj[nc]:
+                    if nc < u and u in non_common:
+                        non_common_cross += 1
+
+            inter_cross = 0
+            inter_cross_less = 0
+            for p in common:
+                for u in adj[p]:
                     if (
                         u in adj_set[vertex]
                         and u not in common
                         and u != vertex
                         and u != distal
                     ):
-                        cross_inter += 1
-
-            # print(f"len(common){len(common)}")
+                        inter_cross += 1
 
             if distal < vertex:
                 # common_less = set([c for c in common if c < vertex])
                 # I cross_edges originano motifs di tipo 3, tutte le altre coppie di vertici motifs di tipo 2
-                total[2] += (len(common) * (len(common) - 1) // 2) - cross_infra
-                total[3] += cross_infra_less
+                total[2] += (len(common) * (len(common) - 1) // 2) - common_cross
+                total[3] += common_cross_less
 
-            # print(f"{vertex}-{distal} common {common}")
-            # print(f"cross_inter {cross_inter}")
-            type1_count = (len(adj[vertex]) - len(common) - 1) * len(
-                common
-            ) - cross_inter
+            total[1] += (len(adj[vertex]) - len(common) - 1) * len(common) - inter_cross
+            total[0] += len(non_common) * (len(non_common) - 1) // 2 - non_common_cross
 
-            # print("type1_count", type1_count)
-            if type1_count > 0:
-                total[1] += type1_count
+            # print(f"len(common){len(common)}")
 
+        # cross_peripheral = 0
+        # for p in adj[vertex]:
+        #     for u in adj[p]:
+        #         if p > u and u in adj_set[vertex]:
+        #             cross_peripheral += 1
+
+        # print(f"vertex {vertex}")
+        # print(f"cross_peripheral {cross_peripheral}")
+        # print("type0_count", total[0])
         total[1] //= 2
+        total[0] //= 3
         # tipo 0
 
         # cross_edges = 0
