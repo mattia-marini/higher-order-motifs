@@ -304,31 +304,71 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
 
         for distal in adj[vertex]:
             # Vicini in comune a distal e vertex
-            # tipo 3,4: simmetrici
+
+            # tipo 2, 3: simmetrici
+            common = adj_set[distal].intersection(adj_set[vertex])
+            common_less = set([c for c in common if c < vertex])
+
+            cross_infra = 0
+            cross_infra_less = 0
+            for c in common:
+                for u in adj[c]:
+                    # u != vertex and u != distal and
+                    if c < u and u in common:
+                        if u < vertex and u < distal:
+                            cross_infra_less += 1
+                        cross_infra += 1
+                        # cross_edges_tot.add(tuple(sorted((c, u))))
+
+            cross_inter = 0
+            cross_inter_less = 0
+            for c in common:
+                for u in adj[c]:
+                    if (
+                        u in adj_set[vertex]
+                        and u not in common
+                        and u != vertex
+                        and u != distal
+                    ):
+                        cross_inter += 1
+
+            # print(f"len(common){len(common)}")
+
             if distal < vertex:
-                common = adj_set[distal].intersection(adj_set[vertex])
-                common_less = set([c for c in common if c < vertex])
-
-                cross_edges_tot_count = 0
-                cross_edges_less_count = 0
-                for c in common:
-                    for u in adj[c]:
-                        # u != vertex and u != distal and
-                        if c < u and u in common:
-                            if u < vertex and u < distal:
-                                cross_edges_less_count += 1
-                            cross_edges_tot_count += 1
-                            # cross_edges_tot.add(tuple(sorted((c, u))))
-
+                # common_less = set([c for c in common if c < vertex])
                 # I cross_edges originano motifs di tipo 3, tutte le altre coppie di vertici motifs di tipo 2
+                total[2] += (len(common) * (len(common) - 1) // 2) - cross_infra
+                total[3] += cross_infra_less
 
-                # print(f"{vertex}-{distal} common {common}")
-                # print(f"len(common){len(common)}")
-                # print(f"cross_edges_tot_count {cross_edges_tot_count}")
-                total[2] += (
-                    len(common) * (len(common) - 1) // 2
-                ) - cross_edges_tot_count
-                total[3] += cross_edges_less_count
+            # print(f"{vertex}-{distal} common {common}")
+            # print(f"cross_inter {cross_inter}")
+            type1_count = (len(adj[vertex]) - len(common) - 1) * len(
+                common
+            ) - cross_inter
+
+            # print("type1_count", type1_count)
+            if type1_count > 0:
+                total[1] += type1_count
+
+        total[1] //= 2
+        # tipo 0
+
+        # cross_edges = 0
+        # for distal in adj[vertex]:
+        #     for u in adj[distal]:
+        #         if distal < u and u in adj_set[vertex]:
+        #             cross_edges += 1
+        #
+        # print(f"vertex {vertex}", f"cross_edges {cross_edges}")
+        # increment = cross_edges * (len(adj[vertex]) - 2) - total[2] - total[3]
+        # print(f"increment {increment}")
+        #
+        # if len(adj[vertex]) >= 3:
+        #     total[1] += increment
+        # (
+        #     len(adj[vertex]) * (len(adj[vertex]) - 1) * (len(adj[vertex]) - 2) // 6
+        # )
+        # (cross_edges * (len(adj[vertex]) - 2))
 
         return total
 
@@ -366,10 +406,23 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
 hg = load_hospital()
 # (76994, 154238, 85214, 33450, 93458, 12982)
 
+
 # hg = Hypergraph()
 # hg.add_edge(Hyperedge([0, 1]))
 # hg.add_edge(Hyperedge([0, 2]))
 # hg.add_edge(Hyperedge([0, 3]))
+# hg.add_edge(Hyperedge([0, 4]))
+# hg.add_edge(Hyperedge([2, 3]))
+# hg.add_edge(Hyperedge([3, 4]))
+# hg.add_edge(Hyperedge([5, 1]))
+# hg.add_edge(Hyperedge([5, 2]))
+# hg.add_edge(Hyperedge([5, 3]))
+# hg.add_edge(Hyperedge([5, 4]))
+
+print(hg.has_multiedge())
+
+# hg.add_edge(Hyperedge([3, 4]))
+
 # hg.add_edge(Hyperedge([1, 3]))
 # hg.add_edge(Hyperedge([2, 3]))
 # hg.add_edge(Hyperedge([1, 2]))
