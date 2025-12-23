@@ -273,10 +273,12 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
     adj_set = [set(neighbors) for neighbors in adj]
     n = hg.n
     mat = hg.get_digraph_matrix()
-    # print(graph)
+
+    total = [0] * 2 if order == 3 else [0] * 6
 
     def count_3(vertex: int) -> list[int]:
-        total = [0] * 2
+        nonlocal total
+        # total = [0] * 2
 
         # straight patterns
         neighbors_count = len(adj[vertex])
@@ -298,16 +300,15 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
         return total
 
     def count_4(vertex: int) -> list[int]:
-        total = [0] * 6
-
-        # I motif simmetrici van contati solo a partire dal vertice maggiore
-
+        nonlocal total
+        partial = [0] * 6
         for distal in adj[vertex]:
             # Vicini in comune a distal e vertex
 
             # tipo 2, 3: simmetrici
             common = adj_set[distal].intersection(adj_set[vertex])
             non_common = adj_set[vertex] - common - {distal}
+            outer = adj_set[distal] - common - {vertex}
             # common_less = set([c for c in common if c < vertex])
 
             common_cross = 0
@@ -326,7 +327,6 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
                         non_common_cross += 1
 
             inter_cross = 0
-            inter_cross_less = 0
             for p in common:
                 for u in adj[p]:
                     if (
@@ -337,37 +337,34 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
                     ):
                         inter_cross += 1
 
-            if distal < vertex:
-                # common_less = set([c for c in common if c < vertex])
-                # I cross_edges originano motifs di tipo 3, tutte le altre coppie di vertici motifs di tipo 2
-                total[2] += (len(common) * (len(common) - 1) // 2) - common_cross
-                total[3] += common_cross
+            type5_cross = 0
+            for o in outer:
+                for u in adj[o]:
+                    if u in non_common:
+                        type5_cross += 1
 
-            total[1] += (len(adj[vertex]) - len(common) - 1) * len(common) - inter_cross
-            total[0] += len(non_common) * (len(non_common) - 1) // 2 - non_common_cross
-
-            # print(f"len(common){len(common)}")
-
-        # cross_peripheral = 0
-        # for p in adj[vertex]:
-        #     for u in adj[p]:
-        #         if p > u and u in adj_set[vertex]:
-        #             cross_peripheral += 1
+            partial[0] += (
+                len(non_common) * (len(non_common) - 1) // 2 - non_common_cross
+            )
+            partial[1] += (len(adj[vertex]) - len(common) - 1) * len(
+                common
+            ) - inter_cross
+            partial[2] += (len(common) * (len(common) - 1) // 2) - common_cross
+            partial[3] += common_cross
+            partial[4] += len(non_common) * len(outer) - type5_cross
+            partial[5] += type5_cross
 
         # print(f"vertex {vertex}")
         # print(f"cross_peripheral {cross_peripheral}")
         # print("type0_count", total[0])
-        total[0] //= 3
-        total[1] //= 2
-        total[3] //= 6
-        # tipo 0
 
-        # cross_edges = 0
-        # for distal in adj[vertex]:
-        #     for u in adj[distal]:
-        #         if distal < u and u in adj_set[vertex]:
-        #             cross_edges += 1
-        #
+        total[0] += partial[0]
+        total[1] += partial[1]
+        total[2] += partial[2]
+        total[3] += partial[3]
+        total[4] += partial[4]
+        total[5] += partial[5]
+
         # print(f"vertex {vertex}", f"cross_edges {cross_edges}")
         # increment = cross_edges * (len(adj[vertex]) - 2) - total[2] - total[3]
         # print(f"increment {increment}")
@@ -381,13 +378,24 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
 
         return total
 
-    total = [0] * 2 if order == 3 else [0] * 6
     for node in range(len(adj)):
         if order == 4:
-            total = [x + y for x, y in zip(total, count_4(node))]
+            count_4(node)
+            # total = [x + y for x, y in zip(total, )]
         elif order == 3:
-            total = [x + y for x, y in zip(total, count_3(node))]
+            count_3(node)
+            # total = [x + y for x, y in zip(total, count_3(node))]
         # print(node)
+
+    if order == 3:
+        pass
+    elif order == 4:
+        total[0] //= 3
+        total[1] //= 2
+        total[2] //= 2
+        total[3] //= 12
+        total[4] //= 2
+        total[5] //= 8
 
     return tuple(total)
 
@@ -428,6 +436,12 @@ hg = load_hospital()
 # hg.add_edge(Hyperedge([5, 3]))
 # hg.add_edge(Hyperedge([5, 4]))
 
+# hg = Hypergraph()
+# hg.add_edge(Hyperedge([0, 1]))
+# hg.add_edge(Hyperedge([0, 2]))
+# hg.add_edge(Hyperedge([2, 3]))
+# hg.add_edge(Hyperedge([1, 3]))
+
 print(hg.has_multiedge())
 
 # hg.add_edge(Hyperedge([3, 4]))
@@ -436,8 +450,8 @@ print(hg.has_multiedge())
 # hg.add_edge(Hyperedge([2, 3]))
 # hg.add_edge(Hyperedge([1, 2]))
 
-print("Running motifs base esu")
-print(f"Found {time_function(lambda: esu(hg, 4))[0]} connected subgraphs")
+# print("Running motifs base esu")
+# print(f"Found {time_function(lambda: esu(hg, 4))[0]} connected subgraphs")
 
 # print()
 
