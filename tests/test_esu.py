@@ -311,12 +311,12 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
             # common_less = set([c for c in common if c < vertex])
 
             common_cross = 0
-            common_cross_less = 0
+            # common_cross_less = 0
             for c in common:
                 for u in adj[c]:
                     if c < u and u in common:
-                        if u < vertex and u < distal:
-                            common_cross_less += 1
+                        # if u < vertex and u < distal:
+                        #     common_cross_less += 1
                         common_cross += 1
 
             non_common_cross = 0
@@ -341,7 +341,7 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
                 # common_less = set([c for c in common if c < vertex])
                 # I cross_edges originano motifs di tipo 3, tutte le altre coppie di vertici motifs di tipo 2
                 total[2] += (len(common) * (len(common) - 1) // 2) - common_cross
-                total[3] += common_cross_less
+                total[3] += common_cross
 
             total[1] += (len(adj[vertex]) - len(common) - 1) * len(common) - inter_cross
             total[0] += len(non_common) * (len(non_common) - 1) // 2 - non_common_cross
@@ -357,8 +357,9 @@ def ad_hoc(hg: Hypergraph, order: int) -> tuple[int, ...]:
         # print(f"vertex {vertex}")
         # print(f"cross_peripheral {cross_peripheral}")
         # print("type0_count", total[0])
-        total[1] //= 2
         total[0] //= 3
+        total[1] //= 2
+        total[3] //= 6
         # tipo 0
 
         # cross_edges = 0
@@ -435,8 +436,8 @@ print(hg.has_multiedge())
 # hg.add_edge(Hyperedge([2, 3]))
 # hg.add_edge(Hyperedge([1, 2]))
 
-# print("Running motifs base esu")
-# print(f"Found {time_function(lambda: esu(hg, 4))[0]} connected subgraphs")
+print("Running motifs base esu")
+print(f"Found {time_function(lambda: esu(hg, 4))[0]} connected subgraphs")
 
 # print()
 
