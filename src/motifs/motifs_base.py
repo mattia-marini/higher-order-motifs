@@ -326,3 +326,5 @@ def generate_motifs(N):
             mapping[k].add(tuple(sorted(relabeling_i)))
 
     return mapping, labeling
+
+

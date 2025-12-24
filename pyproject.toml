@@ -17,3 +17,6 @@ dependencies = [
 dev = [
     "snakeviz>=2.2.2",
 ]
+
+[tool.ruff]
+line-length = 120  # default is 88

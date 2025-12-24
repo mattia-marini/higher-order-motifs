@@ -11,7 +11,7 @@ from src.motifs.motifs2 import motifs_order_3, motifs_order_4
 from src.motifs.motifs_base import generate_motifs
 
 
-class Loader:
+class OldLoader:
     motifs_function = {3: motifs_order_3, 4: motifs_order_4}
 
     def __init__(self, dataset):
@@ -41,9 +41,7 @@ class Loader:
         loader_name = f"load_{self._dataset}"
         loader = getattr(loaders, loader_name, None)
         if not loader:
-            raise ValueError(
-                f"Loader function '{loader_name}' not found in app.loaders"
-            )
+            raise ValueError(f"Loader function '{loader_name}' not found in app.loaders")
 
         # Load data using the loader
         # edges = None
@@ -62,7 +60,9 @@ class Loader:
         return hg, motifs
 
     def get_motifs_cached(self, order: int, hg: Hypergraph):
-        cache_file = f"{cfg.MOTIFS_CACHE_DIR}/{self._dataset}_{order}_{self._construction_method.description()}_{hg.hash()}.npz"
+        cache_file = (
+            f"{cfg.MOTIFS_CACHE_DIR}/{self._dataset}_{order}_{self._construction_method.description()}_{hg.hash()}.npz"
+        )
         motifs = None
 
         if os.path.exists(cache_file) and not self._ignore_cache:
@@ -120,6 +120,39 @@ class Loader:
         return zipped
 
 
+class Loader:
+    def __init__(self, dataset):
+        self._dataset: str = dataset
+        self._order: int = 3
+        self._construction_method: ConstructionMethodBase = StandardConstructionMethod()
+
+    def order(self, order):
+        if order not in [3, 4]:
+            raise ValueError("Order must be 3 or 4")
+        self._order = order
+        return self
+
+    def construction_method(self, construction_method: ConstructionMethodBase):
+        self._construction_method = construction_method
+        return self
+
+    def load(self) -> Hypergraph:
+        print(f'Loading {Colors.BOLD}"{self._dataset}"{Colors.RESET} dataset')
+
+        # Dynamically call the appropriate loader function
+        loader_name = f"load_{self._dataset}"
+        loader = getattr(loaders, loader_name, None)
+        if not loader:
+            raise ValueError(f"Loader function '{loader_name}' not found in app.loaders")
+
+        hg = cast(Hypergraph, loader(self._construction_method))
+        hg.compute_adjacency()
+
+        print(f"{Colors.GREEN}Loaded hypergraph for dataset {self._dataset}{Colors.RESET}")
+
+        return hg
+
+
 def time_function(func, *args, **kwargs):
     """
     Times how long 'func' takes to run with the provided arguments.
@@ -128,12 +161,7 @@ def time_function(func, *args, **kwargs):
     start = time.time()
     result = func(*args, **kwargs)
     end = time.time()
-    print(
-        Colors.DIM
-        + Colors.BRIGHT_CYAN
-        + f"Time elapsed: {end - start:.4f} seconds"
-        + Colors.RESET
-    )
+    print(Colors.DIM + Colors.BRIGHT_CYAN + f"Time elapsed: {end - start:.4f} seconds" + Colors.RESET)
     elapsed = end - start
     return result, elapsed
 

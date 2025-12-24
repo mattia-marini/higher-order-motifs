@@ -1,6 +1,6 @@
 from src.aggregate import aggregate
 from src.graph import NormalizationMethod, StandardConstructionMethod
-from tests.util import Colors, Loader, time_function
+from tests.util import Colors, OldLoader, time_function
 
 
 def time_aggregate(hg, motifs):
@@ -15,7 +15,7 @@ def time_aggregate(hg, motifs):
 
 
 (hg, motifs), _ = time_function(
-    lambda: Loader("hospital")
+    lambda: OldLoader("hospital")
     .order(3)
     .construction_method(
         StandardConstructionMethod(
@@ -29,7 +29,7 @@ def time_aggregate(hg, motifs):
 time_aggregate(hg, motifs)
 
 (hg, motifs), _ = time_function(
-    lambda: Loader("hospital")
+    lambda: OldLoader("hospital")
     .order(3)
     .construction_method(
         StandardConstructionMethod(
@@ -44,7 +44,7 @@ time_aggregate(hg, motifs)
 
 
 (hg, motifs), _ = time_function(
-    lambda: Loader("hospital")
+    lambda: OldLoader("hospital")
     .order(4)
     .construction_method(
         StandardConstructionMethod(
@@ -59,7 +59,7 @@ time_aggregate(hg, motifs)
 
 
 (hg, motifs), _ = time_function(
-    lambda: Loader("hospital")
+    lambda: OldLoader("hospital")
     .order(4)
     .construction_method(
         StandardConstructionMethod(
