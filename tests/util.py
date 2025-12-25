@@ -153,7 +153,7 @@ class Loader:
         return hg
 
 
-def time_function(func, *args, **kwargs):
+def time_function_p(func, *args, **kwargs):
     """
     Times how long 'func' takes to run with the provided arguments.
     Returns (result, elapsed_time).
@@ -162,6 +162,18 @@ def time_function(func, *args, **kwargs):
     result = func(*args, **kwargs)
     end = time.time()
     print(Colors.DIM + Colors.BRIGHT_CYAN + f"Time elapsed: {end - start:.4f} seconds" + Colors.RESET)
+    elapsed = end - start
+    return result, elapsed
+
+
+def time_function(func, *args, **kwargs):
+    """
+    Times how long 'func' takes to run with the provided arguments.
+    Returns (result, elapsed_time).
+    """
+    start = time.time()
+    result = func(*args, **kwargs)
+    end = time.time()
     elapsed = end - start
     return result, elapsed
 
