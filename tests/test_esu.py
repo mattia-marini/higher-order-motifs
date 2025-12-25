@@ -53,6 +53,26 @@ def latex_table():
                 4: 1,
             },
         },
+        "primary_school": {
+            "esu": {
+                3: 15,
+                4: 15,
+            },
+            "ad_hoc": {
+                3: 15,
+                4: 15,
+            },
+        },
+        "high_school": {
+            "esu": {
+                3: 15,
+                4: 15,
+            },
+            "ad_hoc": {
+                3: 15,
+                4: 15,
+            },
+        },
     }
 
     times_table_body = ""

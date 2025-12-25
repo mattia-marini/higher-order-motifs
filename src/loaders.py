@@ -8,6 +8,277 @@ import config as cfg
 from src.graph import *
 
 
+# "Small" datasets
+def load_primary_school(
+    construction_method: ConstructionMethodBase = StandardConstructionMethod(),
+) -> Hypergraph:
+    import networkx as nx
+
+    dataset = f"{cfg.DATASET_DIR}/primaryschool.csv"
+
+    fopen = open(dataset, "r")
+    lines = fopen.readlines()
+
+    graph = {}
+    for l in lines:
+        t, a, b, c, d = l.split()
+        t = int(t) - 31220
+        a = int(a)
+        b = int(b)
+        if t in graph:
+            graph[t].append((a, b))
+        else:
+            graph[t] = [(a, b)]
+
+    fopen.close()
+
+    def standard_construction():
+        cm = cast(StandardConstructionMethod, construction_method)
+        hg = Hypergraph()
+
+        for k in graph.keys():
+            e_k = graph[k]
+            G = nx.Graph(e_k, directed=False)
+            c = list(nx.find_cliques(G))
+            for i in c:
+                i = tuple(sorted(i))
+
+                if not (cm.limit_edge_size and len(i) > cm.limit_edge_size):
+                    if cm.weighted:
+                        if hg.has_edge_with_nodes(i):
+                            handle = hg.get_first_edges_by_nodes(i)
+                            handle.weight += 1.0
+                        else:
+                            hg.add_edge(Hyperedge(i, 1.0))
+                    else:
+                        if not hg.has_edge_with_nodes(i):
+                            hg.add_edge(Hyperedge(i))
+
+        hg.normalize_weights(cm.normalization_method)
+        return hg
+
+    def time_window_construction():
+        cm = cast(TimeWindowConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    def temporal_path_construction():
+        cm = cast(TemporalPathConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    if isinstance(construction_method, StandardConstructionMethod):
+        return standard_construction()
+    elif isinstance(construction_method, TimeWindowConstructionMethod):
+        return time_window_construction()
+    elif isinstance(construction_method, TemporalPathConstructionMethod):
+        return temporal_path_construction()
+    else:
+        raise ValueError("Unknown construction method")
+
+
+def load_conference(
+    construction_method: ConstructionMethodBase = StandardConstructionMethod(),
+) -> Hypergraph:
+    import networkx as nx
+
+    dataset = f"{cfg.DATASET_DIR}/conference.dat"
+
+    fopen = open(dataset, "r")
+    lines = fopen.readlines()
+
+    graph = {}
+    for l in lines:
+        t, a, b = l.split()
+        t = int(t) - 32520
+        a = int(a)
+        b = int(b)
+        if t in graph:
+            graph[t].append((a, b))
+        else:
+            graph[t] = [(a, b)]
+
+    fopen.close()
+
+    def standard_construction():
+        cm = cast(StandardConstructionMethod, construction_method)
+        hg = Hypergraph()
+
+        for k in graph.keys():
+            e_k = graph[k]
+            G = nx.Graph(e_k, directed=False)
+            c = list(nx.find_cliques(G))
+            for i in c:
+                i = tuple(sorted(i))
+
+                if not (cm.limit_edge_size and len(i) > cm.limit_edge_size):
+                    if cm.weighted:
+                        if hg.has_edge_with_nodes(i):
+                            handle = hg.get_first_edges_by_nodes(i)
+                            handle.weight += 1.0
+                        else:
+                            hg.add_edge(Hyperedge(i, 1.0))
+                    else:
+                        if not hg.has_edge_with_nodes(i):
+                            hg.add_edge(Hyperedge(i))
+
+        hg.normalize_weights(cm.normalization_method)
+        return hg
+
+    def time_window_construction():
+        cm = cast(TimeWindowConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    def temporal_path_construction():
+        cm = cast(TemporalPathConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    if isinstance(construction_method, StandardConstructionMethod):
+        return standard_construction()
+    elif isinstance(construction_method, TimeWindowConstructionMethod):
+        return time_window_construction()
+    elif isinstance(construction_method, TemporalPathConstructionMethod):
+        return temporal_path_construction()
+    else:
+        raise ValueError("Unknown construction method")
+
+
+def load_high_school(
+    construction_method: ConstructionMethodBase = StandardConstructionMethod(),
+) -> Hypergraph:
+    import networkx as nx
+
+    dataset = f"{cfg.DATASET_DIR}/High-School_data_2013.csv"
+
+    fopen = open(dataset, "r")
+    lines = fopen.readlines()
+
+    graph = {}
+    for l in lines:
+        t, a, b, c, d = l.split()
+        t = int(t) - 1385982020
+        a = int(a)
+        b = int(b)
+        if t in graph:
+            graph[t].append((a, b))
+        else:
+            graph[t] = [(a, b)]
+
+    fopen.close()
+
+    def standard_construction():
+        cm = cast(StandardConstructionMethod, construction_method)
+        hg = Hypergraph()
+
+        for k in graph.keys():
+            e_k = graph[k]
+            G = nx.Graph(e_k, directed=False)
+            c = list(nx.find_cliques(G))
+            for i in c:
+                i = tuple(sorted(i))
+
+                if not (cm.limit_edge_size and len(i) > cm.limit_edge_size):
+                    if cm.weighted:
+                        if hg.has_edge_with_nodes(i):
+                            handle = hg.get_first_edges_by_nodes(i)
+                            handle.weight += 1.0
+                        else:
+                            hg.add_edge(Hyperedge(i, 1.0))
+                    else:
+                        if not hg.has_edge_with_nodes(i):
+                            hg.add_edge(Hyperedge(i))
+
+        hg.normalize_weights(cm.normalization_method)
+        return hg
+
+    def time_window_construction():
+        cm = cast(TimeWindowConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    def temporal_path_construction():
+        cm = cast(TemporalPathConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    if isinstance(construction_method, StandardConstructionMethod):
+        return standard_construction()
+    elif isinstance(construction_method, TimeWindowConstructionMethod):
+        return time_window_construction()
+    elif isinstance(construction_method, TemporalPathConstructionMethod):
+        return temporal_path_construction()
+    else:
+        raise ValueError("Unknown construction method")
+
+
+def load_hospital(
+    construction_method: ConstructionMethodBase = StandardConstructionMethod(),
+) -> Hypergraph:
+    import networkx as nx
+
+    dataset = f"{cfg.DATASET_DIR}/hospital.dat"
+
+    fopen = open(dataset, "r")
+    lines = fopen.readlines()
+
+    graph = {}
+    for l in lines:
+        t, a, b, c, d = l.split()
+        t = int(t) - 140
+        a = int(a)
+        b = int(b)
+        if t in graph:
+            graph[t].append((a, b))
+        else:
+            graph[t] = [(a, b)]
+
+    fopen.close()
+
+    def standard_construction():
+        cm = cast(StandardConstructionMethod, construction_method)
+        hg = Hypergraph()
+
+        for k in graph.keys():
+            e_k = graph[k]
+            G = nx.Graph(e_k, directed=False)
+            c = list(nx.find_cliques(G))
+            for i in c:
+                i = tuple(sorted(i))
+
+                if not (cm.limit_edge_size and len(i) > cm.limit_edge_size):
+                    if cm.weighted:
+                        if hg.has_edge_with_nodes(i):
+                            handle = hg.get_first_edges_by_nodes(i)
+                            handle.weight += 1.0
+                        else:
+                            hg.add_edge(Hyperedge(i, 1.0))
+                    else:
+                        if not hg.has_edge_with_nodes(i):
+                            hg.add_edge(Hyperedge(i))
+
+        hg.normalize_weights(cm.normalization_method)
+        return hg
+
+    def time_window_construction():
+        cm = cast(TimeWindowConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    def temporal_path_construction():
+        cm = cast(TemporalPathConstructionMethod, construction_method)
+        raise NotImplementedError()
+
+    if isinstance(construction_method, StandardConstructionMethod):
+        return standard_construction()
+    elif isinstance(construction_method, TimeWindowConstructionMethod):
+        return time_window_construction()
+    elif isinstance(construction_method, TemporalPathConstructionMethod):
+        return temporal_path_construction()
+    else:
+        raise ValueError("Unknown construction method")
+
+    # plot_dist_hyperedges(tot, "hospital")
+    # print(len(edges))
+    # count(tot)
+    # return edges
+
+
+# Following datasets are big and could be hard to run locally
 def load_facebook_hs():
     import pandas as pd
 
@@ -224,228 +495,6 @@ def load_PACS_single(N, S):
     return edges
 
 
-def load_high_school_duplicates(N):
-    import networkx as nx
-
-    dataset = "{}/High-School_data_2013.csv".format(cfg.DATASET_DIR)
-
-    fopen = open(dataset, "r")
-    lines = fopen.readlines()
-
-    graph = {}
-    for l in lines:
-        t, a, b, c, d = l.split()
-        t = int(t) - 1385982020
-        a = int(a)
-        b = int(b)
-        if t in graph:
-            graph[t].append((a, b))
-        else:
-            graph[t] = [(a, b)]
-
-    fopen.close()
-
-    tot = {}
-    edges = {}
-
-    for k in graph.keys():
-        e_k = graph[k]
-        G = nx.Graph(e_k, directed=False)
-        c = list(nx.find_cliques(G))
-        for i in c:
-            i = tuple(sorted(i))
-
-            if len(i) <= N:
-                if i in edges:
-                    edges[i] += 1
-                else:
-                    edges[i] = 1
-
-            if i in tot:
-                tot[i] += 1
-            else:
-                tot[i] = 1
-
-    # plot_dist_hyperedges_weights(tot, "high_school")
-    # print(len(edges))
-    # count_weight(edges)
-    return edges, tot
-
-
-def load_high_school(N):
-    import networkx as nx
-
-    dataset = "{}/High-School_data_2013.csv".format(cfg.DATASET_DIR)
-
-    fopen = open(dataset, "r")
-    lines = fopen.readlines()
-
-    graph = {}
-    for l in lines:
-        t, a, b, c, d = l.split()
-        t = int(t) - 1385982020
-        a = int(a)
-        b = int(b)
-        if t in graph:
-            graph[t].append((a, b))
-        else:
-            graph[t] = [(a, b)]
-
-    fopen.close()
-
-    tot = set()
-    edges = set()
-
-    for k in graph.keys():
-        e_k = graph[k]
-        G = nx.Graph(e_k, directed=False)
-        c = list(nx.find_cliques(G))
-        for i in c:
-            i = tuple(sorted(i))
-
-            if len(i) <= N:
-                edges.add(i)
-
-            tot.add(i)
-
-    # plot_dist_hyperedges(tot, "high_school")
-    # print(count(tot))
-    # print(len(edges))
-    return edges
-
-
-def load_primary_school_duplicates(N):
-    import networkx as nx
-
-    dataset = "{}/primaryschool.csv".format(cfg.DATASET_DIR)
-
-    fopen = open(dataset, "r")
-    lines = fopen.readlines()
-
-    graph = {}
-    for l in lines:
-        t, a, b, c, d = l.split()
-        t = int(t) - 31220
-        a = int(a)
-        b = int(b)
-        if t in graph:
-            graph[t].append((a, b))
-        else:
-            graph[t] = [(a, b)]
-
-    fopen.close()
-
-    tot = {}
-    edges = {}
-
-    for k in graph.keys():
-        e_k = graph[k]
-        G = nx.Graph(e_k, directed=False)
-        c = list(nx.find_cliques(G))
-        for i in c:
-            i = tuple(sorted(i))
-
-            if len(i) <= N:
-                if i in edges:
-                    edges[i] += 1
-                else:
-                    edges[i] = 1
-
-            if i in tot:
-                tot[i] += 1
-            else:
-                tot[i] = 1
-
-    # plot_dist_hyperedges_weights(tot, "primary_school")
-    # print(len(edges))
-    # count_weight(edges)
-    return edges, tot
-
-
-def load_primary_school(N):
-    import networkx as nx
-
-    dataset = "{}/primaryschool.csv".format(cfg.DATASET_DIR)
-
-    fopen = open(dataset, "r")
-    lines = fopen.readlines()
-
-    graph = {}
-    for l in lines:
-        t, a, b, c, d = l.split()
-        t = int(t) - 31220
-        a = int(a)
-        b = int(b)
-        if t in graph:
-            graph[t].append((a, b))
-        else:
-            graph[t] = [(a, b)]
-
-    fopen.close()
-
-    tot = set()
-    edges = set()
-
-    for k in graph.keys():
-        e_k = graph[k]
-        G = nx.Graph(e_k, directed=False)
-        c = list(nx.find_cliques(G))
-        for i in c:
-            i = tuple(sorted(i))
-
-            if len(i) <= N:
-                edges.add(i)
-
-            tot.add(i)
-
-    ##plot_dist_hyperedges(tot, "primary_school")
-    # print(len(edges))
-    # print(count(tot))
-    return edges
-
-
-def load_conference(N):
-    import networkx as nx
-
-    dataset = "{}/conference.dat".format(cfg.DATASET_DIR)
-
-    fopen = open(dataset, "r")
-    lines = fopen.readlines()
-
-    graph = {}
-    for l in lines:
-        t, a, b = l.split()
-        t = int(t) - 32520
-        a = int(a)
-        b = int(b)
-        if t in graph:
-            graph[t].append((a, b))
-        else:
-            graph[t] = [(a, b)]
-
-    fopen.close()
-
-    tot = set()
-    edges = set()
-
-    for k in graph.keys():
-        e_k = graph[k]
-        G = nx.Graph(e_k, directed=False)
-        c = list(nx.find_cliques(G))
-        for i in c:
-            i = tuple(sorted(i))
-
-            if len(i) <= N:
-                edges.add(i)
-
-            tot.add(i)
-
-    # plot_dist_hyperedges(tot, "conference")
-    # print(len(edges))
-    # print(count(tot))
-    return edges
-
-
 def load_conference_duplicates(N):
     import networkx as nx
 
@@ -575,126 +624,6 @@ def load_workplace_duplicates(N):
     # plot_dist_hyperedges(tot, "workplace")
     # print(len(edges))
     return edges
-
-
-def load_hospital_duplicates(N):
-    import networkx as nx
-
-    dataset = "{}/hospital.dat".format(cfg.DATASET_DIR)
-
-    fopen = open(dataset, "r")
-    lines = fopen.readlines()
-
-    graph = {}
-    for l in lines:
-        t, a, b, c, d = l.split()
-        t = int(t) - 140
-        a = int(a)
-        b = int(b)
-        if t in graph:
-            graph[t].append((a, b))
-        else:
-            graph[t] = [(a, b)]
-
-    fopen.close()
-
-    tot = {}
-    edges = {}
-
-    for k in graph.keys():
-        e_k = graph[k]
-        G = nx.Graph(e_k, directed=False)
-        c = list(nx.find_cliques(G))
-        for i in c:
-            i = tuple(sorted(i))
-
-            if len(i) <= N:
-                if i in edges:
-                    edges[i] += 1
-                else:
-                    edges[i] = 1
-
-            if i in tot:
-                tot[i] += 1
-            else:
-                tot[i] = 1
-
-    # print(edges)
-    # plot_dist_hyperedges_weights(tot, "hospital")
-    # print(len(edges))
-    # count_weight(edges)
-    return edges, tot
-
-
-def load_hospital(
-    construction_method: ConstructionMethodBase = StandardConstructionMethod(),
-) -> Hypergraph:
-    import networkx as nx
-
-    dataset = f"{cfg.DATASET_DIR}/hospital.dat"
-
-    fopen = open(dataset, "r")
-    lines = fopen.readlines()
-
-    graph = {}
-    for l in lines:
-        t, a, b, c, d = l.split()
-        t = int(t) - 140
-        a = int(a)
-        b = int(b)
-        if t in graph:
-            graph[t].append((a, b))
-        else:
-            graph[t] = [(a, b)]
-
-    fopen.close()
-
-    def standard_construction():
-        cm = cast(StandardConstructionMethod, construction_method)
-        hg = Hypergraph()
-
-        for k in graph.keys():
-            e_k = graph[k]
-            G = nx.Graph(e_k, directed=False)
-            c = list(nx.find_cliques(G))
-            for i in c:
-                i = tuple(sorted(i))
-
-                if not (cm.limit_edge_size and len(i) > cm.limit_edge_size):
-                    if cm.weighted:
-                        if hg.has_edge_with_nodes(i):
-                            handle = hg.get_first_edges_by_nodes(i)
-                            handle.weight += 1.0
-                        else:
-                            hg.add_edge(Hyperedge(i, 1.0))
-                    else:
-                        if not hg.has_edge_with_nodes(i):
-                            hg.add_edge(Hyperedge(i))
-
-        hg.normalize_weights(cm.normalization_method)
-        return hg
-
-    def time_window_construction():
-        cm = cast(TimeWindowConstructionMethod, construction_method)
-        raise NotImplementedError()
-
-    def temporal_path_construction():
-        cm = cast(TemporalPathConstructionMethod, construction_method)
-        raise NotImplementedError()
-
-    if isinstance(construction_method, StandardConstructionMethod):
-        return standard_construction()
-    elif isinstance(construction_method, TimeWindowConstructionMethod):
-        return time_window_construction()
-    elif isinstance(construction_method, TemporalPathConstructionMethod):
-        return temporal_path_construction()
-    else:
-        raise ValueError("Unknown construction method")
-
-    # plot_dist_hyperedges(tot, "hospital")
-    # print(len(edges))
-    # count(tot)
-    # return edges
 
 
 def load_DBLP(N):
