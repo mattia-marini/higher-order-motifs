@@ -35,27 +35,27 @@ def latex_table():
     tests = {
         "hospital": {
             "esu": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
             "ad_hoc": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
         },
         "conference": {
             "esu": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
             "ad_hoc": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
         },
     }
 
-    table_body = ""
+    times_table_body = ""
 
     # Loading graphs
     hypergraphs = {}
@@ -113,9 +113,9 @@ def latex_table():
         t[1] = f"$>$ {tests[dataset]['ad_hoc'][3]} s" if t[1] is None else f"{int(t[1][1] * 1000)} ms"
         t[2] = f"$>$ {tests[dataset]['esu'][4]} s" if t[2] is None else f"{int(t[2][1] * 1000)} ms"
         t[3] = f"$>$ {tests[dataset]['ad_hoc'][4]} s" if t[3] is None else f"{int(t[3][1] * 1000)} ms"
-        table_body += f"{dataset} & {t[0]} & {t[1]} & {t[2]} & {t[3]} \\\\\n"
+        times_table_body += f"{dataset} & {t[0]} & {t[1]} & {t[2]} & {t[3]} \\\\\n"
 
-    header = r"""
+    times_table_header = r"""
 \begin{center}
 	\begin{tabular}{l l l l l}
         \toprule 
@@ -124,13 +124,33 @@ def latex_table():
         Dataset & Esu & Ad-hoc & Esu & Ad-hoc \\
         \midrule
     """
-    footer = r"""
+    times_table_footer = r"""
         \bottomrule
 	\end{tabular}
 \end{center}
     """
 
-    print(f"{header}{table_body}{footer}")
+    # Dataset table
+    dataset_table_header = r"""
+\begin{center}
+	\begin{tabular}{l l l}
+		\toprule
+		Dataset & Nodes & Edges \\
+		\midrule
+    Hospital & 15 & 20 \\
+        """
+    datasets_table_body = ""
+    dataset_table_footer = r"""
+        		\bottomrule
+	\end{tabular}
+\end{center}
+"""
+    for dataset in tests.keys():
+        hg = hypergraphs[dataset][3]
+        datasets_table_body += f"{dataset} & {hg.n()} & {hg.e()} \\\\\n"
+
+    print(f"{dataset_table_header}{datasets_table_body}{dataset_table_footer}")
+    print(f"{times_table_header}{times_table_body}{times_table_footer}")
 
 
 if __name__ == "__main__":
