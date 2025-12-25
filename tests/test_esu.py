@@ -2,11 +2,10 @@ from src.loaders import load_hospital
 from src.motifs.esu import ad_hoc, esu
 from tests.util import Colors, Loader, time_function
 
-hg = load_hospital()
 # (76994, 154238, 85214, 33450, 93458, 12982)
 
-assert not hg.has_multiedge()
-
+# assert not hg.has_multiedge()
+# hg = load_hospital()
 # print("Running motifs base esu")
 # print(f"Found {time_function(lambda: esu(hg, 4))[0]} connected subgraphs")
 #
@@ -19,18 +18,21 @@ assert not hg.has_multiedge()
 def latex_table():
     tests = {
         "hospital": {
-            "esu": {
-                3,
-                4,
-            },
+            "esu": {3},
             "ad_hoc": {3, 4},
         },
-        # "conference": {
-        #     "esu": {
-        #         3,
-        #     },
-        #     "ad_hoc": {3, 4},
-        # },
+        "conference": {
+            "esu": {3},
+            "ad_hoc": {3, 4},
+        },
+        "primary_school": {
+            "esu": {3},
+            "ad_hoc": {3, 4},
+        },
+        "high_school": {
+            "esu": {3},
+            "ad_hoc": {3, 4},
+        },
     }
 
     table_body = ""
@@ -57,8 +59,8 @@ def latex_table():
             print(f"{Colors.GREEN}Found {rv} connected subgraphs {Colors.RESET}")
             ad_hoc_times[o] = duration
 
-        esu_times_str = {k: "\\" if v < 0 else f"{int(v * 1000)} ms" for k, v in esu_times.items()}
-        ad_hoc_times_str = {k: "\\" if v < 0 else f"{int(v * 1000)} ms" for k, v in ad_hoc_times.items()}
+        esu_times_str = {k: "/" if v < 0 else f"{int(v * 1000)} ms" for k, v in esu_times.items()}
+        ad_hoc_times_str = {k: "/" if v < 0 else f"{int(v * 1000)} ms" for k, v in ad_hoc_times.items()}
 
         print(esu_times_str)
         print(ad_hoc_times_str)
