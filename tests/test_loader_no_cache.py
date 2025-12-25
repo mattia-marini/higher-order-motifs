@@ -1,7 +1,7 @@
 from src.graph import NormalizationMethod, StandardConstructionMethod
-from tests.util import Colors, OldLoader, time_function
+from tests.util import Colors, OldLoader, time_function_p
 
-(hg, motifs), _ = time_function(
+(hg, motifs), _ = time_function_p(
     lambda: OldLoader("hospital")
     .order(3)
     .construction_method(
@@ -22,7 +22,7 @@ print(
     f"{Colors.BOLD}{Colors.GREEN}Total instances: {Colors.RESET}{Colors.GREEN}{total}{Colors.RESET}"
 )
 
-(hg, motifs), _ = time_function(
+(hg, motifs), _ = time_function_p(
     lambda: OldLoader("hospital")
     .order(3)
     .construction_method(
@@ -43,7 +43,7 @@ print(
     f"{Colors.BOLD}{Colors.GREEN}Total instances: {Colors.RESET}{Colors.GREEN}{total}{Colors.RESET}"
 )
 
-(hg, motifs), _ = time_function(
+(hg, motifs), _ = time_function_p(
     lambda: OldLoader("hospital")
     .order(4)
     .construction_method(
@@ -64,7 +64,7 @@ print(
     f"{Colors.BOLD}{Colors.GREEN}Total instances: {Colors.RESET}{Colors.GREEN}{total}{Colors.RESET}"
 )
 
-(hg, motifs), _ = time_function(
+(hg, motifs), _ = time_function_p(
     lambda: OldLoader("hospital")
     .order(4)
     .construction_method(
