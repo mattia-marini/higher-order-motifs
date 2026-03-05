@@ -8,7 +8,7 @@ from src.loaders import *
 from src.stats import MotifStat
 
 
-def count_motifs(hg: Hypergraph, order: int) -> tuple[MotifStat, ...]:
+def count_motifs(hg: Hypergraph, order: int) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
     assert order in (3, 4), "Only order 3 and 4 motifs are supported"
     assert not hg.has_multiedge()
 
@@ -28,7 +28,6 @@ def count_motifs(hg: Hypergraph, order: int) -> tuple[MotifStat, ...]:
         for u in adj[vertex]:
             sum += sqrt(adj_mat[vertex][u])
 
-        stats[0].intensity = 0
         for i in range(len(adj[vertex]) - 1):
             u = adj[vertex][i]
             curr = sqrt(adj_mat[vertex][u])
@@ -40,7 +39,7 @@ def count_motifs(hg: Hypergraph, order: int) -> tuple[MotifStat, ...]:
             for w in adj[u]:
                 if w in adj_set[vertex] and w > u:
                     stats[0].intensity -= sqrt(adj_mat[vertex][u] * adj_mat[vertex][w])
-                    stats[1].intensity += sqrt(adj_mat[vertex][u] * adj_mat[vertex][w] * adj_mat[u][w])
+                    stats[1].intensity += (adj_mat[vertex][u] * adj_mat[vertex][w] * adj_mat[u][w]) ** (1 / 3)
                     cross_edges += 1
 
         stats[0].count += (neighbors_count * (neighbors_count - 1) // 2) - cross_edges
@@ -102,6 +101,13 @@ def count_motifs(hg: Hypergraph, order: int) -> tuple[MotifStat, ...]:
     normalizer_coefficient = {3: [1, 3], 4: [3, 2, 2, 12, 2, 8]}
     for i in range(distinct_motifs_count):
         stats[i].count //= normalizer_coefficient[order][i]
-        stats[i].intensity //= normalizer_coefficient[order][i]
+        stats[i].intensity /= normalizer_coefficient[order][i] * stats[i].count if stats[i].count > 0 else 1
 
-    return tuple(stats)
+    rv = {}
+    if order == 3:
+        rv = {
+            ((1, 2), (1, 3)): stats[0],
+            ((1, 2), (1, 3), (2, 3)): stats[1],
+        }
+
+    return rv
