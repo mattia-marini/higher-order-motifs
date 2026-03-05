@@ -52,6 +52,27 @@ class MotifStat:
         self.actual_intensity += other.actual_intensity
         return self
 
+    def __sub__(self, other) -> MotifStat:
+        count = self.count - other.count
+        intensity = 0.0 if count == 0 else self.intensity * self.count / count - other.intensity * other.count / count
+
+        return MotifStat(
+            count,
+            intensity,
+            self.coherence - other.coherence,
+            self.actual_intensity - other.actual_intensity,
+        )
+
+    def __isub__(self, other) -> MotifStat:
+        count = self.count - other.count
+        intensity = 0.0 if count == 0 else self.intensity * self.count / count - other.intensity * other.count / count
+
+        self.count = count
+        self.intensity = intensity
+        self.coherence -= other.coherence
+        self.actual_intensity -= other.actual_intensity
+        return self
+
 
 def aggregate(hg: Hypergraph, motifs: MotifsRv):
     aggregated = []

@@ -7,7 +7,7 @@ from src.motifs.motifs_count_base import generate_motifs
 from tests.util import Loader
 
 hg = Loader("high_school").construction_method(StandardConstructionMethod(weighted=True)).load()
-hg = hg.filter_orders([2], retain=True)
+# hg = hg.filter_orders([2], retain=True)
 
 # for i, x in enumerate(["a", "b", "c"]):
 #     print(i, x)
