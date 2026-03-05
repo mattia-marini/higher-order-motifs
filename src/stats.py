@@ -1,29 +1,56 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from src.graph import Hypergraph
-from src.motifs.motifs_base import MotifsRv
 
 from . import utils
 
+MotifsRv = list[tuple[tuple[tuple[int, ...]], list[tuple[int, ...]]]]
+Motif = tuple[tuple[int]]
+MotifMapping = dict[Motif, set[Motif]]
+MotifLabeling = dict[Motif, list[Motif]]
 
-@dataclass()
-class AggregatedInfos:
-    count: int
-    intensity: float
-    mean_coherence: float
-    actual_intensity: float
+
+@dataclass
+class MotifStat:
+    count: int = 0
+    intensity: float = 0
+    coherence: float = 0
+    actual_intensity: float = 0
 
     def __str__(self):
         return (
             f"AggregatedInfos("
             f"count={self.count}, "
             f"intensity={self.intensity}, "
-            f"mean_coherence={self.mean_coherence}, "
+            f"mean_coherence={self.coherence}, "
             f"actual_intensity={self.actual_intensity}"
             f")"
         )
 
     __repr__ = __str__
+
+    def __add__(self, other) -> MotifStat:
+        count = self.count + other.count
+        intensity = 0.0 if count == 0 else self.intensity * self.count / count + other.intensity * other.count / count
+
+        return MotifStat(
+            count,
+            intensity,
+            self.coherence + other.coherence,
+            self.actual_intensity + other.actual_intensity,
+        )
+
+    def __iadd__(self, other) -> MotifStat:
+        count = self.count + other.count
+        intensity = 0.0 if count == 0 else self.intensity * self.count / count + other.intensity * other.count / count
+
+        self.count = count
+        self.intensity = intensity
+        self.coherence += other.coherence
+        self.actual_intensity += other.actual_intensity
+        return self
 
 
 def aggregate(hg: Hypergraph, motifs: MotifsRv):
@@ -46,7 +73,7 @@ def aggregate(hg: Hypergraph, motifs: MotifsRv):
             total_actual_intensity += intensity * coherence
 
         aggregated.append(
-            AggregatedInfos(
+            MotifStat(
                 count,
                 total_intensity,
                 total_coherence / count if count != 0 else 1,

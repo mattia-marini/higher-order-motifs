@@ -1,10 +1,13 @@
 import itertools
 from typing import Iterable, List
 
-from src.graph import Hypergraph
-from src.utils import is_connected, power_set, relabel
-
-MotifsRv = List[tuple[tuple[tuple[int, ...]], List[tuple[int, ...]]]]
+from src.graph import (
+    Hypergraph,
+    RawFrozenHypergraphUnWeighted,
+    RawHypergraphUnWeighted,
+)
+from src.stats import Motif, MotifStat
+from src.utils import intensity, is_connected, power_set, relabel_unweighted, relabel_weighted
 
 
 def motifs_ho_not_full(hg: Hypergraph, N, visited):
@@ -83,7 +86,11 @@ def motifs_standard(hg: Hypergraph, N, visited):
             tuple contains a motif (as a tuple of edges) and its corresponding
             count in the hypergraph.
     """
-    mapping, labeling = generate_motifs(N)
+    rep_list, rep_map = generate_motifs(N)
+    result = {rep: MotifStat() for rep in rep_list}
+
+    # rep_list, rep_map = generate_motifs(N)
+    # result = {rep: MotifStat() for rep in rep_list}
 
     # if not weighted:
     #     hg = set([tuple(sorted(t)) for t in hg])
@@ -111,7 +118,7 @@ def motifs_standard(hg: Hypergraph, N, visited):
 
     def graph_extend(sub, ext, v, n_sub):
         if len(sub) == N:
-            count_motif(hg, sub, labeling, visited)
+            count_motif(hg, sub, rep_map, result, visited)
             return
 
         while len(ext) > 0:
@@ -135,10 +142,10 @@ def motifs_standard(hg: Hypergraph, N, visited):
         for u in graph[v]:
             if u > v:
                 v_ext.add(u)
-        k += 1
-        if k % 5 == 0:
-            print(f"Vertex {k}")
-            # print(k, len(z), TOT)
+        # k += 1
+        # if k % 5 == 0:
+        #     print(f"Vertex {k}")
+        #     print(k, len(z), TOT)
 
         graph_extend(set([v]), v_ext, v, set(graph[v]))
         c += 1
@@ -149,9 +156,9 @@ def motifs_standard(hg: Hypergraph, N, visited):
 
     # with open('motifs_{}.pickle'.format(N), 'wb') as handle:
     # pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    out = combine_labelings(mapping, labeling)
+    # out = combine_labelings(rep_list, rep_map)
 
-    return out
+    return result
 
 
 def motifs_ho_full(hg: Hypergraph, N):
@@ -173,7 +180,8 @@ def motifs_ho_full(hg: Hypergraph, N):
             size N.
 
     """
-    mapping, labeling = generate_motifs(N)
+    rep_list, rep_map = generate_motifs(N)
+    result = {rep: MotifStat() for rep in rep_list}
 
     # if not hg.weighted:
     #     hg = set([tuple(sorted(t)) for t in hg])
@@ -182,7 +190,7 @@ def motifs_ho_full(hg: Hypergraph, N):
 
     visited = {}
     for e in hg.get_order_map().get(N, []):
-        count_motif(hg, e.nodes, labeling, visited)
+        count_motif(hg, e.nodes, rep_map, result, visited)
         visited[e.nodes] = 1
 
     # D = {}
@@ -192,11 +200,17 @@ def motifs_ho_full(hg: Hypergraph, N):
     # with open('motifs_{}.pickle'.format(N), 'wb') as handle:
     # pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    out = combine_labelings(mapping, labeling)
-    return out, visited
+    # out = combine_labelings(rep_list, rep_map)
+    return result, visited
 
 
-def count_motif(hg: Hypergraph, nodes: Iterable[int], labeling, visited={}):
+def count_motif(
+    hg: Hypergraph,
+    nodes: Iterable[int],
+    rep_map: dict[RawFrozenHypergraphUnWeighted, RawFrozenHypergraphUnWeighted],
+    result: dict[RawFrozenHypergraphUnWeighted, MotifStat],
+    visited={},
+):
     """
     Increments the count of the motif induced by the given nodes in the specified hypergraph
 
@@ -224,33 +238,33 @@ def count_motif(hg: Hypergraph, nodes: Iterable[int], labeling, visited={}):
     #         if edge in edges:
     #             motif.append(edge)
     motif = hg.get_induced_subgraph(nodes)
-    # print(f"Motif edges: {[e.nodes for e in motif]}")
+    raw_motif_weighted = []
+    raw_motif_unweighted = []
+    nodes = set()
+    for handle in motif:
+        nodes.update(handle.nodes)
+        raw_motif_weighted.append(handle.to_raw_hyperedge_weighted())
+        raw_motif_unweighted.append(handle.to_raw_hyperedge_unweighted())
 
-    m = {}
-    idx = 1
-    for i in nodes:
-        m[i] = idx
-        idx += 1
+    map = {}
+    for i, n in enumerate(nodes):
+        map[n] = i + 1
+    labeled_motif = relabel_unweighted(raw_motif_unweighted, map)
 
-    labeled_motif = []
-    for e in motif:
-        new_e = []
-        for node in e.nodes:
-            new_e.append(m[node])
-        new_e = tuple(sorted(new_e))
-        labeled_motif.append(new_e)
-    labeled_motif = tuple(sorted(labeled_motif))
+    curr_result = result[rep_map[labeled_motif]]
+    intensity_v = intensity(raw_motif_weighted) if hg.is_weighted() else 0
+    curr_result += MotifStat(count=1, intensity=intensity_v)
 
-    if labeled_motif in labeling:
-        labeling[labeled_motif].append(nodes)
-        # increment = 1
-        # if weighted:
-        #     weighted_edges = {}
-        #     for e in motif:
-        #         weighted_edges[e] = edges[e]
-        #     increment = intensity(weighted_edges)
-        #
-        # labeling[labeled_motif] += increment
+    # if labeled_motif in labeling:
+    #     labeling[labeled_motif].append(nodes)
+    # increment = 1
+    # if weighted:
+    #     weighted_edges = {}
+    #     for e in motif:
+    #         weighted_edges[e] = edges[e]
+    #     increment = intensity(weighted_edges)
+    #
+    # labeling[labeled_motif] += increment
 
 
 def combine_labelings(mapping, labeling):
@@ -266,7 +280,81 @@ def combine_labelings(mapping, labeling):
     return out
 
 
-def generate_motifs(N):
+def enum_connected_subgraphs(n: int) -> list[RawFrozenHypergraphUnWeighted]:
+    assert n >= 2
+
+    h = [i for i in range(1, n + 1)]
+    A = []  # every possible hyperedge
+
+    for r in range(n, 1, -1):
+        A.extend(list(itertools.combinations(h, r)))
+
+    B = power_set(A)  # every subgraphs
+
+    C = []  # every connected subgraph
+    for g in B:
+        if is_connected(g, n):
+            C.append(sorted(g))
+
+    return C
+
+
+def get_canonical_representative(hg: RawHypergraphUnWeighted, n=None) -> RawFrozenHypergraphUnWeighted:
+    """
+    Returns the canonical representative of the isomorphism class of the given
+    hypergraph. The canonical representative is the labeling of the hypergraph
+    that is lexicographically smallest among all possible labelings. If n is
+    not provided, it is computed as the number of distinct nodes in the
+    hypergraph.
+    """
+    if n is None:
+        distinct_nodes = set()
+        for edge in hg:
+            for node in edge:
+                distinct_nodes.add(node)
+        n = len(distinct_nodes)
+
+    perms = itertools.permutations(range(1, n + 1))
+
+    best = None
+    for p in perms:
+        mapping = {k: v for k, v in zip(range(1, n + 1), p)}
+        rel = relabel_unweighted(hg, mapping)
+        if best is None or rel < best:
+            best = rel
+
+    assert best is not None
+    return best
+
+
+def enum_isomorphisms(hg: RawHypergraphUnWeighted, n=None) -> list[RawFrozenHypergraphUnWeighted]:
+    """
+    Return every possible isomorphism of the given hypergraph. If n is not provided, it is computed
+    as the number of distinct nodes in the hypergraph.
+    """
+    if n is None:
+        distinct_nodes = set()
+        for edge in hg:
+            for node in edge:
+                distinct_nodes.add(node)
+        n = len(distinct_nodes)
+
+    perms = itertools.permutations(range(1, n + 1))
+
+    labelings = []
+    for p in perms:
+        mapping = {k: v for k, v in zip(range(1, n + 1), p)}
+        labelings.append(relabel_unweighted(hg, mapping))  # Aldready internally and externally sorted
+
+    return labelings
+
+
+def generate_motifs(
+    n: int,
+) -> tuple[
+    list[RawFrozenHypergraphUnWeighted],
+    dict[RawFrozenHypergraphUnWeighted, RawFrozenHypergraphUnWeighted],
+]:
     """
     Generate all isomorphism classes of connected motifs of size N.
 
@@ -274,57 +362,29 @@ def generate_motifs(N):
         N (int): The size of the motifs (number of nodes).
 
     Returns:
-        mapping (dict[tuple[tuple[int]]: set[tuple[tuple[int]]]]):
+        mapping:
             A dictionary mapping each isomorphism class representative
             to the set of all its possible labelings
             (as tuples of edges).
-        labeling (dict[tuple[tuple[int]], [tuple[int]]]):
+        labeling:
             A dictionary where each key is a possible labeling of motifs of
             size N, and each value is an empty list, to be filled with the
             motifs found in the hypergraph.
     """
-    n = N
     assert n >= 2
 
-    h = [i for i in range(1, n + 1)]
-    A = []
+    connected_subgraphs = enum_connected_subgraphs(n)
 
-    for r in range(n, 1, -1):
-        A.extend(list(itertools.combinations(h, r)))
+    canonical_rep = set()
 
-    B = power_set(A)
+    for i in connected_subgraphs:
+        canonical_rep.add(get_canonical_representative(i, n))
 
-    C = []
-    for i in range(len(B)):
-        if is_connected(B[i], N):
-            C.append(B[i])
+    rep_map = {}
 
-    isom_classes = {}
+    for representative in canonical_rep:
+        isomophism = enum_isomorphisms(representative, n)
+        for i in isomophism:
+            rep_map[i] = representative
 
-    for i in C:
-        edges = sorted(i)
-        relabeling_list = list(itertools.permutations([j for j in range(1, n + 1)]))
-        found = False
-        for relabeling in relabeling_list:
-            relabeling_i = relabel(edges, relabeling)
-            # print(relabeling_i)
-            if tuple(relabeling_i) in isom_classes:
-                found = True
-                break
-        if not found:
-            isom_classes[tuple(edges)] = 1
-
-    mapping = {}
-    labeling = {}
-
-    for k in isom_classes.keys():
-        mapping[k] = set()
-        relabeling_list = list(itertools.permutations([j for j in range(1, n + 1)]))
-        for relabeling in relabeling_list:
-            relabeling_i = relabel(k, relabeling)
-            labeling[tuple(sorted(relabeling_i))] = []
-            mapping[k].add(tuple(sorted(relabeling_i)))
-
-    return mapping, labeling
-
-
+    return list(sorted(canonical_rep)), rep_map

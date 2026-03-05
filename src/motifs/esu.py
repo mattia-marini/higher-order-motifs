@@ -1,5 +1,6 @@
+from motifs_count_base import generate_motifs
+
 from src.graph import Hypergraph
-from src.motifs.motifs_base import generate_motifs
 
 motif_mapping = {
     # Order 3

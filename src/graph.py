@@ -14,7 +14,17 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 import numpy as np
 from numpy.typing import NDArray
 
-from src.utils import power_set
+RawHyperedgeWeighted = tuple[tuple[int, ...], float]
+RawHyperedgeUnWeighted = tuple[int, ...]
+RawHyperedge = RawHyperedgeWeighted | RawHyperedgeUnWeighted
+
+RawFrozenHyperraphWeighted = tuple[RawHyperedgeWeighted]
+RawFrozenHypergraphUnWeighted = tuple[RawHyperedgeUnWeighted]
+RawFrozenHypergraph = RawFrozenHyperraphWeighted | RawFrozenHypergraphUnWeighted
+
+RawHypergraphWeighted = list[RawHyperedgeWeighted] | RawFrozenHyperraphWeighted
+RawHypergraphUnWeighted = list[RawHyperedgeUnWeighted] | RawFrozenHypergraphUnWeighted
+RawHypergraph = RawHypergraphWeighted | RawHypergraphUnWeighted
 
 
 class NormalizationMethod(Enum):
@@ -79,16 +89,23 @@ class Hyperedge:
 
     __repr__ = __str__
 
-    def to_tuple(
+    def to_raw_hyperedge(
         self,
-    ) -> tuple[
-        tuple[int, ...],
-        Optional[float],
-    ]:
-        return (
-            self.nodes,
-            self._weight,
-        )
+    ) -> RawHyperedge:
+        if self.weighted():
+            return (self.nodes, self.weight)
+        else:
+            return self.nodes
+
+    def to_raw_hyperedge_unweighted(
+        self,
+    ) -> RawHyperedgeUnWeighted:
+        return self.nodes
+
+    def to_raw_hyperedge_weighted(
+        self,
+    ) -> RawHyperedgeWeighted:
+        return (self.nodes, self.weight_or(1.0))
 
     def weighted(self) -> bool:
         return self._weight is not None
@@ -162,13 +179,20 @@ class HyperedgeHandle:
 
         self._edge.nodes = nodes
 
-    def to_tuple(
+    def to_raw_hyperedge(
         self,
-    ) -> tuple[
-        tuple[int, ...],
-        Optional[float],
-    ]:
-        return self._edge.to_tuple()
+    ) -> RawHyperedge:
+        return self._edge.to_raw_hyperedge()
+
+    def to_raw_hyperedge_unweighted(
+        self,
+    ) -> RawHyperedgeUnWeighted:
+        return self._edge.to_raw_hyperedge_unweighted()
+
+    def to_raw_hyperedge_weighted(
+        self,
+    ) -> RawHyperedgeWeighted:
+        return self._edge.to_raw_hyperedge_weighted()
 
     @property
     def order(self) -> int:
@@ -199,9 +223,7 @@ class HyperedgeHandle:
 class Hypergraph:
     def __init__(self):
         self._edges: Dict[int, Hyperedge] = {}
-        self._nodes_map: Dict[
-            tuple[int, ...], Set[int]
-        ] = {}  # For constant time access from nodes
+        self._nodes_map: Dict[tuple[int, ...], Set[int]] = {}  # For constant time access from nodes
         self._handles: Dict[int, HyperedgeHandle] = {}
         self._next_edge_id: int = 0
         self._weighted: Optional[bool] = None
@@ -320,9 +342,7 @@ class Hypergraph:
             rv[handle.order].append(handle)
         return rv
 
-    def normalize_weights(
-        self, normalization_method: NormalizationMethod = NormalizationMethod.DEFAULT
-    ):
+    def normalize_weights(self, normalization_method: NormalizationMethod = NormalizationMethod.DEFAULT):
         if self._weighted is False and normalization_method != NormalizationMethod.NONE:
             raise ValueError("Cannot normalize weights of unweighted graph")
 
@@ -349,7 +369,7 @@ class Hypergraph:
         Returns a SHA-1 hash of a dictionary.
         """
 
-        data_array = [edge.to_tuple() for edge in self._edges.values()]
+        data_array = [edge.to_raw_hyperedge() for edge in self._edges.values()]
         data_array.sort()
 
         encoded = json.dumps(data_array).encode()
@@ -392,6 +412,8 @@ class Hypergraph:
         rv = set()
 
         def power_set_method():
+            from src.utils import power_set
+
             p_nodes = power_set(nodes)
             for edge in p_nodes:
                 if len(edge) >= 2:
@@ -402,9 +424,7 @@ class Hypergraph:
                 raise ValueError("Adjacency not computed")
             for n in nodes:
                 if n not in self._adjacency:
-                    raise ValueError(
-                        f"Cannot get induced subgraph. Node {n} is not in graph"
-                    )
+                    raise ValueError(f"Cannot get induced subgraph. Node {n} is not in graph")
 
                 for edge_handle in self._adjacency[n]:
                     contained = True
@@ -428,9 +448,7 @@ class Hypergraph:
                 return True
         return False
 
-    def filter_orders(
-        self, orders: Iterable[int], retain=True, delete=False
-    ) -> Hypergraph:
+    def filter_orders(self, orders: Iterable[int], retain=True, delete=False) -> Hypergraph:
         if retain and delete:
             raise ValueError("Cannot both retain and delete orders")
         if not retain and not delete:
@@ -490,7 +508,7 @@ class Hypergraph:
 
         return rv
 
-    def get_digraph_matrix(self) -> List[List[bool]]:
+    def get_digraph_adj_matrix(self) -> List[List[float]]:
         edges = self.get_order_map()[2]
         map = {}
         nodes = set()
@@ -500,14 +518,21 @@ class Hypergraph:
         for i, n in enumerate(sorted(nodes)):
             map[n] = i
         n = len(map)
-        rv = [[False] * n for _ in range(n)]
+        rv = [[0.0] * n for _ in range(n)]
         for edge in edges:
             a, b = edge.nodes
+            weight = edge.weight_or(1.0)
             a = map[a]
             b = map[b]
-            rv[a][b] = True
-            rv[b][a] = True
+            rv[a][b] = weight
+            rv[b][a] = weight
 
+        return rv
+
+    def to_raw_edge_list(self) -> RawHypergraph:
+        rv = []
+        for edge in self._edges.values():
+            rv.append(edge.to_raw_hyperedge())
         return rv
 
 

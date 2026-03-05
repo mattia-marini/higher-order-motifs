@@ -1,6 +1,15 @@
 import math
 import numbers
-from typing import Iterable
+from typing import Iterable, Sequence, overload
+
+from src.graph import (
+    RawFrozenHypergraph,
+    RawFrozenHypergraphUnWeighted,
+    RawFrozenHyperraphWeighted,
+    RawHypergraph,
+    RawHypergraphUnWeighted,
+    RawHypergraphWeighted,
+)
 
 
 def diff_sum(original, null_models):
@@ -42,11 +51,7 @@ def count(edges):
         finally:
             for j in i:
                 n.add(j)
-    print(
-        "& {} & {} & {} & {} & {} & {}".format(
-            len(n), len(edges), d[2], d[3], d[4], d[5]
-        )
-    )
+    print("& {} & {} & {} & {} & {} & {}".format(len(n), len(edges), d[2], d[3], d[4], d[5]))
 
 
 def count_weight(edges):
@@ -190,32 +195,60 @@ def is_connected(edges, N):
     return conn
 
 
-def relabel(edges, relabeling):
+def is_weighted(hg: RawHypergraph) -> bool:
+    return type(hg) == RawFrozenHyperraphWeighted
+
+
+def to_unweighted(hg: RawHypergraph) -> RawHypergraphUnWeighted:
+    rv = []
+    weighted = is_weighted(hg)
+
+    for edge in hg:
+        if weighted:
+            rv.append(edge[0])
+        else:
+            rv.append(edge)
+
+    return rv
+
+
+def relabel_weighted(edges: RawHypergraphWeighted, mapping: dict[int, int]) -> RawFrozenHypergraphUnWeighted:
     """
     Relabel the vertices of the edges according to the given relabeling.
-
-    Args:
-        edges (list[tuple[int]]): The list of edges to be relabeled.
-        relabeling (tuple[int]): A tuple representing the new labels for the vertices.
-
-    Returns:
-        list[tuple[int]]: The relabeled edges, sorted.
+    Vertices are expected to be labeled from 1 to N.
     """
     res = []
     for edge in edges:
         new_edge = []
+        # nodes = edge[0] if weighted else edge
+        for v in edge[0]:
+            new_edge.append(mapping[v])
+        res.append((tuple(sorted(new_edge)), edge[1]))
+    return tuple(sorted(res))
+
+
+def relabel_unweighted(edges: RawHypergraphUnWeighted, mapping: dict[int, int]) -> RawFrozenHypergraphUnWeighted:
+    """
+    Relabel the vertices of the edges according to the given relabeling.
+    Vertices are expected to be labeled from 1 to N.
+    """
+    res = []
+    for edge in edges:
+        new_edge = []
+        # nodes = edge[0] if weighted else edge
         for v in edge:
-            new_edge.append(relabeling[v - 1])
+            new_edge.append(mapping[v])
         res.append(tuple(sorted(new_edge)))
-    return sorted(res)
+
+    return tuple(sorted(res))
 
 
-def intensity(edges):
+def intensity(edges: RawHypergraphWeighted) -> float:
     # print(edges)
-    if isinstance(edges, set):
-        return 1.0
+    # if isinstance(edges, set):
+    #     return 1.0
 
-    weights = [w for _, w in edges.items()]
+    weights = [e[1] for e in edges]
 
     log_sum = sum(math.log(n) for n in weights)
     return math.exp(log_sum / len(weights))
@@ -249,9 +282,7 @@ def assert_hypergraph(edges, weighted):
     """
     if weighted:
         if not isinstance(edges, dict):
-            raise TypeError(
-                "Weighted hypergraph should be represented as a dict[tuple[int],numbers.Number]"
-            )
+            raise TypeError("Weighted hypergraph should be represented as a dict[tuple[int],numbers.Number]")
 
         for edge, weight in edges.items():
             if not (isinstance(edge, tuple) and all(isinstance(k, int) for k in edge)):
@@ -260,9 +291,7 @@ def assert_hypergraph(edges, weighted):
                 raise TypeError("Weights must be numeric values")
     else:
         if not isinstance(edges, set):
-            raise TypeError(
-                "Unweighted hypergraph should be represented as a set[tuple[int]]"
-            )
+            raise TypeError("Unweighted hypergraph should be represented as a set[tuple[int]]")
         for edge in edges:
             if not (isinstance(edge, tuple) and all(isinstance(k, int) for k in edge)):
                 raise TypeError("Each edge must be a tuple of integers")

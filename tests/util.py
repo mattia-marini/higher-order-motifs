@@ -8,7 +8,7 @@ import config as cfg
 import src.loaders as loaders
 from src.graph import *
 from src.motifs.motifs2 import motifs_order_3, motifs_order_4
-from src.motifs.motifs_base import generate_motifs
+from src.motifs.motifs_count_base import generate_motifs
 
 
 class OldLoader:
@@ -123,14 +123,7 @@ class OldLoader:
 class Loader:
     def __init__(self, dataset):
         self._dataset: str = dataset
-        self._order: int = 3
         self._construction_method: ConstructionMethodBase = StandardConstructionMethod()
-
-    def order(self, order):
-        if order not in [3, 4]:
-            raise ValueError("Order must be 3 or 4")
-        self._order = order
-        return self
 
     def construction_method(self, construction_method: ConstructionMethodBase):
         self._construction_method = construction_method

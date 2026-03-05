@@ -1,13 +1,7 @@
-import time
 from multiprocessing import Manager, Process
 
-from src.loaders import load_hospital
 from src.motifs.esu import ad_hoc, esu
 from tests.util import Colors, Loader, time_function
-
-hg = load_hospital()
-
-assert not hg.has_multiedge()
 
 
 def esu_wrapper(dataset, hg, f_type, order, rv_dict):
@@ -55,22 +49,22 @@ def latex_table():
         },
         "primary_school": {
             "esu": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
             "ad_hoc": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
         },
         "high_school": {
             "esu": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
             "ad_hoc": {
-                3: 15,
-                4: 15,
+                3: 1,
+                4: 1,
             },
         },
     }
@@ -133,7 +127,7 @@ def latex_table():
         t[1] = f"$>$ {tests[dataset]['ad_hoc'][3]} s" if t[1] is None else f"{int(t[1][1] * 1000)} ms"
         t[2] = f"$>$ {tests[dataset]['esu'][4]} s" if t[2] is None else f"{int(t[2][1] * 1000)} ms"
         t[3] = f"$>$ {tests[dataset]['ad_hoc'][4]} s" if t[3] is None else f"{int(t[3][1] * 1000)} ms"
-        times_table_body += f"{dataset} & {t[0]} & {t[1]} & {t[2]} & {t[3]} \\\\\n"
+        times_table_body += f"{dataset.replace('_', ' ').capitalize()} & {t[0]} & {t[1]} & {t[2]} & {t[3]} \\\\\n"
 
     times_table_header = r"""
 \begin{center}
@@ -157,7 +151,6 @@ def latex_table():
 		\toprule
 		Dataset & Nodes & Edges \\
 		\midrule
-    Hospital & 15 & 20 \\
         """
     datasets_table_body = ""
     dataset_table_footer = r"""
@@ -167,7 +160,7 @@ def latex_table():
 """
     for dataset in tests.keys():
         hg = hypergraphs[dataset][3]
-        datasets_table_body += f"{dataset} & {hg.n()} & {hg.e()} \\\\\n"
+        datasets_table_body += f"{dataset.replace('_', ' ').capitalize()} & {hg.n} & {hg.e} \\\\\n"
 
     print(f"{dataset_table_header}{datasets_table_body}{dataset_table_footer}")
     print(f"{times_table_header}{times_table_body}{times_table_footer}")

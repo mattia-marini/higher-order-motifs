@@ -3,7 +3,7 @@ This file implements the efficient algorithm for motif discovery in hypergraphs.
 """
 
 from src.loaders import *
-from src.motifs.motifs_base import motifs_ho_full, motifs_ho_not_full, motifs_standard
+from src.motifs.motifs_count_base import motifs_ho_full, motifs_ho_not_full, motifs_standard
 from src.utils import *
 
 
@@ -13,9 +13,10 @@ def motifs_order_3(hg: Hypergraph):
     full, visited = motifs_ho_full(hg, N)
     standard = motifs_standard(hg, N, visited)
 
-    res = []
-    for i in range(len(full)):
-        res.append((full[i][0], full[i][1] + standard[i][1]))
+    res = {}
+    for rep in full.keys():
+        res[rep] = full[rep] + standard[rep]
+        # res.append((full[i][0], full[i][1] + standard[i][1]))
 
     return res
 
@@ -32,6 +33,15 @@ def motifs_order_4(hg: Hypergraph):
         res.append((full[i][0], full[i][1] + not_full[i][1] + standard[i][1]))
 
     return res
+
+
+def count_motifs(hg: Hypergraph, order: int):
+    assert order in (3, 4), "Only order 3 and 4 motifs are supported"
+    assert not hg.has_multiedge()
+    if order == 3:
+        return motifs_order_3(hg)
+    else:
+        return motifs_order_4(hg)
 
 
 # N = 3

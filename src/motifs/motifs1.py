@@ -2,8 +2,10 @@
 This file implements the baseline algorithm for motif discovery in hypergraphs.
 """
 
-from .loaders import *
-from .utils import *
+from motifs_count_base import generate_motifs
+
+from src.loaders import *
+from src.utils import *
 
 H_O = True
 L_O = []
