@@ -8,18 +8,15 @@ from src.loaders import *
 from src.stats import MotifStat
 
 
-def count_motifs(hg: Hypergraph, order: int) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
-    assert order in (3, 4), "Only order 3 and 4 motifs are supported"
-    assert not hg.has_multiedge()
-
+def count_3(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
     adj = hg.get_digraph_adj_list()
     adj_set = [set(neighbors) for neighbors in adj]
     adj_mat = hg.get_digraph_adj_matrix()
 
-    distinct_motifs_count = 6 if order == 3 else 6
+    distinct_motifs_count = 6
     stats = [MotifStat() for _ in range(distinct_motifs_count)]
 
-    def count_3(vertex: int):
+    def count_diedge_motifs(vertex: int):
         nonlocal stats
 
         neighbors_count = len(adj[vertex])
@@ -45,7 +42,70 @@ def count_motifs(hg: Hypergraph, order: int) -> dict[RawFrozenHypergraphUnWeight
         stats[0].count += (neighbors_count * (neighbors_count - 1) // 2) - cross_edges
         stats[1].count += cross_edges
 
-    def count_4(vertex: int):
+    # digraph counting
+    for node in range(len(adj)):
+        count_diedge_motifs(node)
+
+    # Normalize counts and intensities by the number of automorphisms of each
+    normalizer_coefficient = [1, 3, 1, 1, 1, 1]
+    for i in range(distinct_motifs_count):
+        stats[i].count //= normalizer_coefficient[i]
+        stats[i].intensity /= normalizer_coefficient[i]
+
+    # hypergraph counting
+    for edge in hg.get_order_map().get(3, []):
+        edge_weights = []
+        e1 = hg.get_edges_by_nodes((edge.nodes[0], edge.nodes[1]))
+        e2 = hg.get_edges_by_nodes((edge.nodes[0], edge.nodes[2]))
+        e3 = hg.get_edges_by_nodes((edge.nodes[1], edge.nodes[2]))
+        if len(e1) > 0:
+            edge_weights.append(e1[0].weight_or(1.0))
+        if len(e2) > 0:
+            edge_weights.append(e2[0].weight_or(1.0))
+        if len(e3) > 0:
+            edge_weights.append(e3[0].weight_or(1.0))
+
+        intensity_v = edge.weight_or(1.0)
+        for w in edge_weights:
+            intensity_v *= w
+        intensity_v = intensity_v ** (1 / (len(edge_weights) + 1))
+
+        # The motif discovered depends only on the number of contained diedges (+2 because the first 2 motifs are the ones without hyperedges)
+        stats[2 + len(edge_weights)].count += 1
+        stats[2 + len(edge_weights)].intensity += intensity_v
+
+        inner_intensity_v = 1.0
+        for w in edge_weights:
+            inner_intensity_v *= w
+        inner_intensity_v = inner_intensity_v ** (1 / len(edge_weights))
+        if len(edge_weights) > 1:
+            stats[len(edge_weights) - 2].count -= 1
+            stats[len(edge_weights) - 2].intensity -= inner_intensity_v
+
+    for i in range(distinct_motifs_count):
+        stats[i].intensity /= stats[i].count if stats[i].count > 0 else 1
+
+    rv = {
+        ((1, 2), (1, 3)): stats[0],
+        ((1, 2), (1, 3), (2, 3)): stats[1],
+        ((1, 2, 3),): stats[2],
+        ((1, 2), (1, 2, 3)): stats[3],
+        ((1, 2), (1, 2, 3), (1, 3)): stats[4],
+        ((1, 2), (1, 2, 3), (1, 3), (2, 3)): stats[5],
+    }
+
+    return rv
+
+
+def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
+    adj = hg.get_digraph_adj_list()
+    adj_set = [set(neighbors) for neighbors in adj]
+    adj_mat = hg.get_digraph_adj_matrix()
+
+    distinct_motifs_count = 6
+    stats = [MotifStat() for _ in range(distinct_motifs_count)]
+
+    def count_diedge_motifs(vertex: int):
         nonlocal stats
         partial = [MotifStat() for _ in range(6)]
         for distal in adj[vertex]:
@@ -93,60 +153,23 @@ def count_motifs(hg: Hypergraph, order: int) -> dict[RawFrozenHypergraphUnWeight
 
     # digraph counting
     for node in range(len(adj)):
-        if order == 3:
-            count_3(node)
-        elif order == 4:
-            count_4(node)
+        count_diedge_motifs(node)
 
     # Normalize counts and intensities by the number of automorphisms of each
-    normalizer_coefficient = {3: [1, 3, 1, 1, 1, 1], 4: [3, 2, 2, 12, 2, 8]}
+    normalizer_coefficient = [3, 2, 2, 12, 2, 8]
     for i in range(distinct_motifs_count):
-        stats[i].count //= normalizer_coefficient[order][i]
-        stats[i].intensity /= normalizer_coefficient[order][i]
-
-    # hypergraph counting
-    if order == 3:
-        for edge in hg.get_order_map().get(3, []):
-            edge_weights = []
-            e1 = hg.get_edges_by_nodes((edge.nodes[0], edge.nodes[1]))
-            e2 = hg.get_edges_by_nodes((edge.nodes[0], edge.nodes[2]))
-            e3 = hg.get_edges_by_nodes((edge.nodes[1], edge.nodes[2]))
-            if len(e1) > 0:
-                edge_weights.append(e1[0].weight_or(1.0))
-            if len(e2) > 0:
-                edge_weights.append(e2[0].weight_or(1.0))
-            if len(e3) > 0:
-                edge_weights.append(e3[0].weight_or(1.0))
-
-            intensity_v = edge.weight_or(1.0)
-            for w in edge_weights:
-                intensity_v *= w
-            intensity_v = intensity_v ** (1 / (len(edge_weights) + 1))
-
-            # The motif discovered depends only on the number of contained diedges (+2 because the first 2 motifs are the ones without hyperedges)
-            stats[2 + len(edge_weights)].count += 1
-            stats[2 + len(edge_weights)].intensity += intensity_v
-
-            inner_intensity_v = 1.0
-            for w in edge_weights:
-                inner_intensity_v *= w
-            inner_intensity_v = inner_intensity_v ** (1 / len(edge_weights))
-            if len(edge_weights) > 1:
-                stats[len(edge_weights) - 2].count -= 1
-                stats[len(edge_weights) - 2].intensity -= inner_intensity_v
-
-    for i in range(distinct_motifs_count):
-        stats[i].intensity /= stats[i].count if stats[i].count > 0 else 1
+        stats[i].count //= normalizer_coefficient[i]
+        stats[i].intensity /= normalizer_coefficient[i]
 
     rv = {}
-    if order == 3:
-        rv = {
-            ((1, 2), (1, 3)): stats[0],
-            ((1, 2), (1, 3), (2, 3)): stats[1],
-            ((1, 2, 3),): stats[2],
-            ((1, 2), (1, 2, 3)): stats[3],
-            ((1, 2), (1, 2, 3), (1, 3)): stats[4],
-            ((1, 2), (1, 2, 3), (1, 3), (2, 3)): stats[5],
-        }
-
     return rv
+
+
+def count_motifs(hg: Hypergraph, order: int) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
+    assert order in (3, 4), "Only order 3 and 4 motifs are supported"
+    assert not hg.has_multiedge()
+
+    if order == 3:
+        return count_3(hg)
+    else:
+        return count_4(hg)
