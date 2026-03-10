@@ -29,7 +29,8 @@ def motifs_ho_not_full(hg: Hypergraph, N, visited):
 
     """
     # assert_hypergraph(hg, weighted=weighted)
-    mapping, labeling = generate_motifs(N)
+    rep_list, rep_map = generate_motifs(N)
+    result = {rep: MotifStat() for rep in rep_list}
 
     # if not weighted:
     #     hg = set([tuple(sorted(t)) for t in hg])
@@ -46,7 +47,7 @@ def motifs_ho_not_full(hg: Hypergraph, N, visited):
     #             graph[e_i] = []
     #         graph[e_i].append(e)
 
-    adjacency = hg.get_adjacency_mut()
+    adjacency = hg.get_adjacency_immut_ref()
     for e in hg.edges:
         if e.order == N - 1:
             for n in e.nodes:
@@ -55,7 +56,7 @@ def motifs_ho_not_full(hg: Hypergraph, N, visited):
                     tmp.extend(e_i.nodes)
                     tmp = list(set(tmp))
                     if len(tmp) == N and tuple(sorted(tmp)) not in visited:
-                        count_motif(hg, tmp, labeling, visited)
+                        count_motif(hg, tmp, rep_map, result, visited)
                         visited[tuple(sorted(tmp))] = 1
 
     # D = {}
@@ -65,8 +66,8 @@ def motifs_ho_not_full(hg: Hypergraph, N, visited):
     # with open('motifs_{}.pickle'.format(N), 'wb') as handle:
     # pickle.dump(D, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    out = combine_labelings(mapping, labeling)
-    return out, visited
+    # out = combine_labelings(mapping, labeling)
+    return result, visited
 
 
 def motifs_standard(hg: Hypergraph, N, visited):

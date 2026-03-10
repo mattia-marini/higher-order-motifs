@@ -18,11 +18,11 @@ RawHyperedgeWeighted = tuple[tuple[int, ...], float]
 RawHyperedgeUnWeighted = tuple[int, ...]
 RawHyperedge = RawHyperedgeWeighted | RawHyperedgeUnWeighted
 
-RawFrozenHyperraphWeighted = tuple[RawHyperedgeWeighted]
-RawFrozenHypergraphUnWeighted = tuple[RawHyperedgeUnWeighted]
-RawFrozenHypergraph = RawFrozenHyperraphWeighted | RawFrozenHypergraphUnWeighted
+RawFrozenHypergraphWeighted = tuple[RawHyperedgeWeighted, ...]
+RawFrozenHypergraphUnWeighted = tuple[RawHyperedgeUnWeighted, ...]
+RawFrozenHypergraph = RawFrozenHypergraphWeighted | RawFrozenHypergraphUnWeighted
 
-RawHypergraphWeighted = list[RawHyperedgeWeighted] | RawFrozenHyperraphWeighted
+RawHypergraphWeighted = list[RawHyperedgeWeighted] | RawFrozenHypergraphWeighted
 RawHypergraphUnWeighted = list[RawHyperedgeUnWeighted] | RawFrozenHypergraphUnWeighted
 RawHypergraph = RawHypergraphWeighted | RawHypergraphUnWeighted
 
@@ -165,6 +165,14 @@ class HyperedgeHandle:
         if not isinstance(other, HyperedgeHandle):
             return False
         return self._id == other._id
+
+    @property
+    def id(self) -> int:
+        return self._id
+
+    @id.setter
+    def id(self, id: int):
+        pass
 
     @property
     def nodes(self) -> Tuple[int, ...]:
@@ -397,7 +405,7 @@ class Hypergraph:
             raise ValueError("Adjacency not computed")
         return self._adjacency.copy()
 
-    def get_adjacency_mut(self) -> Dict[int, List[HyperedgeHandle]]:
+    def get_adjacency_immut_ref(self) -> Dict[int, List[HyperedgeHandle]]:
         """
         One should not modify the returned adjacency directly, as it would mess
         with the internal logic of the graph

@@ -21,7 +21,7 @@ class MotifStat:
 
     def __str__(self):
         return (
-            f"AggregatedInfos("
+            f"MotifStat("
             f"count={self.count}, "
             f"intensity={self.intensity}, "
             f"mean_coherence={self.coherence}, "

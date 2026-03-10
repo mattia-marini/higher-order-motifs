@@ -2,10 +2,12 @@
 Efficient ad hoc motif counting algorithm for order 3 and 4 in undirected graphs. Unlike ESU, this algorithm logic is not based on enumeration but on combinatorial counting. Hopefully can be extended to weighted graphs
 """
 
-from math import sqrt
+from math import prod, sqrt
 
 from src.loaders import *
+from src.motifs.motifs_count_base import generate_motifs
 from src.stats import MotifStat
+from src.utils import intensity, relabel_unweighted
 
 
 def count_3(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
@@ -102,11 +104,22 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
     adj_set = [set(neighbors) for neighbors in adj]
     adj_mat = hg.get_digraph_adj_matrix()
 
-    distinct_motifs_count = 6
-    stats = [MotifStat() for _ in range(distinct_motifs_count)]
+    distinct_motifs_count = 171
+    # stats = [MotifStat() for _ in range(distinct_motifs_count)]
+
+    # digraph motifs aliases
+    type0 = ((1, 2), (1, 3), (1, 4))
+    type1 = ((1, 2), (1, 3), (1, 4), (2, 3))
+    type2 = ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4))
+    type3 = ((1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4))
+    type4 = ((1, 2), (1, 3), (2, 4))
+    type5 = ((1, 2), (1, 3), (2, 4), (3, 4))
+
+    rep, rep_map = generate_motifs(4)
+    result = {rep: MotifStat() for rep in rep}
 
     def count_diedge_motifs(vertex: int):
-        nonlocal stats
+        nonlocal result
         partial = [MotifStat() for _ in range(6)]
         for distal in adj[vertex]:
             common = adj_set[distal].intersection(adj_set[vertex])
@@ -144,12 +157,12 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
             partial[4].count += len(inner_nc) * len(outer_nc) - type5_cross
             partial[5].count += type5_cross
 
-        stats[0].count += partial[0].count
-        stats[1].count += partial[1].count
-        stats[2].count += partial[2].count
-        stats[3].count += partial[3].count
-        stats[4].count += partial[4].count
-        stats[5].count += partial[5].count
+        result[type0].count += partial[0].count
+        result[type1].count += partial[1].count
+        result[type2].count += partial[2].count
+        result[type3].count += partial[3].count
+        result[type4].count += partial[4].count
+        result[type5].count += partial[5].count
 
     # digraph counting
     for node in range(len(adj)):
@@ -157,12 +170,88 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
 
     # Normalize counts and intensities by the number of automorphisms of each
     normalizer_coefficient = [3, 2, 2, 12, 2, 8]
-    for i in range(distinct_motifs_count):
-        stats[i].count //= normalizer_coefficient[i]
-        stats[i].intensity /= normalizer_coefficient[i]
+    result[type0].count //= normalizer_coefficient[0]
+    result[type1].count //= normalizer_coefficient[1]
+    result[type2].count //= normalizer_coefficient[2]
+    result[type3].count //= normalizer_coefficient[3]
+    result[type4].count //= normalizer_coefficient[4]
+    result[type5].count //= normalizer_coefficient[5]
 
-    rv = {}
-    return rv
+    result[type0].intensity /= normalizer_coefficient[0]
+    result[type1].intensity /= normalizer_coefficient[1]
+    result[type2].intensity /= normalizer_coefficient[2]
+    result[type3].intensity /= normalizer_coefficient[3]
+    result[type4].intensity /= normalizer_coefficient[4]
+    result[type5].intensity /= normalizer_coefficient[5]
+
+    # order 3 hypergraph
+    hg_adj = hg.get_adjacency_immut_ref()
+    for edge in hg.get_order_map().get(3, []):
+        ext_set = set()
+        for node in edge.nodes:
+            ext_set.update(hg_adj[node])
+
+        # print(ext_set)
+        ext_edges = {}
+        for u in ext_set:
+            out_count = 0
+            out_node = None
+            for node in u.nodes:
+                if node not in edge.nodes:
+                    out_count += 1
+                    out_node = node
+            if out_count == 1:
+                if out_node not in ext_edges:
+                    ext_edges[out_node] = []
+                ext_edges[out_node].append(u)
+
+        induced_subgraph = hg.get_induced_subgraph(edge.nodes)
+        center_unweighted = [edge.to_raw_hyperedge_unweighted() for edge in induced_subgraph]
+
+        center_prod = prod([edge.weight for edge in induced_subgraph])
+        center_diedge_prod = prod([edge.weight for edge in induced_subgraph if len(edge.nodes) == 2])
+
+        for u, edges in ext_edges.items():
+            min_id = min([edge.id] + [e.id for e in edges if len(e.nodes) == 3])
+            if edge.id != min_id:
+                continue
+
+            new_motif = center_unweighted + [e.to_raw_hyperedge_unweighted() for e in edges]
+
+            tot_prod = center_prod * prod([edge.weight for edge in edges])
+            tot_intensity = tot_prod ** (1 / (len(edges) + len(induced_subgraph)))
+            stat = MotifStat(count=1, intensity=tot_intensity)
+
+            mapping = {k: v for k, v in zip(edge.nodes + (u,), range(1, 5))}
+            labeled_new_motif = relabel_unweighted(new_motif, mapping)
+
+            result[rep_map[labeled_new_motif]] += stat
+
+            underlying_diedges = tuple([e for e in labeled_new_motif if len(e) == 2])
+            if underlying_diedges in rep_map:  # if its connected
+                print("Found motif with underlying diedges: ", underlying_diedges)
+                diedges_prod = center_diedge_prod * prod([e.weight for e in edges if len(e.nodes) == 2])
+                tot_diedge_intensity = diedges_prod ** (1 / len(underlying_diedges))
+
+                result[rep_map[underlying_diedges]] -= MotifStat(count=1, intensity=tot_diedge_intensity)
+
+    # for edge in hg.get_order_map().get(4, []):
+
+    # Normalization for motifs with multiple triedges
+
+    # for motif, stat in result.items():
+    #     triedge_count = sum([1 for edge in motif if len(edge) == 3])
+    #     if triedge_count > 0:
+    #         stat.count //= triedge_count
+    #         underlying_diedges = tuple([e for e in motif if len(e) == 2])
+    #         if underlying_diedges in rep_map:  # if its connected
+    #             result[rep_map[underlying_diedges]] -= MotifStat(count=1, intensity=tot_diedge_intensity)
+
+    # for motif, stat in result.items():
+    # if stat.count > 0:
+    #     stat.intensity = stat.intensity ** (1 / stat.count)
+
+    return result
 
 
 def count_motifs(hg: Hypergraph, order: int) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:

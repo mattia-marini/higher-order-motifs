@@ -5,7 +5,7 @@ from typing import Iterable, Sequence, overload
 from src.graph import (
     RawFrozenHypergraph,
     RawFrozenHypergraphUnWeighted,
-    RawFrozenHyperraphWeighted,
+    RawFrozenHypergraphWeighted,
     RawHypergraph,
     RawHypergraphUnWeighted,
     RawHypergraphWeighted,
@@ -196,7 +196,7 @@ def is_connected(edges, N):
 
 
 def is_weighted(hg: RawHypergraph) -> bool:
-    return type(hg) == RawFrozenHyperraphWeighted
+    return type(hg) == RawFrozenHypergraphWeighted
 
 
 def to_unweighted(hg: RawHypergraph) -> RawHypergraphUnWeighted:

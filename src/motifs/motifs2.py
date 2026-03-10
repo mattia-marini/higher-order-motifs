@@ -28,9 +28,9 @@ def motifs_order_4(hg: Hypergraph):
     not_full, visited = motifs_ho_not_full(hg, N, visited)
     standard = motifs_standard(hg, N, visited)
 
-    res = []
-    for i in range(len(full)):
-        res.append((full[i][0], full[i][1] + not_full[i][1] + standard[i][1]))
+    res = {}
+    for rep in full.keys():
+        res[rep] = full[rep] + standard[rep] + not_full[rep]
 
     return res
 
