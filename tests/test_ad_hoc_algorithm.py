@@ -9,7 +9,7 @@ from tests.util import Loader, time_function_p
 hg = Loader("hospital").construction_method(StandardConstructionMethod(weighted=True)).load()
 
 
-hg = hg.filter_orders([2, 3], retain=True)
+hg = hg.filter_orders([2], retain=True)
 # print(len(hg.get_order_map()[2]))
 
 
@@ -22,7 +22,7 @@ count = 0
 for motif in rep:
     tri_edge_count = sum([1 if len(edge) == 3 else 0 for edge in motif])
     quad_edge_count = sum([1 if len(edge) == 4 else 0 for edge in motif])
-    if quad_edge_count == 0:
+    if quad_edge_count == 0 and tri_edge_count == 0:
         count += 1
         print(motif)
         # print(motifs2[motif])

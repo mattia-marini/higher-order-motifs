@@ -4,6 +4,8 @@ Efficient ad hoc motif counting algorithm for order 3 and 4 in undirected graphs
 
 from math import prod, sqrt
 
+from pandas import period_range
+
 from src.loaders import *
 from src.motifs.motifs_count_base import generate_motifs
 from src.stats import MotifStat
@@ -118,71 +120,125 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
     rep, rep_map = generate_motifs(4)
     result = {rep: MotifStat() for rep in rep}
 
+    test = 0
+
     def count_diedge_motifs(vertex: int):
-        nonlocal result
+        nonlocal result, test
         partial = [MotifStat() for _ in range(6)]
         for distal in adj[vertex]:
             common = adj_set[distal].intersection(adj_set[vertex])
             inner_nc = adj_set[vertex] - common - {distal}
             outer_nc = adj_set[distal] - common - {vertex}
 
-            common_cross = 0
-            for c in common:
-                for u in adj[c]:
-                    if c < u and u in common:
-                        common_cross += 1
+            # intensity
+            pivot_edge_cr = adj_mat[vertex][distal] ** (1 / 3)
+            type0_sum = 0
+            inner_nc_list = list(inner_nc)
+            for i in range(len(inner_nc_list)):
+                type0_sum += adj_mat[vertex][inner_nc_list[i]] ** (1 / 3)
+
+            for i in range(len(inner_nc_list) - 1):
+                curr_weight_cr = adj_mat[vertex][inner_nc_list[i]] ** (1 / 3)
+                type0_sum -= curr_weight_cr
+                partial[0].intensity += pivot_edge_cr * curr_weight_cr * type0_sum
+
+            type4_sum = 0
+            if len(outer_nc) > len(inner_nc):
+                type4_sum = sum(adj_mat[distal][onc] ** (1 / 3) for onc in outer_nc)
+                for inc in inner_nc:
+                    partial[4].intensity += pivot_edge_cr * type4_sum * adj_mat[vertex][inc] ** (1 / 3)
+            else:
+                type4_sum = sum(adj_mat[vertex][inc] ** (1 / 3) for inc in inner_nc)
+                for onc in outer_nc:
+                    partial[4].intensity += pivot_edge_cr * type4_sum * adj_mat[distal][onc] ** (1 / 3)
 
             inner_nc_cross = 0
-            for nc in inner_nc:
-                for u in adj[nc]:
-                    if nc < u and u in inner_nc:
+            for nc1 in inner_nc:
+                for nc2 in adj[nc1]:
+                    if nc1 < nc2 and nc2 in inner_nc:
                         inner_nc_cross += 1
+                        curr = adj_mat[vertex][nc1] * adj_mat[vertex][nc2] * adj_mat[vertex][distal]
+                        partial[0].intensity -= curr ** (1 / 3)
+                        partial[1].intensity += (curr * adj_mat[nc1][nc2]) ** (1 / 4)
 
             inter_cross = 0
-            for p in common:
-                for u in adj[p]:
-                    if u in adj_set[vertex] and u not in common and u != vertex and u != distal:
+            for c in common:
+                for nc in adj[c]:
+                    if nc in inner_nc:
                         inter_cross += 1
+                        curr = adj_mat[vertex][c] * adj_mat[vertex][nc] * adj_mat[vertex][distal] * adj_mat[c][distal]
+                        # partial[1].intensity -= curr ** (1 / 4)
+                        partial[2].intensity += (curr * adj_mat[c][nc]) ** (1 / 5)
+
+            common_cross = 0
+            for c1 in common:
+                for c2 in adj[c1]:
+                    if c1 < c2 and c2 in common:
+                        common_cross += 1
+                        curr = (
+                            adj_mat[vertex][c1]
+                            * adj_mat[vertex][c2]
+                            * adj_mat[c1][distal]
+                            * adj_mat[c2][distal]
+                            * adj_mat[vertex][distal]
+                        )
+                        # partial[1].intensity -= curr ** (1 / 4)
+                        partial[3].intensity += (curr * adj_mat[c1][c2]) ** (1 / 6)
 
             type5_cross = 0
-            for o in outer_nc:
-                for u in adj[o]:
-                    if u in inner_nc:
+            for onc in outer_nc:
+                for inc in adj[onc]:
+                    if inc in inner_nc:
                         type5_cross += 1
+                        curr = adj_mat[vertex][distal] * adj_mat[vertex][inc] * adj_mat[distal][onc]
+                        partial[4].intensity -= curr ** (1 / 3)
+                        partial[5].intensity += (curr * adj_mat[inc][onc]) ** (1 / 4)
 
             partial[0].count += len(inner_nc) * (len(inner_nc) - 1) // 2 - inner_nc_cross
-            partial[1].count += (len(adj[vertex]) - len(common) - 1) * len(common) - inter_cross
-            partial[2].count += (len(common) * (len(common) - 1) // 2) - common_cross
+            partial[1].count += inner_nc_cross
+            partial[2].count += inter_cross
             partial[3].count += common_cross
             partial[4].count += len(inner_nc) * len(outer_nc) - type5_cross
             partial[5].count += type5_cross
 
         result[type0].count += partial[0].count
+        result[type0].intensity += partial[0].intensity
+
         result[type1].count += partial[1].count
+        result[type1].intensity += partial[1].intensity
+
         result[type2].count += partial[2].count
+        result[type2].intensity += partial[2].intensity
+
         result[type3].count += partial[3].count
+        result[type3].intensity += partial[3].intensity
+
         result[type4].count += partial[4].count
+        result[type4].intensity += partial[4].intensity
+
         result[type5].count += partial[5].count
+        result[type5].intensity += partial[5].intensity
 
     # digraph counting
     for node in range(len(adj)):
         count_diedge_motifs(node)
 
     # Normalize counts and intensities by the number of automorphisms of each
-    normalizer_coefficient = [3, 2, 2, 12, 2, 8]
+    normalizer_coefficient = [3, 1, 4, 12, 2, 8]
+
+    result[type0].intensity /= max(1, result[type0].count)
+    result[type1].intensity /= max(1, result[type1].count)
+    result[type2].intensity /= max(1, result[type2].count)
+    result[type3].intensity /= max(1, result[type3].count)
+    result[type4].intensity /= max(1, result[type4].count)
+    result[type5].intensity /= max(1, result[type5].count)
+
     result[type0].count //= normalizer_coefficient[0]
     result[type1].count //= normalizer_coefficient[1]
     result[type2].count //= normalizer_coefficient[2]
     result[type3].count //= normalizer_coefficient[3]
     result[type4].count //= normalizer_coefficient[4]
     result[type5].count //= normalizer_coefficient[5]
-
-    result[type0].intensity /= normalizer_coefficient[0]
-    result[type1].intensity /= normalizer_coefficient[1]
-    result[type2].intensity /= normalizer_coefficient[2]
-    result[type3].intensity /= normalizer_coefficient[3]
-    result[type4].intensity /= normalizer_coefficient[4]
-    result[type5].intensity /= normalizer_coefficient[5]
 
     # order 3 hypergraph
     hg_adj = hg.get_adjacency_immut_ref()
