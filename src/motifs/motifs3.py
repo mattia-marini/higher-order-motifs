@@ -4,12 +4,10 @@ Efficient ad hoc motif counting algorithm for order 3 and 4 in undirected graphs
 
 from math import prod, sqrt
 
-from pandas import period_range
-
 from src.loaders import *
 from src.motifs.motifs_count_base import generate_motifs
 from src.stats import MotifStat
-from src.utils import intensity, relabel_unweighted
+from src.utils import relabel_unweighted
 
 
 def count_3(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
@@ -246,6 +244,7 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
         ext_set = set()
         for node in edge.nodes:
             ext_set.update(hg_adj[node])
+        ext_set = [e for e in ext_set if e.order < 4]
 
         # print(ext_set)
         ext_edges = {}
@@ -262,6 +261,8 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
                 ext_edges[out_node].append(u)
 
         induced_subgraph = hg.get_induced_subgraph(edge.nodes)
+        induced_subgraph = [e for e in induced_subgraph if len(e.nodes) <= 3]
+
         center_unweighted = [edge.to_raw_hyperedge_unweighted() for edge in induced_subgraph]
 
         center_prod = prod([edge.weight for edge in induced_subgraph])
@@ -285,27 +286,27 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
 
             underlying_diedges = tuple([e for e in labeled_new_motif if len(e) == 2])
             if underlying_diedges in rep_map:  # if its connected
-                print("Found motif with underlying diedges: ", underlying_diedges)
+                # print("Found motif with underlying diedges: ", underlying_diedges)
                 diedges_prod = center_diedge_prod * prod([e.weight for e in edges if len(e.nodes) == 2])
                 tot_diedge_intensity = diedges_prod ** (1 / len(underlying_diedges))
 
                 result[rep_map[underlying_diedges]] -= MotifStat(count=1, intensity=tot_diedge_intensity)
 
-    # for edge in hg.get_order_map().get(4, []):
+    # return result
+    for edge in hg.get_order_map().get(4, []):
+        induced_subgraph = hg.get_induced_subgraph(edge.nodes)
+        intensity_v = prod([e.weight for e in induced_subgraph]) ** (1 / len(induced_subgraph))
+        new_motif = [e.to_raw_hyperedge_unweighted() for e in induced_subgraph]
 
-    # Normalization for motifs with multiple triedges
+        mapping = {k: v for k, v in zip(edge.nodes, range(1, 5))}
+        labeled_new_motif = relabel_unweighted(new_motif, mapping)
 
-    # for motif, stat in result.items():
-    #     triedge_count = sum([1 for edge in motif if len(edge) == 3])
-    #     if triedge_count > 0:
-    #         stat.count //= triedge_count
-    #         underlying_diedges = tuple([e for e in motif if len(e) == 2])
-    #         if underlying_diedges in rep_map:  # if its connected
-    #             result[rep_map[underlying_diedges]] -= MotifStat(count=1, intensity=tot_diedge_intensity)
+        result[rep_map[labeled_new_motif]] += MotifStat(count=1, intensity=intensity_v)
 
-    # for motif, stat in result.items():
-    # if stat.count > 0:
-    #     stat.intensity = stat.intensity ** (1 / stat.count)
+        underlying_motif = tuple([e for e in labeled_new_motif if len(e) == 2 or len(e) == 3])
+        if underlying_motif in rep_map:  # if its connected
+            underlying_intensity = (intensity_v ** len(induced_subgraph) / edge.weight) ** (1 / len(underlying_motif))
+            result[rep_map[underlying_motif]] -= MotifStat(count=1, intensity=underlying_intensity)
 
     return result
 
