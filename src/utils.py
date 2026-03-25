@@ -243,6 +243,11 @@ def relabel_unweighted(edges: RawHypergraphUnWeighted, mapping: dict[int, int]) 
     return tuple(sorted(res))
 
 
+def mean(edges: RawHypergraphWeighted) -> float:
+    weights = [e[1] for e in edges]
+    return sum(weights) / len(weights)
+
+
 def intensity(edges: RawHypergraphWeighted) -> float:
     # print(edges)
     # if isinstance(edges, set):

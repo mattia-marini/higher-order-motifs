@@ -8,7 +8,7 @@ import config as cfg
 from src.graph import *
 
 
-# "Small" datasets
+# Small datasets
 def load_primary_school(
     construction_method: ConstructionMethodBase = StandardConstructionMethod(),
 ) -> Hypergraph:

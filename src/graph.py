@@ -497,6 +497,9 @@ class Hypergraph:
         return rv
 
     def get_digraph_adj_list(self) -> List[List[int]]:
+        """
+        Return adj list considering only 2-edges where each node id is normalized to a number from 0 to n-1, where n is the number of nodes in the graph
+        """
         edges = self.get_order_map()[2]
         map = {}
         nodes = set()

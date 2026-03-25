@@ -7,7 +7,7 @@ from src.graph import (
     RawHypergraphUnWeighted,
 )
 from src.stats import Motif, MotifStat
-from src.utils import intensity, is_connected, power_set, relabel_unweighted, relabel_weighted
+from src.utils import intensity, is_connected, mean, power_set, relabel_unweighted, relabel_weighted
 
 
 def motifs_ho_not_full(hg: Hypergraph, N, visited):
@@ -253,8 +253,12 @@ def count_motif(
     labeled_motif = relabel_unweighted(raw_motif_unweighted, map)
 
     curr_result = result[rep_map[labeled_motif]]
-    intensity_v = intensity(raw_motif_weighted) if hg.is_weighted() else 0
-    curr_result += MotifStat(count=1, intensity=intensity_v)
+    intensity_v = intensity(raw_motif_weighted) if hg.is_weighted() else 1.0
+    coherence_v = intensity_v / (mean(raw_motif_weighted) if hg.is_weighted() else 1.0)
+
+    curr_result += MotifStat(
+        count=1, intensity=intensity_v, coherence=coherence_v, actual_intensity=intensity_v * coherence_v
+    )
 
     # if labeled_motif in labeling:
     #     labeling[labeled_motif].append(nodes)

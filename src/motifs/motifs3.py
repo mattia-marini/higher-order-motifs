@@ -140,15 +140,9 @@ def count_4(hg: Hypergraph) -> dict[RawFrozenHypergraphUnWeighted, MotifStat]:
                 type0_sum -= curr_weight_cr
                 partial[0].intensity += pivot_edge_cr * curr_weight_cr * type0_sum
 
-            type4_sum = 0
-            if len(outer_nc) > len(inner_nc):
-                type4_sum = sum(adj_mat[distal][onc] ** (1 / 3) for onc in outer_nc)
-                for inc in inner_nc:
-                    partial[4].intensity += pivot_edge_cr * type4_sum * adj_mat[vertex][inc] ** (1 / 3)
-            else:
-                type4_sum = sum(adj_mat[vertex][inc] ** (1 / 3) for inc in inner_nc)
-                for onc in outer_nc:
-                    partial[4].intensity += pivot_edge_cr * type4_sum * adj_mat[distal][onc] ** (1 / 3)
+            inner_sum = sum(adj_mat[vertex][inc] ** (1 / 3) for inc in inner_nc)
+            outer_sum = sum(adj_mat[distal][onc] ** (1 / 3) for onc in outer_nc)
+            partial[4].intensity += pivot_edge_cr * inner_sum * outer_sum
 
             inner_nc_cross = 0
             for nc1 in inner_nc:

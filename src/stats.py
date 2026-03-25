@@ -34,71 +34,85 @@ class MotifStat:
     def __add__(self, other) -> MotifStat:
         count = self.count + other.count
         intensity = 0.0 if count == 0 else self.intensity * self.count / count + other.intensity * other.count / count
-
-        return MotifStat(
-            count,
-            intensity,
-            self.coherence + other.coherence,
-            self.actual_intensity + other.actual_intensity,
+        coherence = 0.0 if count == 0 else self.coherence * self.count / count + other.coherence * other.count / count
+        actual_intensity = (
+            0.0
+            if count == 0
+            else self.actual_intensity * self.count / count + other.actual_intensity * other.count / count
         )
+
+        return MotifStat(count, intensity, coherence, actual_intensity)
 
     def __iadd__(self, other) -> MotifStat:
         count = self.count + other.count
         intensity = 0.0 if count == 0 else self.intensity * self.count / count + other.intensity * other.count / count
+        coherence = 0.0 if count == 0 else self.coherence * self.count / count + other.coherence * other.count / count
+        actual_intensity = (
+            0.0
+            if count == 0
+            else self.actual_intensity * self.count / count + other.actual_intensity * other.count / count
+        )
 
         self.count = count
         self.intensity = intensity
-        self.coherence += other.coherence
-        self.actual_intensity += other.actual_intensity
+        self.coherence = coherence
+        self.actual_intensity = actual_intensity
         return self
 
     def __sub__(self, other) -> MotifStat:
         count = self.count - other.count
         intensity = 0.0 if count == 0 else self.intensity * self.count / count - other.intensity * other.count / count
-
-        return MotifStat(
-            count,
-            intensity,
-            self.coherence - other.coherence,
-            self.actual_intensity - other.actual_intensity,
+        coherence = 0.0 if count == 0 else self.coherence * self.count / count - other.coherence * other.count / count
+        actual_intensity = (
+            0.0
+            if count == 0
+            else self.actual_intensity * self.count / count - other.actual_intensity * other.count / count
         )
+
+        return MotifStat(count, intensity, coherence, actual_intensity)
 
     def __isub__(self, other) -> MotifStat:
         count = self.count - other.count
         intensity = 0.0 if count == 0 else self.intensity * self.count / count - other.intensity * other.count / count
+        coherence = 0.0 if count == 0 else self.coherence * self.count / count - other.coherence * other.count / count
+        actual_intensity = (
+            0.0
+            if count == 0
+            else self.actual_intensity * self.count / count - other.actual_intensity * other.count / count
+        )
 
         self.count = count
         self.intensity = intensity
-        self.coherence -= other.coherence
-        self.actual_intensity -= other.actual_intensity
+        self.coherence = coherence
+        self.actual_intensity = actual_intensity
         return self
 
 
-def aggregate(hg: Hypergraph, motifs: MotifsRv):
-    aggregated = []
-    hg.compute_adjacency()
-
-    for motif, instances in motifs:
-        count = len(motif)
-        total_intensity = 0
-        total_coherence = 0
-        total_actual_intensity = 0
-
-        for motif_instance in instances:
-            induced_subgraph = hg.get_induced_subgraph(motif_instance)
-            intensity = utils.intensity(induced_subgraph)
-            coherence = utils.coherence(induced_subgraph)
-
-            total_intensity += intensity
-            total_coherence += coherence
-            total_actual_intensity += intensity * coherence
-
-        aggregated.append(
-            MotifStat(
-                count,
-                total_intensity,
-                total_coherence / count if count != 0 else 1,
-                total_actual_intensity,
-            )
-        )
-    return aggregated
+# def aggregate(hg: Hypergraph, motifs: MotifsRv):
+#     aggregated = []
+#     hg.compute_adjacency()
+#
+#     for motif, instances in motifs:
+#         count = len(motif)
+#         total_intensity = 0
+#         total_coherence = 0
+#         total_actual_intensity = 0
+#
+#         for motif_instance in instances:
+#             induced_subgraph = hg.get_induced_subgraph(motif_instance)
+#             intensity = utils.intensity(induced_subgraph)
+#             coherence = utils.coherence(induced_subgraph)
+#
+#             total_intensity += intensity
+#             total_coherence += coherence
+#             total_actual_intensity += intensity * coherence
+#
+#         aggregated.append(
+#             MotifStat(
+#                 count,
+#                 total_intensity,
+#                 total_coherence / count if count != 0 else 1,
+#                 total_actual_intensity,
+#             )
+#         )
+#     return aggregated

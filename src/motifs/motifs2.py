@@ -31,6 +31,7 @@ def motifs_order_4(hg: Hypergraph):
     res = {}
     for rep in full.keys():
         res[rep] = full[rep] + standard[rep] + not_full[rep]
+        # res[rep].coherence = res[rep].intensity / res[rep].coherence
 
     return res
 
