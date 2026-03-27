@@ -1,96 +1,70 @@
 from collections import deque
 from typing import Iterable
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Row, Table
+
 from src.graph import Hyperedge, Hypergraph
+from src.loaders import load_justice_ideo
 from src.motifs.motifs3 import count_motifs as count_motifs3
 from src.triangle import *
-from tests.util import Colors, Loader, StandardConstructionMethod, time_function
+from tests.util import Colors, Loader, StandardConstructionMethod, display_graph, load_and_time, time_function
 
-hg = Hypergraph()
-# hg.add_edge(Hyperedge((0, 1)))
-# hg.add_edge(Hyperedge((1, 2)))
-# hg.add_edge(Hyperedge((2, 3)))
-# hg.add_edge(Hyperedge((0, 1)))
-# hg.add_edge(Hyperedge((1, 2)))
-# hg.add_edge(Hyperedge((2, 0)))
-# hg.add_edge(Hyperedge((2, 3)))
-# hg.add_edge(Hyperedge((0, 3)))
-# hg.add_edge(Hyperedge((1, 3)))
+console = Console()
 
-hg = Loader("primary_school").construction_method(StandardConstructionMethod(weighted=True)).load()
+hg = load_and_time(lambda: load_justice_ideo(StandardConstructionMethod(weighted=True))[0])
+
 hg = hg.filter_orders([2], retain=True)
 
-
-# def count3(hg: Hypergraph) -> int:
-#     adj = hg.get_digraph_adj_list()
-#     ext = [{} for _ in range(hg.n)]
-#     visited = [False for _ in range(hg.n)]
-#     count = 0
-#
-#     # def compute_ext_rec(n: int, visited: list[bool]):
-#     #     nonlocal ext
-#     #     visited[n] = True
-#     #
-#     #     new_ext = set(adj[n]) - {n}
-#     #     for u in adj[n]:
-#     #         ext[u].update(new_ext - {u})
-#     #
-#     #     for u in adj[n]:
-#     #         if not visited[u]:
-#     #             compute_ext_rec(u, visited)
-#     #
-#     # def count3_rec(n: int, visited: list[bool]):
-#     #     nonlocal count
-#     #     visited[n] = True
-#     #
-#     #     new_ext = set(adj[n]) - {n}
-#     #     for u in adj[n]:
-#     #         if u in ext[n]:
-#     #             # print(n)
-#     #             count += 1
-#     #
-#     #     for u in adj[n]:
-#     #         if not visited[u]:
-#     #             count3_rec(u, visited)
-#     def fin():
-#         nonlocal count
-#         for n in range(hg.n):
-#             for u in adj[n]:
-#                 if u in ext[n]:
-#                     count += 1
-#             print(count)
-#
-#     # compute_ext_rec(0, visited.copy())
-#     # print(ext)
-#     # count3_rec(0, visited)
-#     fin()
-#     return count
+nodes = list(hg.nodes)
+console.print(f"[dim]Removed {hg.remove_self_loops()} self loops")
 
 
-# print("prova")
+table1 = Table()
+order_map = sorted(hg.get_order_map().items())
+edges_counts = []
+
+for order, edges in order_map:
+    table1.add_column(str(order), no_wrap=True)
+    edges_counts.append(str(len(edges)))
+
+
+table1.add_row(*edges_counts)
+console.print(table1)
+
+
+table2 = Table(title=f"[green]n= {hg.n}, m: {hg.e}[/]")
+table2.add_column("Algorithm", no_wrap=True)
+table2.add_column("Count")
+table2.add_column("Time (s)")
+
+
 motifs3, elapsed = time_function(lambda: count_motifs3(hg, 3))
 triangles = motifs3[((1, 2), (1, 3), (2, 3))].count
-print(f"count_motifs3:            \t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("count_motifs3", str(triangles), f"{elapsed:.4f}")
 
 triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=False))
-print(f"forward:                 \t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("forward", str(triangles), f"{elapsed:.4f}")
 
 triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=True))
-print(f"forward deg sort:       \t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("forward deg sort", str(triangles), f"{elapsed:.4f}")
 
 triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=False))
-print(f"compact forward:        \t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("compact forward", str(triangles), f"{elapsed:.4f}")
 
 triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=True))
-print(f"compact forward deg sort:\t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("compact forward deg sort", str(triangles), f"{elapsed:.4f}")
 
 triangles, elapsed = time_function(lambda: cetc(hg))
-print(f"cetc:                     \t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("cetc", str(triangles), f"{elapsed:.4f}")
 
 triangles, elapsed = time_function(lambda: cetc_s(hg))
-print(f"cetc_s:                   \t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("cetc_s", str(triangles), f"{elapsed:.4f}")
 
 triangles, elapsed = time_function(lambda: bfs_din_map(hg))
-print(f"t2:                       \t{triangles} triangles \t {elapsed:.4f} seconds")
+table2.add_row("bfs din map", str(triangles), f"{elapsed:.4f}")
 
-# print(triangles)
+console.print(table2)
+
+display_graph(hg)

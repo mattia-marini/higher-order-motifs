@@ -2,13 +2,18 @@ import os
 import time
 from typing import cast
 
+import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
+from rich.console import Console
 
 import config as cfg
 import src.loaders as loaders
 from src.graph import *
 from src.motifs.motifs2 import motifs_order_3, motifs_order_4
 from src.motifs.motifs_count_base import generate_motifs
+
+console = Console()
 
 
 class OldLoader:
@@ -113,7 +118,7 @@ class OldLoader:
 
         zipped = []
         index = 0
-        for motif, _ in mapping.items():
+        for motif, _ in mapping:
             zipped.append((motif, rv[index]))
             index += 1
 
@@ -130,7 +135,7 @@ class Loader:
         return self
 
     def load(self) -> Hypergraph:
-        print(f'Loading {Colors.BOLD}"{self._dataset}"{Colors.RESET} dataset')
+        console.print(f'[green]Loading [bold]"{self._dataset}"[/bold] dataset[/]')
 
         # Dynamically call the appropriate loader function
         loader_name = f"load_{self._dataset}"
@@ -139,11 +144,43 @@ class Loader:
             raise ValueError(f"Loader function '{loader_name}' not found in app.loaders")
 
         hg = cast(Hypergraph, loader(self._construction_method))
-        hg.compute_adjacency()
+        # hg.compute_adjacency()
 
-        print(f"{Colors.GREEN}Loaded hypergraph for dataset {self._dataset}{Colors.RESET}")
+        console.print(f"[green]Loaded hypergraph for dataset [bold]{self._dataset}[/]")
 
         return hg
+
+
+def load_and_time(func, *args, **kwargs):
+    def guess_name_from_lambda(fn):
+        # only for simple lambdas of the form: lambda: SOME_GLOBAL(...)
+        co = getattr(fn, "__code__", None)
+        if co is None:
+            return None
+        names = co.co_names  # tuple of names referenced by the code object
+        if not names:
+            return None
+        # heuristics: the first name is often the callee
+        callee_name = names[0]
+        # try to resolve the name in the lambda's globals
+        candidate = fn.__globals__.get(callee_name)
+        if candidate is not None:
+            return getattr(candidate, "__name__", callee_name)
+
+        return callee_name
+
+    func_name = guess_name_from_lambda(func)
+
+    dataset = "" if func_name == None else func_name.split("_")[1]  # Assuming function name is like "load_datasetname"
+    console.print(f"[green]Loading [bold]{dataset}[/bold] dataset[/]")
+
+    start = time.time()
+    rv = func()
+    end = time.time()
+    elapsed = end - start
+    console.print(f"[green]Loaded hypergraph for dataset [bold]{dataset} in {elapsed:.4f} s[/]")
+
+    return rv
 
 
 def time_function_p(func, *args, **kwargs):
@@ -154,7 +191,7 @@ def time_function_p(func, *args, **kwargs):
     start = time.time()
     result = func(*args, **kwargs)
     end = time.time()
-    print(Colors.DIM + Colors.BRIGHT_CYAN + f"Time elapsed: {end - start:.4f} seconds" + Colors.RESET)
+    console.print(f"[bright cyan]Time elapsed: {end - start:.4f} seconds [/]")
     elapsed = end - start
     return result, elapsed
 
@@ -169,6 +206,18 @@ def time_function(func, *args, **kwargs):
     end = time.time()
     elapsed = end - start
     return result, elapsed
+
+
+def display_graph(hg: Hypergraph):
+    # G = nx.karate_club_graph()  # example graph
+
+    edges = [handle.nodes for handle in hg.get_order_map().get(2, [])]
+    G = nx.from_edgelist(edges, create_using=nx.Graph())
+
+    # pos = nx.spring_layout(G, seed=42)  # force-directed layout
+    nx.draw(G, with_labels=False, node_size=30, font_size=8, width=0.1)
+    plt.title("NetworkX + Matplotlib")
+    plt.show()
 
 
 class Colors:

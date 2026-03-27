@@ -10,15 +10,17 @@ def cetc(hg: Hypergraph) -> int:
     """
     count = 0
     adj = hg.get_digraph_adj_list()
+    n = len(adj)
 
-    for i in range(hg.n):
-        # adj[i] = sorted(adj[i])
-        counting_sort(adj[i])
+    for i in range(n):
+        pass
+        adj[i] = sorted(adj[i])
+        # counting_sort(adj[i])
 
     levels = bfs(adj)
 
     # cetc
-    for u in range(hg.n):
+    for u in range(n):
         for v in adj[u]:
             if levels[v] == levels[u] and u < v:
                 for w in common_neighbors_sorted_list(adj[u], adj[v]):
@@ -33,10 +35,10 @@ def cetc_s(hg: Hypergraph) -> int:
     Split CETC triangle counting
     """
     adj = hg.get_digraph_adj_list()
-    adj0 = [[] for _ in range(hg.n)]
-    adj1 = [[] for _ in range(hg.n)]
-    hash = [False for _ in range(hg.n)]
-    n = hg.n
+    n = len(adj)
+    adj0 = [[] for _ in range(n)]
+    adj1 = [[] for _ in range(n)]
+    hash = [False for _ in range(n)]
     count = 0
 
     levels = bfs(adj)

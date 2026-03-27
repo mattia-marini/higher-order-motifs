@@ -7,6 +7,8 @@ from tests.util import Colors, Loader, StandardConstructionMethod, time_function
 
 
 def bfs(adj: list[list[int]], start_vertex=0):
+    if len(adj) == 0:
+        return []
     queue = deque([start_vertex])
     visited = [False] * len(adj)
     levels = [-1] * len(adj)

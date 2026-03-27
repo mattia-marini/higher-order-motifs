@@ -456,6 +456,21 @@ class Hypergraph:
                 return True
         return False
 
+    def has_self_loops(self) -> bool:
+        for edge in self.get_order_map().get(2, []):
+            if edge.nodes[0] == edge.nodes[1]:
+                return True
+        return False
+
+    def remove_self_loops(self) -> int:
+        count = 0
+        for edge in self.get_order_map().get(2, []):
+            if edge.nodes[0] == edge.nodes[1]:
+                count += 1
+                self.remove_edge(edge.id)
+
+        return count
+
     def filter_orders(self, orders: Iterable[int], retain=True, delete=False) -> Hypergraph:
         if retain and delete:
             raise ValueError("Cannot both retain and delete orders")
@@ -500,7 +515,7 @@ class Hypergraph:
         """
         Return adj list considering only 2-edges where each node id is normalized to a number from 0 to n-1, where n is the number of nodes in the graph
         """
-        edges = self.get_order_map()[2]
+        edges = self.get_order_map().get(2, [])
         map = {}
         nodes = set()
         for edge in edges:
@@ -520,7 +535,7 @@ class Hypergraph:
         return rv
 
     def get_digraph_adj_matrix(self) -> List[List[float]]:
-        edges = self.get_order_map()[2]
+        edges = self.get_order_map().get(2, [])
         map = {}
         nodes = set()
         for edge in edges:
@@ -557,7 +572,7 @@ def dump_digraph_to_file(hg: Hypergraph, file: str, map_vertices: bool = False):
     ...
     """
     with open(file, "w") as f:
-        edges = hg.get_order_map()[2]
+        edges = hg.get_order_map().get(2, [])
         f.write(f"{len(edges)} {'w' if hg.is_weighted() else 'u'}\n")
         if len(edges) == 0:
             return
