@@ -3,20 +3,18 @@ name = "higher-order-motifs"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "hypergraphx>=1.7.8",
-    "matplotlib>=3.10.7",
-    "networkx>=3.6",
-    "numpy>=2.3.5",
-    "pandas>=2.3.3",
-    "rich>=14.3.3",
-    "scipy>=1.16.3",
+requires-python = ">=3.14"
+authors = [
+    { name = "Mattia Marini", email = "marmattia26@gmail.com" }
 ]
 
-[dependency-groups]
-dev = [
-    "snakeviz>=2.2.2",
+dependencies = [ ]
+
+[tool.uv.workspace]
+members = [
+    "python-core",
+    "rust-core",
+    "test-core",
 ]
 
 [tool.ruff]

@@ -1,0 +1,30 @@
+[project]
+name = "python-core"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Mattia Marini", email = "marmattia26@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "hypergraphx>=1.7.8",
+    "matplotlib>=3.10.7",
+    "networkx>=3.6",
+    "numpy>=2.3.5",
+    "pandas>=2.3.3",
+    "polars>=1.39.3",
+    "rich>=14.3.3",
+    "scipy>=1.16.3",
+    "rust-core"
+]
+
+[tool.uv.sources]
+rust-core = { workspace = true }
+
+[project.scripts]
+python-core = "python_core:main"
+
+[build-system]
+requires = ["uv_build>=0.9.11,<0.10.0"]
+build-backend = "uv_build"
