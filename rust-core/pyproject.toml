@@ -1,13 +1,31 @@
-[build-system]
-requires = ["maturin>=1.12,<2.0"]
-build-backend = "maturin"
-
 [project]
 name = "rust-core"
-requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Rust",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
-]
-dynamic = ["version"]
+version = "0.1"
+requires-python = ">=3.10"
+# classifiers = [
+#     "Programming Language :: Rust",
+#     "Programming Language :: Python :: Implementation :: CPython",
+#     "Programming Language :: Python :: Implementation :: PyPy",
+# ]
+# dynamic = ["version"]
+
+[build-system]
+requires = ["maturin>=1.1,<2.0"]
+build-backend = "maturin"
+
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }, { file = "rust_core.pyi" }]
+
+[tool.maturin]
+python-source = "stubs"
+module-name = "rust_core._core"
+
+[tool.pyo3-stub-gen]
+generate-init-py = true 
+
+
+# [tool.pyo3-stub-gen]
+# generate-init-py = ["rust-core", "rust-core.triangle", "rust-core.triangle"]  # Enable for specific packages
+# [tool.pyo3-stub-gen]
+# generate-init-py = true
