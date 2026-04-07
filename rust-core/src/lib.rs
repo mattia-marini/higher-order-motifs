@@ -7,7 +7,7 @@ use pyo3_stub_gen::{define_stub_info_gatherer, reexport_module_members};
 pub mod util;
 
 #[pymodule]
-pub mod _core {
+pub mod core {
 
     use crate::util::submodules_initializer::PyModuleSubmoduleExt;
     use pyo3::{Bound, PyResult, types::PyModule};
@@ -25,6 +25,6 @@ pub mod _core {
     }
 }
 
-reexport_module_members!("rust_core" from "rust_core._core");
+reexport_module_members!("rust_core" from "rust_core.core");
 
 define_stub_info_gatherer!(stub_info);

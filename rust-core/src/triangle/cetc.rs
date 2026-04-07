@@ -1,24 +1,24 @@
 use super::common::bfs;
 use pyo3::prelude::*;
+use pyo3_stub_gen::reexport_module_members;
 
 #[pymodule(submodule)]
 pub mod cetc {
     use pyo3::prelude::*;
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.cetc")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.cetc")]
     #[pyfunction]
     pub fn cetc(mut adj: Vec<Vec<usize>>) -> usize {
         super::cetc(&mut adj)
     }
 
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.cetc")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.cetc")]
     #[pyfunction]
     pub fn cetc_s(adj: Vec<Vec<usize>>) -> usize {
         super::cetc_s(&adj)
     }
 }
-
 
 /// Computes intersection of two sorted vectors and returns the common elements.
 
@@ -98,4 +98,4 @@ pub fn cetc_s(adj: &Vec<Vec<usize>>) -> usize {
     count
 }
 
-// reexport_module_members!("rust_core.triangle.cetc" from "rust_core._core.triangle.cetc");
+reexport_module_members!("rust_core.triangle.cetc" from "rust_core.core.triangle.cetc");

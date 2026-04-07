@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3_stub_gen::reexport_module_members;
 
 mod cetc;
 mod common;
@@ -20,3 +21,5 @@ pub mod triangle {
     #[pymodule_export]
     use super::kclist::kclist;
 }
+
+reexport_module_members!("rust_core.triangle" from "rust_core.core.triangle");

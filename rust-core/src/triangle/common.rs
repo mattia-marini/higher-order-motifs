@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use pyo3_stub_gen::reexport_module_members;
 
 #[pymodule(submodule)]
 pub mod common {
@@ -10,19 +11,19 @@ pub mod common {
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.common")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
     pub fn degree_ordering(adj: Vec<Vec<usize>>) -> (Vec<usize>, Vec<usize>, usize) {
         super::degree_ordering(&adj)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.common")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
     pub fn bfs(adj: Vec<Vec<usize>>) -> Vec<i32> {
         super::bfs(&adj)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.common")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
     pub fn sort_adj_list(adj: Vec<Vec<usize>>) -> Vec<Vec<usize>> {
         let mut adj_mut = adj.clone();
         super::sort_adj_list(&mut adj_mut);
@@ -30,19 +31,19 @@ pub mod common {
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.common")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
     pub fn common_neighbors_sorted_list(a: Vec<usize>, b: Vec<usize>) -> Vec<usize> {
         super::common_neighbors_sorted_list(&a, &b)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.common")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
     pub fn degeneracy_ordering(adj: Vec<Vec<usize>>) -> (Vec<usize>, Vec<usize>, usize) {
         super::degeneracy_ordering(&adj)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.common")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
     pub fn degeneracy_ordering_py(
         adj: Bound<'_, PyList>,
     ) -> PyResult<(Vec<usize>, Vec<usize>, usize)> {
@@ -320,4 +321,4 @@ pub fn degeneracy_ordering_py(
     Ok((order_idx, pos, k))
 }
 
-// reexport_module_members!("rust_core.triangle.common" from "rust_core._core.triangle.common");
+reexport_module_members!("rust_core.triangle.common" from "rust_core.core.triangle.common");

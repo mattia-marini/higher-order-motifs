@@ -1,5 +1,6 @@
 use super::common::degree_ordering;
 use pyo3::prelude::*;
+use pyo3_stub_gen::reexport_module_members;
 use std::collections::HashSet;
 
 /// Computes the degree ordering: (order, position)
@@ -10,13 +11,13 @@ pub mod forward {
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.forward")]
     pub fn forward(adj: Vec<Vec<usize>>, sort_degrees: bool) -> usize {
         super::forward(&adj, sort_degrees)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.forward")]
     pub fn compact_forward(adj: Vec<Vec<usize>>, sort_degrees: bool) -> usize {
         super::forward(&adj, sort_degrees)
     }
@@ -90,4 +91,4 @@ pub fn compact_forward(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     count
 }
 
-// reexport_module_members!("rust_core.triangle.forward" from "rust_core._core.triangle.forward");
+reexport_module_members!("rust_core.triangle.forward" from "rust_core.core.triangle.forward");

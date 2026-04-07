@@ -1,3 +1,5 @@
+import sys
+
 from python_core.graph import StandardConstructionMethod
 from python_core.loaders import (
     load_gene_disease,
@@ -16,11 +18,18 @@ def run():
 
     # from rust_core._core.motifs import count_motifs_3
     import rust_core as rc
+    from rust_core.motifs import count_motifs_3
+
+    rc.triangle.cetc.cetc([])
+    print(count_motifs_3())
+
+    # rc.triangle.cetc.cetc_s([])
+    # rc.triangle.cetc.cetc_s([])
+
+    # print(rc.motifs.count_motifs_3())
 
     # rc.motifs.count_motifs_3()
     # import rust_core._core.motifs as motfs
-
-    # print(rc._core.motifs.count_motifs_3())
 
     # print(dir(rc._core))
     # from rust_core import triangle

@@ -1,4 +1,5 @@
 use pyo3::{prelude::*, types::PyList};
+use pyo3_stub_gen::reexport_module_members;
 
 #[pymodule(submodule)]
 pub mod kclist {
@@ -6,13 +7,13 @@ pub mod kclist {
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.kclist")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.kclist")]
     pub fn kclist(adj: Vec<Vec<usize>>) -> usize {
         super::kclist(&adj)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.triangle.kclist")]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.kclist")]
     pub fn kclist_py(adj: Bound<'_, PyList>) -> PyResult<usize> {
         super::kclist_py(adj)
     }
@@ -113,3 +114,4 @@ pub fn kclist_py(adj_py: Bound<'_, PyList>) -> PyResult<usize> {
     Ok(count)
 }
 
+reexport_module_members!("rust_core.triangle.kclist" from "rust_core.core.triangle.kclist");

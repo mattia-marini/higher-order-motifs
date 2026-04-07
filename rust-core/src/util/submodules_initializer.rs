@@ -15,7 +15,6 @@ fn _inner_init(module: &Bound<'_, PyModule>, path: &str) -> PyResult<()> {
         if let Ok(submod) = submod.cast::<PyModule>() {
             _inner_init(&submod, &modpath)?;
             sys_modules.set_item(&modpath, submod)?;
-            println!("{} - {:?}", modpath, submod);
         }
     }
     Ok(())

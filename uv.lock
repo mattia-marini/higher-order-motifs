@@ -461,7 +461,6 @@ wheels = [
 
 [[package]]
 name = "rust-core"
-version = "0.1"
 source = { editable = "rust-core" }
 
 [[package]]
