@@ -4,11 +4,14 @@
 import builtins
 import typing
 __all__ = [
-    "compact_forward",
     "forward",
+    "forward_hashed",
+    "forward_hbs",
 ]
 
-def compact_forward(adj: typing.Sequence[typing.Sequence[builtins.int]], sort_degrees: builtins.bool) -> builtins.int: ...
-
 def forward(adj: typing.Sequence[typing.Sequence[builtins.int]], sort_degrees: builtins.bool) -> builtins.int: ...
+
+def forward_hashed(adj: typing.Sequence[typing.Sequence[builtins.int]], sort_degrees: builtins.bool) -> builtins.int: ...
+
+def forward_hbs(adj: typing.Sequence[typing.Sequence[builtins.int]], sort_degrees: builtins.bool) -> builtins.int: ...
 

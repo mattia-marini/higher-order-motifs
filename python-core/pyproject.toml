@@ -28,3 +28,6 @@ python-core = "python_core:main"
 [build-system]
 requires = ["uv_build>=0.9.11,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.pyright]
+typeCheckingMode = "basic"

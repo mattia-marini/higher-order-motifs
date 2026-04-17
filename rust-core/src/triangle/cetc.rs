@@ -67,7 +67,7 @@ pub fn cetc_s(adj: &Vec<Vec<usize>>) -> usize {
     }
 
     // Reuse the compact_forward from previous implementation
-    count += super::forward::compact_forward(&adj0, false);
+    count += super::forward::forward_hashed(&adj0, false);
 
     for u in 0..n {
         if adj1[u].is_empty() {

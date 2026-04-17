@@ -1,3 +1,4 @@
+pub mod graph;
 pub mod motifs;
 pub mod triangle;
 use pyo3::prelude::*;

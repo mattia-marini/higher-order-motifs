@@ -1015,7 +1015,7 @@ def load_wiki(construction_method: ConstructionMethodBase = StandardConstruction
     if not isinstance(construction_method, StandardConstructionMethod):
         raise ValueError("Unsupported construction method")
 
-    fopen = open("{}/wiki.txt".format(cfg.DATASET_DIR), "r")
+    fopen = open("{}/wiki/wiki.txt".format(cfg.DATASET_DIR), "r")
     lines = fopen.readlines()
 
     edges = set()
@@ -1200,6 +1200,37 @@ def load_enron(construction_method: ConstructionMethodBase = StandardConstructio
             else:
                 if not hg.has_edge_with_nodes(e):
                     hg.add_edge(Hyperedge(e))
+
+    return hg
+
+
+def load_wiki_talk(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
+    import polars as pl
+
+    dataset = f"{cfg.DATASET_DIR}/wiki/wiki-talk.txt"
+
+    df = pl.read_csv(
+        dataset,
+        separator="\t",
+        has_header=False,
+        new_columns=["u", "v"],
+        schema={"u": pl.Int64, "v": pl.Int64},
+        infer_schema_length=0,
+        ignore_errors=True,
+        rechunk=False,
+    )
+
+    df = pl.concat([df, df.select([pl.col("v").alias("u"), pl.col("u").alias("v")])])
+
+    hg = Hypergraph()
+
+    u_col = df["u"].to_numpy()
+    v_col = df["v"].to_numpy()
+
+    for i in range(len(u_col)):
+        nodes = (int(u_col[i]), int(v_col[i]))
+        if not hg.has_edge_with_nodes(nodes):
+            hg.add_edge(Hyperedge(nodes))
 
     return hg
 

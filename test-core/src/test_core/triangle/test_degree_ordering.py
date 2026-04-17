@@ -13,30 +13,8 @@ console = Console()
 
 
 def run():
-    # hg = load_and_time(lambda: load_gene_disease(StandardConstructionMethod(weighted=True)))
-    # import rust_core.motifs
-
-    # from rust_core._core.motifs import count_motifs_3
-    import rust_core as rc
-    from rust_core.motifs import count_motifs_3
-
-    rc.triangle.cetc.cetc([])
-    print(count_motifs_3())
-
-    # rc.triangle.cetc.cetc_s([])
-    # rc.triangle.cetc.cetc_s([])
-
-    # print(rc.motifs.count_motifs_3())
-
-    # rc.motifs.count_motifs_3()
-    # import rust_core._core.motifs as motfs
-
-    # print(dir(rc._core))
-    # from rust_core import triangle
-    # triangle.
-
-    # help(rc)
-    # help(rc.motifs)
+    hg = load_and_time(lambda: load_gene_disease(StandardConstructionMethod(weighted=True)))
+    test_sort_adj(hg)
 
 
 def test_sort_adj(hg):

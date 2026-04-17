@@ -3,7 +3,10 @@
 
 __all__ = [
     "count_motifs_3",
+    "orca",
 ]
 
 def count_motifs_3() -> None: ...
+
+def orca() -> None: ...
 

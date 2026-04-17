@@ -1,7 +1,9 @@
-use super::common::degree_ordering;
+use crate::triangle::cbs::hcbs::HCBSGraph;
+
+use super::common::{count_neighbors_sorted_list, degree_ordering};
+use bit_set::BitSet;
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
-use std::collections::HashSet;
 
 /// Computes the degree ordering: (order, position)
 
@@ -18,25 +20,39 @@ pub mod forward {
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core.core.triangle.forward")]
-    pub fn compact_forward(adj: Vec<Vec<usize>>, sort_degrees: bool) -> usize {
-        super::forward(&adj, sort_degrees)
+    pub fn forward_hashed(adj: Vec<Vec<usize>>, sort_degrees: bool) -> usize {
+        super::forward_hashed(&adj, sort_degrees)
+    }
+
+    #[pyfunction]
+    #[gen_stub_pyfunction(module = "rust_core.core.triangle.forward")]
+    pub fn forward_hbs(adj: Vec<Vec<usize>>, sort_degrees: bool) -> usize {
+        super::forward_hbs(&adj, sort_degrees)
     }
 }
 
+/// Forward algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
+/// the natural order (u < v). Common neighbors are counted with the sorted list strategy
 pub fn forward(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     let n = adj.len();
-    let mut a: Vec<HashSet<usize>> = vec![HashSet::new(); n];
+    let mut a = vec![Vec::new(); n];
+    for i in 0..n {
+        a[i].reserve(adj[i].len());
+    }
+
     let mut count = 0;
 
     if sort_degrees {
-        let pos = degree_ordering(adj).1;
-        for u in 0..n {
+        let (order, pos, _) = degree_ordering(adj);
+
+        for i in 0..n {
+            let u = order[i];
             for &v in &adj[u] {
                 // Only process directed edge u -> v in the DAG
-                if pos[u] < pos[v] {
+                if i < pos[v] {
                     // Count common neighbors in the 'a' sets
-                    count += a[u].intersection(&a[v]).count();
-                    a[v].insert(u);
+                    count += count_neighbors_sorted_list(&a[u], &a[v]);
+                    a[v].push(pos[u]);
                 }
             }
         }
@@ -44,8 +60,8 @@ pub fn forward(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
         for u in 0..n {
             for &v in &adj[u] {
                 if u < v {
-                    count += a[u].intersection(&a[v]).count();
-                    a[v].insert(u);
+                    count += count_neighbors_sorted_list(&a[u], &a[v]);
+                    a[v].push(u);
                 }
             }
         }
@@ -53,38 +69,84 @@ pub fn forward(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     count
 }
 
-pub fn compact_forward(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
+/// Compact forward/forward hashed algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
+/// the natural order (u < v). Common neighbors are counted with the hash map strategy
+pub fn forward_hashed(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     let n = adj.len();
-    let mut a: Vec<HashSet<usize>> = vec![HashSet::new(); n];
-    let mut hash_map = vec![false; n];
+    let mut a = vec![Vec::new(); n];
+    for i in 0..n {
+        a[i].reserve(adj[i].len());
+    }
+
+    let mut bitset = BitSet::with_capacity(n);
     let mut count = 0;
 
-    let pos = if sort_degrees {
-        degree_ordering(adj).1
+    let (order, pos, _) = if sort_degrees {
+        degree_ordering(adj)
     } else {
-        vec![]
+        (vec![], vec![], 0)
     };
 
-    for u in 0..n {
+    for i in 0..n {
+        let u = if sort_degrees { order[i] } else { i };
         for &v in &adj[u] {
-            let is_ordered = if sort_degrees { pos[u] < pos[v] } else { u < v };
+            let is_forward = if sort_degrees { i < pos[v] } else { u < v };
 
-            if is_ordered {
+            if is_forward {
                 // Mark elements in a[u]
                 for &w in &a[u] {
-                    hash_map[w] = true;
+                    bitset.insert(w);
                 }
                 // Check elements in a[v] against the mark
                 for &w in &a[v] {
-                    if hash_map[w] {
+                    if bitset.contains(w) {
                         count += 1;
                     }
                 }
                 // Reset marks for next iteration
                 for &w in &a[u] {
-                    hash_map[w] = false;
+                    bitset.remove(w);
                 }
-                a[v].insert(u);
+                a[v].push(u);
+            }
+        }
+    }
+    count
+}
+
+/// Forward algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
+/// the natural order (u < v). Common neighbors are counted with an optimized hierarchical bitset
+pub fn forward_hbs(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
+    let n = adj.len();
+    let mut a = HCBSGraph::<u128>::with_nodes(n);
+    for i in 0..n {
+        a.nodes[i].bits.reserve(adj[i].len());
+        a.nodes[i].offsets.reserve(adj[i].len());
+    }
+
+    let mut count = 0;
+
+    if sort_degrees {
+        let (order, pos, _) = degree_ordering(adj);
+
+        for i in 0..n {
+            let u = order[i];
+            for &v in &adj[u] {
+                // Only process directed edge u -> v in the DAG
+                if i < pos[v] {
+                    // Count common neighbors in the 'a' sets
+                    count += a.count_common_neighbors(u, v);
+                    a.append_neighbor(v, pos[u]);
+                }
+            }
+        }
+    } else {
+        for u in 0..n {
+            for &v in &adj[u] {
+                if u < v {
+                    count += a.count_common_neighbors(u, v);
+                    a.append_neighbor(v, u);
+                }
             }
         }
     }

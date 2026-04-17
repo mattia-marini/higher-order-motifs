@@ -1,6 +1,8 @@
 from collections import deque
 from typing import Any, Callable
 
+from rust_core.triangle import common as rc_common
+
 
 def bfs(adj: list[list[int]], start_vertex=0):
     if len(adj) == 0:
@@ -56,7 +58,7 @@ def common_neighbors_sorted_list(u: list[int], v: list[int]) -> list[int]:
 
 def sort_adj_list_bucket(adj: list[list[int]]):
     """
-    Bucket sort each adjacency list in-place. Inefficient; sparse graph can end up with O(n^2) complexity
+    Bucket sort each adjacency list in-place. Inefficient; sparse graph can end up with O(n^2) complexity.
     """
     for neighbors in adj:
         d = len(neighbors)
@@ -84,7 +86,7 @@ def sort_adj_list_bucket(adj: list[list[int]]):
                 idx += 1
 
 
-def sort_adj_list(adj: list[list[int]]):
+def sort_adj_list(adj: list[list[int]]) -> list[list[int]]:
     """
     Efficiently sort each adjacency list in-place.
     Time complexity: O(n + m)
@@ -97,7 +99,7 @@ def sort_adj_list(adj: list[list[int]]):
         for u in adj[v]:
             sorted[u].append(v)
 
-    adj[:] = sorted
+    return sorted
 
 
 def degree_ordering(adj: list[list[int]]) -> tuple[list[int], list[int], int]:
@@ -200,3 +202,11 @@ def degeneracy_ordering(adj: list[list[int]]) -> tuple[list[int], list[int], int
                 deg[u] -= 1
 
     return order, pos, k
+
+
+def sort_adj_list_rust(adj: list[list[int]]) -> list[list[int]]:
+    """
+    Sort each adjacency list using Rust implementation
+    """
+
+    return rc_common.sort_adj_list(adj)

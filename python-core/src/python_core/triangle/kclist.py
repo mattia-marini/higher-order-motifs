@@ -1,12 +1,13 @@
+from rust_core.triangle import kclist as rc_kclist
+
 from .common import degeneracy_ordering
 
 
-def kclist(hg) -> int:
-    adj = hg.get_digraph_adj_list()
+def kclist(adj: list[list[int]]) -> int:
     n = len(adj)
     # Re-orient edges (using Original IDs)
 
-    order, pos, _ = degeneracy_ordering(adj)
+    _, pos, _ = degeneracy_ordering(adj)
     out_adj = [[] for _ in range(n)]
 
     for u in range(n):
@@ -24,3 +25,17 @@ def kclist(hg) -> int:
                     count += 1
 
     return count
+
+
+def kclist_rust(adj: list[list[int]]) -> int:
+    """
+    KCLIST triangle counting with rust implementation
+    """
+    return rc_kclist.kclist(adj)
+
+
+def kclist_rustpy(adj: list[list[int]]) -> int:
+    """
+    KCLIST triangle counting with rust implementation, using pyO3 rust-python objects
+    """
+    return rc_kclist.kclist_py(adj)

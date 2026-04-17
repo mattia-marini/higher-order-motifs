@@ -1,18 +1,13 @@
-from python_core.graph import Hypergraph
+import rust_core.triangle.forward as rc_forward
 
-from .common import counting_sort, degree_ordering
+# from rust_core.triangle import forward as rc_forward
+from .common import degree_ordering
 
 
-def forward(hg: Hypergraph, sort_degrees: bool = False) -> int:
+def forward(adj: list[list[int]], sort_degrees: bool = False) -> int:
     """
     forward triangle counting
     """
-    adj = hg.get_digraph_adj_list()
-
-    return forward_raw(adj, sort_degrees)
-
-
-def forward_raw(adj: list[list[int]], sort_degrees: bool = False) -> int:
     n = len(adj)
     a = [set() for _ in range(n)]
 
@@ -46,17 +41,7 @@ def forward_raw(adj: list[list[int]], sort_degrees: bool = False) -> int:
         return no_sort()
 
 
-def compact_forward(hg: Hypergraph, sort_degrees: bool = False) -> int:
-    """
-    forward hashed / compact forward triangle counting
-    """
-    a = [set() for _ in range(hg.n)]
-    adj = hg.get_digraph_adj_list()
-
-    return compact_forward_raw(adj, sort_degrees)
-
-
-def compact_forward_raw(adj: list[list[int]], sort_degrees: bool = False) -> int:
+def forward_hashed(adj: list[list[int]], sort_degrees: bool = False) -> int:
     """
     forward hashed / compact forward triangle counting
     """
@@ -103,3 +88,24 @@ def compact_forward_raw(adj: list[list[int]], sort_degrees: bool = False) -> int
         return sort()
     else:
         return no_sort()
+
+
+def forward_rust(adj: list[list[int]], sort_degrees: bool = False) -> int:
+    """
+    forward triangle counting with rust implementation
+    """
+    return rc_forward.forward(adj, sort_degrees)
+
+
+def forward_hashed_rust(adj: list[list[int]], sort_degrees: bool = False) -> int:
+    """
+    forward hashed / compact forward triangle counting with rust implementation
+    """
+    return rc_forward.forward_hashed(adj, sort_degrees)
+
+
+def forward_hcbs_rust(adj: list[list[int]], sort_degrees: bool = False) -> int:
+    """
+    forward hashed / compact forward triangle counting with rust implementation and cbst neighbors merge
+    """
+    return rc_forward.forward_hbs(adj, sort_degrees)

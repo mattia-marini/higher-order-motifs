@@ -13,6 +13,9 @@ wheels/
 # Virtual environments
 .venv
 
+# go-task
+.task
+
 # Other
 .DS_Store
 dataset/

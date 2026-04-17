@@ -5,8 +5,10 @@ from python_core.graph import Hyperedge, Hypergraph
 from python_core.loaders import (
     load_conference,
     load_DBLP,
+    load_enron,
     load_example,
     load_friendship_hs,
+    load_gene_disease,
     load_hospital,
     load_justice_ideo,
     load_NDC_classes,
@@ -15,10 +17,13 @@ from python_core.loaders import (
     load_PACS_common,
     load_random_hypergraph,
     load_wiki,
+    load_wiki_talk,
 )
 from python_core.motifs.motifs3 import count_motifs as count_motifs3
-from python_core.triangle import *
+from python_core.triangle.cetc import cetc, cetc_rust, cetc_s, cetc_s_rust
 from python_core.triangle.common import degeneracy_ordering
+from python_core.triangle.forward import forward, forward_hashed, forward_hashed_rust, forward_hcbs_rust, forward_rust
+from python_core.triangle.kclist import kclist, kclist_rust
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import track
@@ -38,18 +43,22 @@ console = Console()
 
 construction_method = StandardConstructionMethod(weighted=True)
 
-graphs = {
-    "random": load_and_time(lambda: load_random_hypergraph(100, 200)),
-    "hospital": load_and_time(lambda: load_hospital(construction_method)),
-    "conference": load_and_time(lambda: load_conference(construction_method)),
-    "PACS": load_and_time(lambda: load_PACS(construction_method)),
-    "ndc_substances": load_and_time(lambda: load_NDC_substances(construction_method)),
-    "DBLP": load_and_time(lambda: load_DBLP(construction_method)),
-    "wiki": load_and_time(lambda: load_wiki(construction_method)),
-}
-
 
 def run():
+    graphs = {
+        "random": load_and_time(lambda: load_random_hypergraph(100, 200)),
+        "hospital": load_and_time(lambda: load_hospital(construction_method)),
+        "conference": load_and_time(lambda: load_conference(construction_method)),
+        "wiki": load_and_time(lambda: load_wiki(construction_method)),
+        # Bigger datasets
+        # "PACS": load_and_time(lambda: load_PACS(construction_method)),
+        # "ndc_substances": load_and_time(lambda: load_NDC_substances(construction_method)),
+        # "DBLP": load_and_time(lambda: load_DBLP(construction_method)),
+        # "enron": load_and_time(lambda: load_enron(construction_method)),
+        # "gene_disease": load_and_time(lambda: load_gene_disease(construction_method)),
+        "wiki-talk": load_and_time(lambda: load_wiki_talk(construction_method)),
+    }
+
     for name, graph in graphs.items():
         console.print(graph)
 
@@ -70,39 +79,73 @@ def run():
 
     results = []
     for name, hg in graphs.items():
+        assert not hg.has_multiedge()
+        assert not hg.has_self_loops()
+
         table = Table(title=f"[green]{name}: n = {hg.n}, m = {hg.e}[/]")
         table.add_column("Algorithm", no_wrap=True)
         table.add_column("Count")
         table.add_column("Time (s)")
 
         curr_result = []
+        adj = hg.get_digraph_adj_list()
 
-        # motifs3, elapsed = time_function(lambda: count_motifs3(hg, 3))
+        # PYTHON
+        # triangles, elapsed = time_function(lambda: forward(adj, sort_degrees=False))
+        # curr_result.append(("forward", triangles, elapsed))
+        #
+        # triangles, elapsed = time_function(lambda: forward(adj, sort_degrees=True))
+        # curr_result.append(("forward deg sort", triangles, elapsed))
+        #
+        # triangles, elapsed = time_function(lambda: forward_hashed(adj, sort_degrees=False))
+        # curr_result.append(("forward hashed", triangles, elapsed))
+        #
+        # triangles, elapsed = time_function(lambda: forward_hashed(adj, sort_degrees=True))
+        # curr_result.append(("forward hashed deg sort", triangles, elapsed))
+        #
+        # triangles, elapsed = time_function(lambda: cetc(adj))
+        # curr_result.append(("cetc", triangles, elapsed))
+        #
+        # triangles, elapsed = time_function(lambda: cetc_s(adj))
+        # curr_result.append(("cetc_s", triangles, elapsed))
+        #
+        # triangles, elapsed = time_function(lambda: kclist(adj))
+        # curr_result.append(("kclist", triangles, elapsed))
+
+        # RUST
+        triangles, elapsed = time_function(lambda: forward_rust(adj, sort_degrees=False))
+        curr_result.append(("forward rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: forward_rust(adj, sort_degrees=True))
+        curr_result.append(("forward deg sort rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: forward_hashed_rust(adj, sort_degrees=False))
+        curr_result.append(("forward hashed rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: forward_hashed_rust(adj, sort_degrees=True))
+        curr_result.append(("forward hashed deg sort rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: forward_hcbs_rust(adj, sort_degrees=False))
+        curr_result.append(("forward hcbs rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: forward_hcbs_rust(adj, sort_degrees=True))
+        curr_result.append(("forward hcbs deg sort rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: cetc_rust(adj))
+        curr_result.append(("cetc rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: cetc_s_rust(adj))
+        curr_result.append(("cetc_s rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: kclist_rust(adj))
+        curr_result.append(("kclist rust", triangles, elapsed))
+
+        # algorithms that are too bad to even try
+        # motifs3, elapsed = time_function(lambda: count_motifs3(adj, 3))
         # triangles = motifs3[((1, 2), (1, 3), (2, 3))].count
         # current_result.append(("count_motifs3", triangles, elapsed))
 
-        triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=False))
-        curr_result.append(("forward", triangles, elapsed))
-
-        triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=True))
-        curr_result.append(("forward deg sort", triangles, elapsed))
-
-        triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=False))
-        curr_result.append(("compact forward", triangles, elapsed))
-
-        triangles, elapsed = time_function(lambda: forward(hg, sort_degrees=True))
-        curr_result.append(("compact forward deg sort", triangles, elapsed))
-
-        triangles, elapsed = time_function(lambda: cetc(hg))
-        curr_result.append(("cetc", triangles, elapsed))
-
-        triangles, elapsed = time_function(lambda: cetc_s(hg))
-        curr_result.append(("cetc_s", triangles, elapsed))
-
-        triangles, elapsed = time_function(lambda: kclist(hg))
-        curr_result.append(("kclist", triangles, elapsed))
-
-        # triangles, elapsed = time_function(lambda: bfs_din_map(hg))
+        # triangles, elapsed = time_function(lambda: bfs_din_map(adj))
         # curr_result.append(("bfs din map", triangles, elapsed))
 
         for alg, count, elapsed in curr_result:

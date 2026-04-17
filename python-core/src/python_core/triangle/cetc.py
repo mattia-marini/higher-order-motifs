@@ -1,15 +1,14 @@
-from python_core.graph import Hypergraph
+from rust_core.triangle import cetc as rc_cetc
 
-from .common import bfs, common_neighbors_sorted_list, counting_sort
-from .forward import compact_forward_raw
+from .common import bfs, common_neighbors_sorted_list
+from .forward import forward_hashed
 
 
-def cetc(hg: Hypergraph) -> int:
+def cetc(adj: list[list[int]]) -> int:
     """
     Standard CETC triangle counting
     """
     count = 0
-    adj = hg.get_digraph_adj_list()
     n = len(adj)
 
     for i in range(n):
@@ -30,11 +29,10 @@ def cetc(hg: Hypergraph) -> int:
     return count
 
 
-def cetc_s(hg: Hypergraph) -> int:
+def cetc_s(adj: list[list[int]]) -> int:
     """
     Split CETC triangle counting
     """
-    adj = hg.get_digraph_adj_list()
     n = len(adj)
     adj0 = [[] for _ in range(n)]
     adj1 = [[] for _ in range(n)]
@@ -48,7 +46,7 @@ def cetc_s(hg: Hypergraph) -> int:
                 adj0[u].append(v)
             else:
                 adj1[u].append(v)
-    count += compact_forward_raw(adj0)
+    count += forward_hashed(adj0)
 
     for u in range(n):
         if len(adj1[u]) == 0:
@@ -66,3 +64,17 @@ def cetc_s(hg: Hypergraph) -> int:
             hash[v] = False
 
     return count
+
+
+def cetc_rust(adj: list[list[int]]) -> int:
+    """
+    Split CETC triangle counting
+    """
+    return rc_cetc.cetc(adj)
+
+
+def cetc_s_rust(adj: list[list[int]]) -> int:
+    """
+    Split CETC triangle counting
+    """
+    return rc_cetc.cetc_s(adj)

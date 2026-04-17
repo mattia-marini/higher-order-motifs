@@ -1,10 +1,11 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
 
-mod cetc;
+pub mod cbs;
+pub mod cetc;
 mod common;
-mod forward;
-mod kclist;
+pub mod forward;
+pub mod kclist;
 
 #[pymodule(submodule)]
 pub mod triangle {
