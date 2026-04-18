@@ -1,13 +1,9 @@
-use std::cmp::{self, max};
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 
-use timed::timed;
-
-use crate::graph::bin_writer::load_vec;
-use crate::graph::{AdjList, AdjMat, FlatAdjList};
+use crate::graph::FlatAdjList;
 
 #[inline(always)]
 pub fn parse(chars: &[u8]) -> u32 {
@@ -53,7 +49,7 @@ pub fn load_wiki_talk() -> Result<FlatAdjList<u32, u32>, Box<dyn Error>> {
         };
         println!("Header: n {} m {}", n, m);
 
-        reader.read_to_end(&mut file);
+        reader.read_to_end(&mut file)?;
 
         // let v: Vec<char> = file[0..100].iter().map(|c| *c as char).collect();
         // println!("{:?}", v);
@@ -77,7 +73,7 @@ pub fn load_wiki_talk() -> Result<FlatAdjList<u32, u32>, Box<dyn Error>> {
 
         // let mut adj_mat = AdjMat::with_nodes(n);
         for c in file_it {
-            if (c == b'\t' || c == b'\r' || c == b'\n') {
+            if c == b'\t' || c == b'\r' || c == b'\n' {
                 if is_first {
                     if pos == 1 {
                         let u = parse(&buffs[0][..sizes[0]]);

@@ -1,8 +1,24 @@
-use pyo3::pyfunction;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
+use std::collections::HashMap;
 
-#[pyfunction]
-#[gen_stub_pyfunction(module = "rust_core.core.motifs")]
-pub fn count_motifs_3() {
-    println!("Count motifs");
+use crate::graph::AdjList;
+
+pub fn count_motifs_3(edges: &(Vec<(usize, usize)>, Vec<(usize, usize, usize)>)) {
+    let adj_list = AdjList::from_edges(&edges.0);
+    let mut count_2 = [0, 0]; // star, triangle
+
+    //2 counting
+    for (_n, neighbors) in adj_list.adj.iter().enumerate() {
+        count_2[0] += neighbors.len() * (neighbors.len() - 1) / 2;
+    }
+
+    //3 counting
+}
+
+pub fn count_motifs_4(
+    edges: &(
+        Vec<(usize, usize)>,
+        Vec<(usize, usize, usize)>,
+        Vec<(usize, usize, usize, usize)>,
+    ),
+) {
 }
