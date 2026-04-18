@@ -1,4 +1,3 @@
-use bit_set::BitSet;
 use num_traits::{AsPrimitive, One, PrimInt, Unsigned, Zero};
 
 use rkyv::{
@@ -7,13 +6,10 @@ use rkyv::{
     de::Pool,
     deserialize,
     rancor::Strategy,
-    util::AlignedVec,
     validation::{Validator, archive::ArchiveValidator, shared::SharedValidator},
 };
 
 use std::{
-    cmp::{max, min},
-    collections::{HashMap, HashSet},
     fs::File,
     hash::Hash,
     io::Write,
@@ -56,7 +52,7 @@ where
         }
     }
 
-    pub fn from_edges(edges: &[(E, E)], directed: bool) -> Self {
+    pub fn from_edges(edges: &[(E, E)], _directed: bool) -> Self {
         let mut adj_list = AdjList::<E>::from_edges(edges);
         adj_list.remove_self_loops();
         // adj_list.remove_multiedges();

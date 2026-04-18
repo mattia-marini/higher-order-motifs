@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 
 use crate::graph::AdjList;
 
@@ -15,7 +14,7 @@ pub fn count_motifs_3(edges: &(Vec<(usize, usize)>, Vec<(usize, usize, usize)>))
 }
 
 pub fn count_motifs_4(
-    edges: &(
+    _edges: &(
         Vec<(usize, usize)>,
         Vec<(usize, usize, usize)>,
         Vec<(usize, usize, usize, usize)>,
