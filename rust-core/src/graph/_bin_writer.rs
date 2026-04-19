@@ -1,4 +1,3 @@
-
 use std::fs::write;
 
 pub fn save_vec(path: &str, data: &[(u32, u32)]) -> std::io::Result<()> {

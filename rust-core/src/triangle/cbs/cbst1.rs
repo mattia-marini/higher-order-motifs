@@ -16,6 +16,15 @@ pub struct CBSTGraph<T> {
     pub max_lvl: usize,
 }
 
+impl<T> Default for CBST<T>
+where
+    T: PrimInt + BitOrAssign,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> CBST<T>
 where
     T: PrimInt + BitOrAssign,

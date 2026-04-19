@@ -1,58 +1,11 @@
-use std::collections::VecDeque;
-
-use pyo3::prelude::*;
+use pyo3::prelude::{PyAnyMethods, PyListMethods};
 use pyo3::types::PyList;
-use pyo3_stub_gen::reexport_module_members;
-
-#[pymodule(submodule)]
-pub mod common {
-    use pyo3::prelude::*;
-    use pyo3::types::PyList;
-    use pyo3_stub_gen::derive::gen_stub_pyfunction;
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
-    pub fn degree_ordering(adj: Vec<Vec<usize>>) -> (Vec<usize>, Vec<usize>, usize) {
-        super::degree_ordering(&adj)
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
-    pub fn bfs(adj: Vec<Vec<usize>>) -> Vec<i32> {
-        super::bfs(&adj)
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
-    pub fn sort_adj_list(adj: Vec<Vec<usize>>) -> Vec<Vec<usize>> {
-        super::sort_adj_list(&adj)
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
-    pub fn common_neighbors_sorted_list(a: Vec<usize>, b: Vec<usize>) -> Vec<usize> {
-        super::common_neighbors_sorted_list(&a, &b)
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
-    pub fn degeneracy_ordering(adj: Vec<Vec<usize>>) -> (Vec<usize>, Vec<usize>, usize) {
-        super::degeneracy_ordering(&adj)
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.common")]
-    pub fn degeneracy_ordering_py(
-        adj: Bound<'_, PyList>,
-    ) -> PyResult<(Vec<usize>, Vec<usize>, usize)> {
-        super::degeneracy_ordering_py(adj)
-    }
-}
+use pyo3::{Bound, PyResult};
 
 /// Returns a degree ordering of the vertices, the position of each vertex in that ordering, and
 /// the maximum degree of the graph.
 /// Time Complexity: O(n)
-pub fn degree_ordering(adj: &Vec<Vec<usize>>) -> (Vec<usize>, Vec<usize>, usize) {
+pub fn degree_ordering(adj: &Vec<Vec<usize>>, decreasing: bool) -> (Vec<usize>, Vec<usize>, usize) {
     let n = adj.len();
     if n == 0 {
         return (Vec::new(), Vec::new(), 0);
@@ -78,75 +31,24 @@ pub fn degree_ordering(adj: &Vec<Vec<usize>>) -> (Vec<usize>, Vec<usize>, usize)
     // Fill order and pos
     let mut order = vec![0usize; n];
     let mut pos = vec![0usize; n];
-    for v in 0..n {
-        let d = deg[v];
-        pos[v] = bin_starts[d];
-        order[pos[v]] = v;
-        bin_starts[d] += 1;
+
+    if decreasing {
+        for v in (0..n).rev() {
+            let d = deg[v];
+            pos[v] = bin_starts[d];
+            order[pos[v]] = v;
+            bin_starts[d] += 1;
+        }
+    } else {
+        for v in 0..n {
+            let d = deg[v];
+            pos[v] = bin_starts[d];
+            order[pos[v]] = v;
+            bin_starts[d] += 1;
+        }
     }
 
     (order, pos, max_deg)
-}
-
-/// A simple BFS to calculate levels/distances from a starting component.
-/// In most CETC contexts, this assumes node 0 is the root or
-/// it iterates through all components.
-pub fn bfs(adj: &Vec<Vec<usize>>) -> Vec<i32> {
-    let n = adj.len();
-    let mut levels = vec![-1; n];
-    let mut queue = VecDeque::new();
-
-    for i in 0..n {
-        if levels[i] == -1 {
-            levels[i] = 0;
-            queue.push_back(i);
-            while let Some(u) = queue.pop_front() {
-                for &v in &adj[u] {
-                    if levels[v] == -1 {
-                        levels[v] = levels[u] + 1;
-                        queue.push_back(v);
-                    }
-                }
-            }
-        }
-    }
-    levels
-}
-
-/// Efficiently computes the common neighbors of two vertices given their sorted adjacency lists.
-/// Time Complexity: O(deg(u) + deg(v))
-pub fn common_neighbors_sorted_list(a: &[usize], b: &[usize]) -> Vec<usize> {
-    let mut neighbors = Vec::new();
-    let (mut i, mut j) = (0, 0);
-    while i < a.len() && j < b.len() {
-        if a[i] == b[j] {
-            neighbors.push(a[i]);
-            i += 1;
-            j += 1;
-        } else if a[i] < b[j] {
-            i += 1;
-        } else {
-            j += 1;
-        }
-    }
-    neighbors
-}
-
-pub fn count_neighbors_sorted_list(a: &[usize], b: &[usize]) -> usize {
-    let mut count = 0;
-    let (mut i, mut j) = (0, 0);
-    while i < a.len() && j < b.len() {
-        if a[i] == b[j] {
-            count += 1;
-            i += 1;
-            j += 1;
-        } else if a[i] < b[j] {
-            i += 1;
-        } else {
-            j += 1;
-        }
-    }
-    count
 }
 
 /// Efficiently sorts each adjacency list in-place.
@@ -301,5 +203,3 @@ pub fn degeneracy_ordering_py(
 
     Ok((order_idx, pos, k))
 }
-
-reexport_module_members!("rust_core.triangle.common" from "rust_core.core.triangle.common");

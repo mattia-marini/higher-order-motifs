@@ -7,6 +7,12 @@ pub struct AdjMat {
     pub mat: Vec<BitSet>,
 }
 
+impl Default for AdjMat {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AdjMat {
     pub fn new() -> Self {
         Self { mat: Vec::new() }

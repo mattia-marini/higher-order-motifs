@@ -86,6 +86,15 @@ where
     }
 }
 
+impl<T> Default for HCBSGraph<T>
+where
+    T: PrimInt + BitOrAssign + BitAnd<Output = T> + BitAndAssign + Binary,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> HCBSGraph<T>
 where
     T: PrimInt + BitOrAssign + BitAnd<Output = T> + BitAndAssign + Binary,

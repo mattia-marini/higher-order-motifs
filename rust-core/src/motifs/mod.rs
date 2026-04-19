@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
+pub mod base;
 pub mod motifs3;
 pub mod orca;
-pub mod base;
 
 #[pymodule(submodule)]
 pub mod motifs {
@@ -11,21 +11,21 @@ pub mod motifs {
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
-    pub fn count_motifs_3(mut edges: (Vec<(usize, usize)>, Vec<(usize, usize, usize)>)) {
-        super::motifs3::count_motifs_3(&mut edges)
+    pub fn count_motifs_3(edges: (Vec<(usize, usize)>, Vec<(usize, usize, usize)>)) {
+        super::motifs3::count_motifs_3(&edges)
         // println!("count_motifs_3 called with edges: {:?}", edges);
     }
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
     pub fn count_motifs_4(
-        mut edges: (
+        edges: (
             Vec<(usize, usize)>,
             Vec<(usize, usize, usize)>,
             Vec<(usize, usize, usize, usize)>,
         ),
     ) {
-        super::motifs3::count_motifs_4(&mut edges);
+        super::motifs3::count_motifs_4(&edges);
         // println!("count_motifs_4 called with edges: {:?}", edges);
     }
 

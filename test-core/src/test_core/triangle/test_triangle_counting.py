@@ -22,7 +22,14 @@ from python_core.loaders import (
 from python_core.motifs.motifs3 import count_motifs as count_motifs3
 from python_core.triangle.cetc import cetc, cetc_rust, cetc_s, cetc_s_rust
 from python_core.triangle.common import degeneracy_ordering
-from python_core.triangle.forward import forward, forward_hashed, forward_hashed_rust, forward_hcbs_rust, forward_rust
+from python_core.triangle.forward import (
+    forward,
+    forward_hashed,
+    forward_hashed_cloj_rust,
+    forward_hashed_rust,
+    forward_hcbs_rust,
+    forward_rust,
+)
 from python_core.triangle.kclist import kclist, kclist_rust
 from rich.console import Console
 from rich.panel import Panel
@@ -53,10 +60,10 @@ def run():
         # Bigger datasets
         # "PACS": load_and_time(lambda: load_PACS(construction_method)),
         # "ndc_substances": load_and_time(lambda: load_NDC_substances(construction_method)),
-        # "DBLP": load_and_time(lambda: load_DBLP(construction_method)),
+        "DBLP": load_and_time(lambda: load_DBLP(construction_method)),
         # "enron": load_and_time(lambda: load_enron(construction_method)),
         # "gene_disease": load_and_time(lambda: load_gene_disease(construction_method)),
-        "wiki-talk": load_and_time(lambda: load_wiki_talk(construction_method)),
+        # "wiki-talk": load_and_time(lambda: load_wiki_talk(construction_method)),
     }
 
     for name, graph in graphs.items():
@@ -139,6 +146,9 @@ def run():
 
         triangles, elapsed = time_function(lambda: kclist_rust(adj))
         curr_result.append(("kclist rust", triangles, elapsed))
+
+        triangles, elapsed = time_function(lambda: forward_hashed_cloj_rust(adj))
+        curr_result.append(("forward hadhes cloj rust", triangles, elapsed))
 
         # algorithms that are too bad to even try
         # motifs3, elapsed = time_function(lambda: count_motifs3(adj, 3))

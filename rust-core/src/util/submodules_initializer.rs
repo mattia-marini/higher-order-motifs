@@ -1,8 +1,9 @@
 /// This allows to import like this: from module.submodule import something
 use pyo3::{
-    Bound, PyResult,
-    types::{PyAnyMethods, PyModule, PyModuleMethods},
+    types::{PyAnyMethods, PyModule, PyModuleMethods}, Bound,
+    PyResult,
 };
+
 
 fn _inner_init(module: &Bound<'_, PyModule>, path: &str) -> PyResult<()> {
     let py = module.py();
@@ -13,7 +14,7 @@ fn _inner_init(module: &Bound<'_, PyModule>, path: &str) -> PyResult<()> {
         let submod = module.getattr(&submod_name)?;
         let modpath = format!("{path}.{submod_name}");
         if let Ok(submod) = submod.cast::<PyModule>() {
-            _inner_init(&submod, &modpath)?;
+            _inner_init(submod, &modpath)?;
             sys_modules.set_item(&modpath, submod)?;
         }
     }

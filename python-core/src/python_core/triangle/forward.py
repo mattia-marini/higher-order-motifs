@@ -109,3 +109,10 @@ def forward_hcbs_rust(adj: list[list[int]], sort_degrees: bool = False) -> int:
     forward hashed / compact forward triangle counting with rust implementation and cbst neighbors merge
     """
     return rc_forward.forward_hbs(adj, sort_degrees)
+
+
+def forward_hashed_cloj_rust(adj: list[list[int]], sort_degrees: bool = False) -> int:
+    """
+    forward hashed / compact forward triangle counting with rust implementation
+    """
+    return rc_forward.forward_hashed_cloj(adj, sort_degrees)

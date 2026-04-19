@@ -4,32 +4,47 @@ use std::collections::{HashMap, HashSet, VecDeque};
 /// Node labels are expected to be 1..=n.
 type Node = usize;
 
-/// Motif generation here is *unweighted* in spirit (Python reference uses unweighted hypergraphs).
-/// We nevertheless keep a "weight" field because the Python project also has weighted variants.
-///
-/// Important: this weight type must be `Eq + Hash + Ord` because we store hypergraphs in
-/// `HashSet`/`HashMap` and compare them lexicographically for canonicalization.
-type Edge = (usize, Vec<Node>); // (weight, nodes)
+// -----------------------------
+// Hypergraph representations
+// -----------------------------
 
-/// A hypergraph is a list of edges. The representation is normalized by:
+/// Unweighted hyperedge: a list of nodes.
+///
+/// In all motif-generation logic below, edges and hypergraphs are normalized by:
 /// - sorting nodes inside each edge
-/// - sorting edges in the hypergraph
-///
-/// With this normalization, Rust's derived lexicographic ordering for `Vec` matches the
-/// Python "internally and externally sorted" representation.
-type Hypergraph = Vec<Edge>;
+/// - sorting edges inside the hypergraph
+pub type UnweightedEdge = Vec<Node>;
 
-/// Relabel a hypergraph according to `mapping` and return a normalized hypergraph.
-fn relabel(hg: &Hypergraph, mapping: &HashMap<usize, usize>) -> Hypergraph {
-    let mut res: Hypergraph = hg
+/// Unweighted hypergraph: a list of unweighted edges.
+pub type UnweightedHypergraph = Vec<UnweightedEdge>;
+
+/// Weighted hyperedge: (weight, nodes).
+///
+/// NOTE: This file's canonicalization logic is defined for **unweighted** motifs as in the
+/// Python reference. The weighted types are provided for completeness and future extensions.
+pub type WeightedEdge<W = f32> = (W, Vec<Node>);
+
+/// Weighted hypergraph: a list of weighted edges.
+pub type WeightedHypergraph<W = f32> = Vec<WeightedEdge<W>>;
+
+// -----------------------------
+// Helpers (unweighted)
+// -----------------------------
+
+/// Relabel an unweighted hypergraph according to `mapping` and return a normalized hypergraph.
+fn relabel_unweighted(
+    hg: &UnweightedHypergraph,
+    mapping: &HashMap<Node, Node>,
+) -> UnweightedHypergraph {
+    let mut res: UnweightedHypergraph = hg
         .iter()
-        .map(|(w, nodes)| {
+        .map(|nodes| {
             let mut new_nodes: Vec<Node> = nodes
                 .iter()
                 .map(|v| *mapping.get(v).expect("missing node in mapping"))
                 .collect();
             new_nodes.sort_unstable();
-            (*w, new_nodes)
+            new_nodes
         })
         .collect();
 
@@ -37,22 +52,22 @@ fn relabel(hg: &Hypergraph, mapping: &HashMap<usize, usize>) -> Hypergraph {
     res
 }
 
-/// Powerset of the provided edge-node lists.
+/// Powerset of the provided edge list.
 ///
 /// The input `edges` is expected to be a list of hyperedges represented by their node list.
 /// Output hypergraphs are normalized.
-fn power_set(edges: &Vec<Vec<Node>>) -> Vec<Hypergraph> {
+fn power_set(edges: &UnweightedHypergraph) -> Vec<UnweightedHypergraph> {
     let mut edges = edges.clone();
     edges.sort();
 
     let m = edges.len();
-    let mut subsets: Vec<Hypergraph> = Vec::with_capacity(1usize << m);
+    let mut subsets: Vec<UnweightedHypergraph> = Vec::with_capacity(1usize << m);
 
     for mask in 0usize..(1usize << m) {
-        let mut g: Hypergraph = Vec::new();
+        let mut g: UnweightedHypergraph = Vec::new();
         for i in 0..m {
             if ((mask >> i) & 1) == 1 {
-                g.push((1, edges[i].clone()));
+                g.push(edges[i].clone());
             }
         }
         // normalize (external)
@@ -67,13 +82,13 @@ fn power_set(edges: &Vec<Vec<Node>>) -> Vec<Hypergraph> {
 ///
 /// Connectivity is computed by turning each hyperedge into a clique in the underlying
 /// 2-section graph (same as the Python reference).
-fn is_connected(g: &Hypergraph, n: usize) -> bool {
+fn is_connected(g: &UnweightedHypergraph, n: usize) -> bool {
     if n == 0 {
         return false;
     }
 
     let mut nodes: HashSet<Node> = HashSet::new();
-    for (_w, edge_nodes) in g.iter() {
+    for edge_nodes in g.iter() {
         for &v in edge_nodes.iter() {
             nodes.insert(v);
         }
@@ -87,7 +102,7 @@ fn is_connected(g: &Hypergraph, n: usize) -> bool {
     // adjacency list over 1..=n
     let mut adj: Vec<Vec<Node>> = vec![Vec::new(); n + 1];
 
-    for (_w, edge_nodes) in g.iter() {
+    for edge_nodes in g.iter() {
         // connect all distinct pairs inside the hyperedge
         for i in 0..edge_nodes.len() {
             for j in (i + 1)..edge_nodes.len() {
@@ -123,24 +138,28 @@ fn is_connected(g: &Hypergraph, n: usize) -> bool {
     (1..=n).all(|v| visited[v])
 }
 
-/// Return every possible isomorphism (relabeling) of the given hypergraph.
+// -----------------------------
+// Public API (unweighted)
+// -----------------------------
+
+/// Return every possible isomorphism (relabeling) of the given unweighted hypergraph.
 ///
 /// If `n` is not provided, it is computed as the number of distinct nodes appearing in `hg`.
-pub fn enum_isomorphisms(hg: &Hypergraph, n: Option<usize>) -> Vec<Hypergraph> {
+pub fn enum_isomorphisms(hg: &UnweightedHypergraph, n: Option<usize>) -> Vec<UnweightedHypergraph> {
     let n = n.unwrap_or_else(|| {
         let mut distinct: HashSet<Node> = HashSet::new();
-        for (_w, edge_nodes) in hg.iter() {
+        for edge_nodes in hg.iter() {
             distinct.extend(edge_nodes.iter().copied());
         }
         distinct.len()
     });
 
     let base: Vec<Node> = (1..=n).collect();
-    let mut labelings: Vec<Hypergraph> = Vec::new();
+    let mut labelings: Vec<UnweightedHypergraph> = Vec::new();
 
     for perm in base.iter().copied().permutations(n) {
         let mapping: HashMap<Node, Node> = (1..=n).zip(perm.into_iter()).collect();
-        labelings.push(relabel(hg, &mapping));
+        labelings.push(relabel_unweighted(hg, &mapping));
     }
 
     labelings
@@ -150,24 +169,24 @@ pub fn enum_isomorphisms(hg: &Hypergraph, n: Option<usize>) -> Vec<Hypergraph> {
 ///
 /// Hyperedges are all subsets of {1..=n} of size r for r=n,n-1,...,2.
 /// Sub-hypergraphs are all subsets (powerset) of those hyperedges.
-pub fn enum_connected_subgraphs(n: usize) -> Vec<Hypergraph> {
+pub fn enum_connected_subgraphs(n: usize) -> Vec<UnweightedHypergraph> {
     assert!(n >= 2);
 
     let nodes: Vec<Node> = (1..=n).collect();
 
     // All possible hyperedges of size 2..=n.
-    let mut all_edges: Vec<Vec<Node>> = Vec::new();
+    let mut all_edges: UnweightedHypergraph = Vec::new();
     for r in (2..=n).rev() {
         all_edges.extend(nodes.iter().copied().combinations(r));
     }
 
     let all_subgraphs = power_set(&all_edges);
 
-    let mut connected: Vec<Hypergraph> = Vec::new();
+    let mut connected: Vec<UnweightedHypergraph> = Vec::new();
     for mut g in all_subgraphs {
         if is_connected(&g, n) {
             // Ensure normalized (power_set already sorts, but keep this defensive)
-            for (_w, ns) in g.iter_mut() {
+            for ns in g.iter_mut() {
                 ns.sort_unstable();
             }
             g.sort();
@@ -182,10 +201,13 @@ pub fn enum_connected_subgraphs(n: usize) -> Vec<Hypergraph> {
 ///
 /// The representative is the relabeling of `hg` that is lexicographically smallest among
 /// all permutations of node labels 1..=n.
-pub fn get_canonical_representative(hg: &Hypergraph, n: Option<usize>) -> Hypergraph {
+pub fn get_canonical_representative(
+    hg: &UnweightedHypergraph,
+    n: Option<usize>,
+) -> UnweightedHypergraph {
     let n = n.unwrap_or_else(|| {
         let mut distinct: HashSet<Node> = HashSet::new();
-        for (_w, edge_nodes) in hg.iter() {
+        for edge_nodes in hg.iter() {
             distinct.extend(edge_nodes.iter().copied());
         }
         distinct.len()
@@ -193,10 +215,10 @@ pub fn get_canonical_representative(hg: &Hypergraph, n: Option<usize>) -> Hyperg
 
     let base: Vec<Node> = (1..=n).collect();
 
-    let mut best: Option<Hypergraph> = None;
+    let mut best: Option<UnweightedHypergraph> = None;
     for perm in base.iter().copied().permutations(n) {
         let mapping: HashMap<Node, Node> = (1..=n).zip(perm.into_iter()).collect();
-        let rel = relabel(hg, &mapping);
+        let rel = relabel_unweighted(hg, &mapping);
         match &best {
             None => best = Some(rel),
             Some(b) => {
@@ -215,24 +237,29 @@ pub fn get_canonical_representative(hg: &Hypergraph, n: Option<usize>) -> Hyperg
 /// Returns:
 /// - `rep_list`: sorted list of canonical representatives
 /// - `rep_map`: map from every labeled motif (every isomorphism of each rep) to its rep
-pub fn generate_motifs(n: usize) -> (Vec<Hypergraph>, HashMap<Hypergraph, Hypergraph>) {
+pub fn generate_motifs(
+    n: usize,
+) -> (
+    Vec<UnweightedHypergraph>,
+    HashMap<UnweightedHypergraph, UnweightedHypergraph>,
+) {
     assert!(n >= 2);
 
     let connected_subgraphs = enum_connected_subgraphs(n);
 
-    let mut canonical_rep: HashSet<Hypergraph> = HashSet::new();
+    let mut canonical_rep: HashSet<UnweightedHypergraph> = HashSet::new();
     for g in connected_subgraphs.iter() {
         canonical_rep.insert(get_canonical_representative(g, Some(n)));
     }
 
-    let mut rep_map: HashMap<Hypergraph, Hypergraph> = HashMap::new();
+    let mut rep_map: HashMap<UnweightedHypergraph, UnweightedHypergraph> = HashMap::new();
     for representative in canonical_rep.iter() {
         for iso in enum_isomorphisms(representative, Some(n)) {
             rep_map.insert(iso, representative.clone());
         }
     }
 
-    let mut reps: Vec<Hypergraph> = canonical_rep.into_iter().collect();
+    let mut reps: Vec<UnweightedHypergraph> = canonical_rep.into_iter().collect();
     reps.sort();
 
     (reps, rep_map)
@@ -246,13 +273,13 @@ mod tests {
     fn test_enum_connected_subgraphs_n2() {
         let graphs = enum_connected_subgraphs(2);
         assert_eq!(graphs.len(), 1);
-        assert_eq!(graphs[0], vec![(1, vec![1, 2])]);
+        assert_eq!(graphs[0], vec![vec![1, 2]]);
     }
 
     #[test]
     fn test_enum_connected_subgraphs_n3_count() {
         // For n=3: 4 possible hyperedges (one 3-edge + three 2-edges) => 16 subgraphs.
-        // Connected spanning ones are 12 (see reasoning in implementation notes).
+        // Connected spanning ones are 12.
         let graphs = enum_connected_subgraphs(3);
         assert_eq!(graphs.len(), 12);
         assert!(graphs.iter().all(|g| is_connected(g, 3)));
@@ -260,9 +287,17 @@ mod tests {
 
     #[test]
     fn test_canonical_representative_is_in_isomorphisms() {
-        let hg: Hypergraph = vec![(1, vec![1, 2]), (1, vec![2, 3])];
+        let hg: UnweightedHypergraph = vec![vec![1, 2], vec![2, 3]];
         let rep = get_canonical_representative(&hg, Some(3));
         let isos = enum_isomorphisms(&hg, Some(3));
         assert!(isos.contains(&rep));
+    }
+
+    #[test]
+    fn test_generate_motifs() {
+        let motifs3 = generate_motifs(3);
+        let motifs4 = generate_motifs(4);
+        assert_eq!(motifs3.0.len(), 6);
+        assert_eq!(motifs4.0.len(), 171);
     }
 }

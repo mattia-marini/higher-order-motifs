@@ -1,12 +1,12 @@
-use num_traits::{AsPrimitive, One, PrimInt, Unsigned, Zero};
+use num_traits::{AsPrimitive, One};
 
 use rkyv::{
-    Archive, Deserialize, Serialize,
-    bytecheck::CheckBytes,
-    de::Pool,
-    deserialize,
+    bytecheck::CheckBytes, de::Pool, deserialize,
     rancor::Strategy,
-    validation::{Validator, archive::ArchiveValidator, shared::SharedValidator},
+    validation::{archive::ArchiveValidator, shared::SharedValidator, Validator},
+    Archive,
+    Deserialize,
+    Serialize,
 };
 
 use std::{
@@ -35,6 +35,18 @@ where
         let start = self.offsets[index].as_();
         let end = self.offsets[index + 1].as_();
         &self.edges[start..end]
+    }
+}
+
+impl<T, E> Default for FlatAdjList<T, E>
+where
+    T: AsPrimitive<usize> + num_traits::Zero,
+    E: AsPrimitive<usize> + num_traits::Zero + Clone + Ord + AddAssign + Hash + Eq + One,
+    usize: AsPrimitive<E>,
+    usize: AsPrimitive<T>,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 

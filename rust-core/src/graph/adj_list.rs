@@ -1,6 +1,5 @@
 use num_traits::{AsPrimitive, One, Zero};
 
-
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
@@ -13,6 +12,16 @@ pub struct AdjList<E> {
     pub adj: Vec<Vec<E>>,
     n: usize,
     m: usize,
+}
+
+impl<E> Default for AdjList<E>
+where
+    E: Zero + Clone + Copy + AsPrimitive<usize> + Ord + Hash + Eq + One + AddAssign,
+    usize: AsPrimitive<E>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<E> AdjList<E>
@@ -54,12 +63,12 @@ where
         let mut curr_number = E::zero();
 
         for &(u, v) in edges {
-            if !node_map.contains_key(&u) {
-                node_map.insert(u, curr_number);
+            if let std::collections::hash_map::Entry::Vacant(e) = node_map.entry(u) {
+                e.insert(curr_number);
                 curr_number += E::one();
             }
-            if !node_map.contains_key(&v) {
-                node_map.insert(v, curr_number);
+            if let std::collections::hash_map::Entry::Vacant(e) = node_map.entry(v) {
+                e.insert(curr_number);
                 curr_number += E::one();
             }
         }

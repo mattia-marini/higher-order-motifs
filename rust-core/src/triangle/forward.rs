@@ -1,6 +1,6 @@
 use crate::triangle::cbs::hcbs::HCBSGraph;
 
-use super::common::{count_neighbors_sorted_list, degree_ordering};
+use crate::misc::{count_neighbors_sorted_list, degree_ordering};
 use bit_set::BitSet;
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
@@ -43,7 +43,7 @@ pub fn forward(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     let mut count = 0;
 
     if sort_degrees {
-        let (order, pos, _) = degree_ordering(adj);
+        let (order, pos, _) = degree_ordering(adj, true);
 
         for i in 0..n {
             let u = order[i];
@@ -71,7 +71,7 @@ pub fn forward(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
 
 /// Compact forward/forward hashed algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
 /// the natural order (u < v). Common neighbors are counted with the hash map strategy
-pub fn forward_hashed(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
+pub fn _forward_hashed(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     let n = adj.len();
     let mut a = vec![Vec::new(); n];
     for i in 0..n {
@@ -82,7 +82,7 @@ pub fn forward_hashed(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     let mut count = 0;
 
     let (order, pos, _) = if sort_degrees {
-        degree_ordering(adj)
+        degree_ordering(adj, true)
     } else {
         (vec![], vec![], 0)
     };
@@ -114,6 +114,54 @@ pub fn forward_hashed(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     count
 }
 
+/// Compact forward/forward hashed algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
+/// the natural order (u < v). Common neighbors are counted with the hash map strategy
+pub fn forward_hashed(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
+    let n = adj.len();
+    let mut a = vec![Vec::new(); n];
+
+    // Timestamp-based marking
+    let mut mark = vec![0usize; n];
+    let mut current = 1;
+
+    let mut count = 0;
+
+    let (order, pos) = if sort_degrees {
+        let (o, p, _) = degree_ordering(adj, true);
+        (o, p)
+    } else {
+        ((0..n).collect(), (0..n).collect())
+    };
+
+    for i in 0..n {
+        let u = order[i];
+
+        for &v in &adj[u] {
+            let is_forward = i < pos[v];
+
+            if is_forward {
+                // Mark neighbors of u
+                for &w in &a[u] {
+                    mark[w] = current;
+                }
+
+                // Count intersection with a[v]
+                for &w in &a[v] {
+                    if mark[w] == current {
+                        count += 1;
+                    }
+                }
+
+                current += 1; // no clearing needed
+
+                a[v].push(u);
+            }
+        }
+    }
+
+    count
+}
+
 /// Forward algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
 /// the natural order (u < v). Common neighbors are counted with an optimized hierarchical bitset
 pub fn forward_hbs(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
@@ -127,7 +175,7 @@ pub fn forward_hbs(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
     let mut count = 0;
 
     if sort_degrees {
-        let (order, pos, _) = degree_ordering(adj);
+        let (order, pos, _) = degree_ordering(adj, true);
 
         for i in 0..n {
             let u = order[i];
@@ -154,3 +202,48 @@ pub fn forward_hbs(adj: &Vec<Vec<usize>>, sort_degrees: bool) -> usize {
 }
 
 reexport_module_members!("rust_core.triangle.forward" from "rust_core.core.triangle.forward");
+
+pub fn forward_hashed_cloj<F>(adj: &Vec<Vec<usize>>, sort_degrees: bool, mut counter: F)
+where
+    F: FnMut(usize, usize, usize),
+{
+    let n = adj.len();
+    let mut a = vec![Vec::new(); n];
+
+    // Timestamp-based marking
+    let mut mark = vec![0usize; n];
+    let mut current = 1;
+
+    let (order, pos) = if sort_degrees {
+        let (o, p, _) = degree_ordering(adj, true);
+        (o, p)
+    } else {
+        ((0..n).collect(), (0..n).collect())
+    };
+
+    for i in 0..n {
+        let u = order[i];
+
+        for &v in &adj[u] {
+            let is_forward = i < pos[v];
+
+            if is_forward {
+                // Mark neighbors of u
+                for &w in &a[u] {
+                    mark[w] = current;
+                }
+
+                // Count intersection with a[v]
+                for &w in &a[v] {
+                    if mark[w] == current {
+                        counter(u, v, w);
+                    }
+                }
+
+                current += 1; // no clearing needed
+
+                a[v].push(u);
+            }
+        }
+    }
+}

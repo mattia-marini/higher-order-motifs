@@ -1,6 +1,6 @@
 pub mod graph;
-pub mod hypergraph;
 pub mod loader;
+pub mod misc;
 pub mod motifs;
 pub mod triangle;
 use pyo3::prelude::*;
@@ -11,9 +11,8 @@ pub mod util;
 
 #[pymodule]
 pub mod core {
-
     use crate::util::submodules_initializer::PyModuleSubmoduleExt;
-    use pyo3::{Bound, PyResult, types::PyModule};
+    use pyo3::{types::PyModule, Bound, PyResult};
 
     #[pymodule_export]
     use super::triangle::triangle;

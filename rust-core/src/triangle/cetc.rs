@@ -1,4 +1,4 @@
-use super::common::bfs;
+use crate::misc::{bfs, common_neighbors_sorted_list, sort_adj_list};
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
 
@@ -26,14 +26,14 @@ pub fn cetc(adj: &mut Vec<Vec<usize>>) -> usize {
     let n = adj.len();
     let mut count = 0;
 
-    super::common::sort_adj_list(adj);
-    let levels = bfs(&adj);
+    sort_adj_list(adj);
+    let levels = bfs(adj);
 
     for u in 0..n {
         for &v in &adj[u] {
             // Check levels and use u < v to avoid double counting
             if levels[v] == levels[u] && u < v {
-                let common = super::common::common_neighbors_sorted_list(&adj[u], &adj[v]);
+                let common = common_neighbors_sorted_list(&adj[u], &adj[v]);
                 for w in common {
                     // Triangle (u, v, w) logic
                     if levels[w] != levels[u] || v < w {

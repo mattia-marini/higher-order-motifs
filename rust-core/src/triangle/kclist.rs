@@ -1,9 +1,10 @@
+use crate::misc::{degeneracy_ordering, degeneracy_ordering_py};
 use pyo3::{prelude::*, types::PyList};
 use pyo3_stub_gen::reexport_module_members;
 
 #[pymodule(submodule)]
 pub mod kclist {
-    use pyo3::{Bound, PyResult, pyfunction, types::PyList};
+    use pyo3::{pyfunction, types::PyList, Bound, PyResult};
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
     #[pyfunction]
@@ -29,7 +30,7 @@ pub fn kclist(adj: &[Vec<usize>]) -> usize {
     }
 
     // 1. Get the degeneracy ordering
-    let (order, pos, _) = super::common::degeneracy_ordering(adj);
+    let (order, pos, _) = degeneracy_ordering(adj);
 
     // 2. Re-orient edges: only keep edges u -> v where pos[u] < pos[v]
     // This creates a Directed Acyclic Graph (DAG)
@@ -75,7 +76,7 @@ pub fn kclist_py(adj_py: Bound<'_, PyList>) -> PyResult<usize> {
 
     // 1. Get the degeneracy ordering using your conversion
     // We call it directly as a Rust function
-    let (order, pos, _) = super::common::degeneracy_ordering_py(adj_py.clone())?;
+    let (order, pos, _) = degeneracy_ordering_py(adj_py.clone())?;
 
     // 2. Re-orient edges: only keep edges u -> v where pos[u] < pos[v]
     // We'll build this in Rust memory to ensure the triangle counting is fast.

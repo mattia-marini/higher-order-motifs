@@ -6,3 +6,6 @@ test-all:
 
 rebuild-all:
   uv sync --reinstall --package test-core
+
+test-rust:
+  cd rust-core && cargo test
