@@ -1,7 +1,8 @@
 use crate::graph::AdjList;
 use crate::triangle::forward::forward_hashed_cloj;
+use crate::graph::types::*;
 
-pub fn count_motifs_3(edges: &(Vec<(usize, usize)>, Vec<(usize, usize, usize)>)) {
+pub fn count_motifs_3(edges: &(Vec<(NodeId, NodeId)>, Vec<(NodeId, NodeId, NodeId)>)) {
     let adj_list = AdjList::from_edges(&edges.0);
     let mut count_2 = [0, 0]; // star, triangle
 
@@ -10,7 +11,7 @@ pub fn count_motifs_3(edges: &(Vec<(usize, usize)>, Vec<(usize, usize, usize)>))
         count_2[0] += neighbors.len() * (neighbors.len() - 1) / 2;
     }
 
-    forward_hashed_cloj(&adj_list.adj, false, |u, v, w| count_2[1] += 1);
+    //forward_hashed_cloj(&adj_list.adj, false, |u, v, w| count_2[1] += 1);
 
     //3 counting
 }

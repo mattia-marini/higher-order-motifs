@@ -1,7 +1,11 @@
-use pyo3::pyclass;
+use pyo3::{FromPyObject, pyclass};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use rkyv::{Archive, Deserialize, Serialize};
 
 pub type NodeId = u32;
 
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, FromPyObject)]
+#[gen_stub_pyclass]
 #[pyclass]
 pub struct H2(NodeId, NodeId);
 
@@ -11,6 +15,8 @@ impl H2 {
     }
 }
 
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, FromPyObject)]
+#[gen_stub_pyclass]
 #[pyclass]
 pub struct H3(NodeId, NodeId, NodeId);
 
@@ -20,6 +26,8 @@ impl H3 {
     }
 }
 
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, FromPyObject)]
+#[gen_stub_pyclass]
 #[pyclass]
 pub struct H4(NodeId, NodeId, NodeId, NodeId);
 
@@ -29,6 +37,8 @@ impl H4 {
     }
 }
 
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, FromPyObject)]
+#[gen_stub_pyclass]
 #[pyclass]
 pub struct H5(NodeId, NodeId, NodeId, NodeId, NodeId);
 
@@ -37,3 +47,4 @@ impl H5 {
         H5(u, v, w, x, y)
     }
 }
+

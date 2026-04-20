@@ -3,6 +3,10 @@ pub mod loader;
 pub mod misc;
 pub mod motifs;
 pub mod triangle;
+
+#[cfg(test)]
+mod test;
+
 use pyo3::prelude::*;
 
 use pyo3_stub_gen::{define_stub_info_gatherer, reexport_module_members};
@@ -12,7 +16,7 @@ pub mod util;
 #[pymodule]
 pub mod core {
     use crate::util::submodules_initializer::PyModuleSubmoduleExt;
-    use pyo3::{types::PyModule, Bound, PyResult};
+    use pyo3::{Bound, PyResult, types::PyModule};
 
     #[pymodule_export]
     use super::triangle::triangle;

@@ -1,21 +1,27 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::File, io::Write, path::Path, time::Instant};
+
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use rkyv::{Archive, Deserialize, Serialize};
 
 use super::types::*;
 use pyo3::{pyclass, pymethods};
 
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)] // <--- Add this
+#[gen_stub_pyclass]
 #[pyclass]
 pub struct Hypergraph {
-    h2: Vec<H2>,
-    h3: Vec<H3>,
-    h4: Vec<H4>,
-    h5: Vec<H5>,
+    pub h2: Vec<H2>,
+    pub h3: Vec<H3>,
+    pub h4: Vec<H4>,
+    pub h5: Vec<H5>,
 
-    bigger_edges: HashMap<usize, Vec<Vec<NodeId>>>,
+    pub bigger_edges: HashMap<usize, Vec<Vec<NodeId>>>,
 
     n: usize,
     m: usize,
 }
 
+#[gen_stub_pymethods]
 #[pymethods]
 impl Hypergraph {
     #[new]
@@ -44,6 +50,50 @@ impl Hypergraph {
             _ => self.bigger_edges.entry(size).or_insert(vec![]).push(edge),
         }
     }
+
+    #[inline(always)]
+    pub fn add_h2(&mut self, edge: H2) {
+        self.h2.push(edge);
+        self.m += 1;
+    }
+    #[inline(always)]
+    pub fn extends_h2(&mut self, edges: Vec<H2>) {
+        self.m += edges.len();
+        self.h2.extend(edges);
+    }
+
+    #[inline(always)]
+    pub fn add_h3(&mut self, edge: H3) {
+        self.h3.push(edge);
+        self.m += 1;
+    }
+    #[inline(always)]
+    pub fn extends_h3(&mut self, edges: Vec<H3>) {
+        self.m += edges.len();
+        self.h3.extend(edges);
+    }
+
+    #[inline(always)]
+    pub fn add_h4(&mut self, edge: H4) {
+        self.h4.push(edge);
+        self.m += 1;
+    }
+    #[inline(always)]
+    pub fn extends_h4(&mut self, edges: Vec<H4>) {
+        self.m += edges.len();
+        self.h4.extend(edges);
+    }
+
+    #[inline(always)]
+    pub fn add_h5(&mut self, edge: H5) {
+        self.h5.push(edge);
+        self.m += 1;
+    }
+    #[inline(always)]
+    pub fn extends_h5(&mut self, edges: Vec<H5>) {
+        self.m += edges.len();
+        self.h5.extend(edges);
+    }
 }
 
 impl Hypergraph {
@@ -62,5 +112,31 @@ impl Hypergraph {
             }
         }
         hg
+    }
+
+    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error>> {
+        let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
+
+        let mut file = File::create(path)?;
+        file.write_all(&bytes)?;
+
+        Ok(())
+    }
+
+    pub fn load_from_file<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<Hypergraph, Box<dyn std::error::Error>> {
+        let bytes = std::fs::read(path)?;
+
+        let start = Instant::now();
+        let archived = rkyv::access::<ArchivedHypergraph, rkyv::rancor::Error>(&bytes[..])?;
+        // let archived = unsafe { rkyv::access_unchecked::<ArchivedFlatAdjList>(&bytes[..]) }; // Faster
+        println!("Loading ArchivedHypergraph {:?}", start.elapsed());
+
+        let start = Instant::now();
+        let rv = rkyv::deserialize::<Hypergraph, rkyv::rancor::Error>(archived)?;
+        println!("Loading Hypergraph{:?}", start.elapsed());
+
+        Ok(rv)
     }
 }

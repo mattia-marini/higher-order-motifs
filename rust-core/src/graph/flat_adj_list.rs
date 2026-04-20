@@ -1,91 +1,52 @@
-use num_traits::{AsPrimitive, One};
+use rkyv::{Archive, Deserialize, Serialize};
+use std::{fs::File, io::Write, ops::Index, path::Path, time::Instant};
 
-use rkyv::{
-    bytecheck::CheckBytes, de::Pool, deserialize,
-    rancor::Strategy,
-    validation::{archive::ArchiveValidator, shared::SharedValidator, Validator},
-    Archive,
-    Deserialize,
-    Serialize,
-};
-
-use std::{
-    fs::File,
-    hash::Hash,
-    io::Write,
-    ops::{AddAssign, Index},
-    path::Path,
-};
-
-use super::adj_list::AdjList;
+use crate::graph::{AdjList, types::NodeId};
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
-pub struct FlatAdjList<T, E> {
-    pub offsets: Vec<T>,
-    pub edges: Vec<E>,
+pub struct FlatAdjList {
+    offsets: Vec<usize>,
+    edges: Vec<NodeId>,
 }
 
-impl<T, E> Index<usize> for FlatAdjList<T, E>
-where
-    T: AsPrimitive<usize>,
-{
-    type Output = [E];
+impl Index<usize> for FlatAdjList {
+    type Output = [NodeId];
 
     fn index(&self, index: usize) -> &Self::Output {
-        let start = self.offsets[index].as_();
-        let end = self.offsets[index + 1].as_();
+        let start = self.offsets[index];
+        let end = self.offsets[index + 1];
         &self.edges[start..end]
     }
 }
 
-impl<T, E> Default for FlatAdjList<T, E>
-where
-    T: AsPrimitive<usize> + num_traits::Zero,
-    E: AsPrimitive<usize> + num_traits::Zero + Clone + Ord + AddAssign + Hash + Eq + One,
-    usize: AsPrimitive<E>,
-    usize: AsPrimitive<T>,
-{
+impl Default for FlatAdjList {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T, E> FlatAdjList<T, E>
-where
-    T: AsPrimitive<usize> + num_traits::Zero,
-    E: AsPrimitive<usize> + num_traits::Zero + Clone + Ord + AddAssign + Hash + Eq + One,
-    usize: AsPrimitive<E>,
-    usize: AsPrimitive<T>,
-{
+impl FlatAdjList {
     pub fn new() -> Self {
         Self {
-            offsets: vec![T::zero()],
+            offsets: vec![0],
             edges: vec![],
         }
     }
 
-    pub fn from_edges(edges: &[(E, E)], _directed: bool) -> Self {
-        let mut adj_list = AdjList::<E>::from_edges(edges);
+    pub fn from_edges(edges: &[(NodeId, NodeId)], _directed: bool) -> Self {
+        let mut adj_list = AdjList::from_edges(edges);
         adj_list.remove_self_loops();
-        // adj_list.remove_multiedges();
         adj_list.make_undirected();
 
         let mut rv = Self {
-            offsets: vec![T::zero(); adj_list.n() + 1],
-            edges: vec![E::zero(); adj_list.m()],
+            offsets: vec![0; adj_list.n() + 1],
+            edges: vec![0; adj_list.m()],
         };
 
-        println!("Constructed adjacency list. n: {}, m: {}", rv.n(), rv.m());
-
         for (i, neighbors) in adj_list.adj.iter().enumerate() {
-            rv.offsets[i + 1] = rv.offsets[i] + neighbors.len().as_();
-            rv.edges[rv.offsets[i].as_()..rv.offsets[i + 1].as_()].copy_from_slice(neighbors);
+            rv.offsets[i + 1] = rv.offsets[i] + neighbors.len();
+            rv.edges[rv.offsets[i]..rv.offsets[i + 1]].copy_from_slice(neighbors);
         }
-        println!(
-            "Constructed flat adjacency list. n: {}, m: {}",
-            rv.n(),
-            rv.m()
-        );
 
         rv
     }
@@ -99,29 +60,7 @@ where
     }
 }
 
-impl<T, E> FlatAdjList<T, E>
-where
-    T: for<'a> rkyv::Serialize<
-            rkyv::rancor::Strategy<
-                rkyv::ser::Serializer<
-                    rkyv::util::AlignedVec,
-                    rkyv::ser::allocator::ArenaHandle<'a>,
-                    rkyv::ser::sharing::Share,
-                >,
-                rkyv::rancor::Error,
-            >,
-        >,
-    E: for<'a> rkyv::Serialize<
-            rkyv::rancor::Strategy<
-                rkyv::ser::Serializer<
-                    rkyv::util::AlignedVec,
-                    rkyv::ser::allocator::ArenaHandle<'a>,
-                    rkyv::ser::sharing::Share,
-                >,
-                rkyv::rancor::Error,
-            >,
-        >,
-{
+impl FlatAdjList {
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error>> {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
         // .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
@@ -131,24 +70,21 @@ where
 
         Ok(())
     }
-}
 
-impl<T, E> FlatAdjList<T, E>
-where
-    T: Archive,
-    E: Archive,
-    for<'a> <T as Archive>::Archived:
-        CheckBytes<Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>>,
-    for<'a> <E as Archive>::Archived:
-        CheckBytes<Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>>,
-    ArchivedFlatAdjList<T, E>: Deserialize<FlatAdjList<T, E>, Strategy<Pool, rkyv::rancor::Error>>,
-{
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load_from_file<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<FlatAdjList, Box<dyn std::error::Error>> {
         let bytes = std::fs::read(path)?;
-        let archived =
-            rkyv::access::<ArchivedFlatAdjList<T, E>, rkyv::rancor::Error>(&bytes[..]).unwrap();
 
-        let rv = deserialize::<FlatAdjList<T, E>, rkyv::rancor::Error>(archived)?;
+        let start = Instant::now();
+        let archived = rkyv::access::<ArchivedFlatAdjList, rkyv::rancor::Error>(&bytes[..])?;
+        // let archived = unsafe { rkyv::access_unchecked::<ArchivedFlatAdjList>(&bytes[..]) }; // Faster
+        println!("Loading ArchivedFlatAdjList {:?}", start.elapsed());
+
+        let start = Instant::now();
+        let rv = rkyv::deserialize::<FlatAdjList, rkyv::rancor::Error>(archived)?;
+        println!("Loading FlatAdjList{:?}", start.elapsed());
+
         Ok(rv)
     }
 }

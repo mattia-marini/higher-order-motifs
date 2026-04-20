@@ -1,34 +1,22 @@
-use num_traits::{AsPrimitive, One, Zero};
+use std::collections::{HashMap, HashSet};
 
-use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-    ops::AddAssign,
-};
+use super::types::NodeId;
 
 use super::adj_mat::AdjMat;
 
-pub struct AdjList<E> {
-    pub adj: Vec<Vec<E>>,
+pub struct AdjList {
+    pub adj: Vec<Vec<NodeId>>,
     n: usize,
     m: usize,
 }
 
-impl<E> Default for AdjList<E>
-where
-    E: Zero + Clone + Copy + AsPrimitive<usize> + Ord + Hash + Eq + One + AddAssign,
-    usize: AsPrimitive<E>,
-{
+impl Default for AdjList {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<E> AdjList<E>
-where
-    E: Zero + Clone + Copy + AsPrimitive<usize> + Ord + Hash + Eq + One + AddAssign,
-    usize: AsPrimitive<E>,
-{
+impl AdjList {
     pub fn new() -> Self {
         Self {
             adj: Vec::new(),
@@ -47,40 +35,40 @@ where
         let mut adj_list = Self::with_nodes(adj_mat.n());
         for i in 0..adj_mat.n() {
             for j in adj_mat.mat[i].iter() {
-                adj_list.adj[j].push(i.as_());
+                adj_list.adj[j].push(i as NodeId);
             }
         }
         adj_list
     }
 
-    pub fn from_edges(edges: &[(E, E)]) -> Self {
+    pub fn from_edges(edges: &[(NodeId, NodeId)]) -> Self {
         if edges.is_empty() {
             return Self::new();
         }
 
         // Step 1: assign compact IDs
-        let mut node_map: HashMap<E, E> = HashMap::new();
-        let mut curr_number = E::zero();
+        let mut node_map: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut curr_number = 0;
 
         for &(u, v) in edges {
             if let std::collections::hash_map::Entry::Vacant(e) = node_map.entry(u) {
                 e.insert(curr_number);
-                curr_number += E::one();
+                curr_number += 1;
             }
             if let std::collections::hash_map::Entry::Vacant(e) = node_map.entry(v) {
                 e.insert(curr_number);
-                curr_number += E::one();
+                curr_number += 1;
             }
         }
 
-        let n = curr_number.as_();
+        let n = curr_number as usize;
 
         // Step 2: compute adjacency sizes
-        let mut sizes = vec![0usize; n];
+        let mut sizes = vec![0; n];
 
         for &(u, _) in edges {
-            let u_idx = node_map[&u].as_();
-            sizes[u_idx] += 1;
+            let u_idx = node_map[&u];
+            sizes[u_idx as usize] += 1;
         }
 
         // Step 3: allocate graph
@@ -112,7 +100,7 @@ where
         let mut removed = 0;
         for (n, neighbors) in self.adj.iter_mut().enumerate() {
             neighbors.retain(|&v| {
-                if v.as_() == n {
+                if v as usize == n {
                     removed += 1;
                     false
                 } else {
@@ -152,13 +140,12 @@ where
 
         for u in 0..self.adj.len() {
             for &v in &self.adj[u] {
-                new_edges.push((v, u.as_()));
+                new_edges.push((v, u as NodeId));
             }
         }
 
         self.extend(new_edges);
         self.remove_multiedges();
-        // self.m = self.adj.iter().map(|neighbors| neighbors.len()).sum();
     }
 
     pub fn n(&self) -> usize {
@@ -170,16 +157,16 @@ where
     }
 
     #[inline(always)]
-    pub fn add_edge(&mut self, u: E, v: E) {
-        self.adj[u.as_()].push(v);
+    pub fn add_edge(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].push(v);
         self.m += 1;
     }
 
     #[inline(always)]
-    pub fn extend(&mut self, edges: Vec<(E, E)>) {
+    pub fn extend(&mut self, edges: Vec<(NodeId, NodeId)>) {
         self.m += edges.len();
         for (u, v) in edges {
-            self.adj[u.as_()].push(v);
+            self.adj[u as usize].push(v);
         }
     }
 }

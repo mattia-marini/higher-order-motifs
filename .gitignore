@@ -16,6 +16,8 @@ wheels/
 # go-task
 .task
 
+.env
+
 # Other
 .DS_Store
 dataset/

@@ -4,7 +4,7 @@ pub mod flat_adj_list;
 
 pub mod _bin_writer;
 pub mod hypergraph;
-mod types;
+pub mod types;
 
 pub use adj_list::*;
 pub use adj_mat::*;
