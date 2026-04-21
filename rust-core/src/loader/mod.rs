@@ -1,13 +1,9 @@
 pub mod common;
-pub mod med;
-pub mod small;
 pub mod wiki_talk;
 
-pub use med::*;
-pub use small::*;
-pub use wiki_talk::*;
-
 use pyo3::prelude::*;
+
+pub use wiki_talk::load_wiki_talk;
 
 #[pymodule]
 pub mod loader {
@@ -20,11 +16,12 @@ pub mod loader {
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core.core.loader")]
+    #[pyo3(signature = (dataset_dir, cache_dir = None))]
     pub fn load_wiki_talk(
         dataset_dir: PathBuf,
         cache_dir: Option<PathBuf>,
     ) -> PyResult<Hypergraph> {
-        super::load_wiki_talk_cached(&dataset_dir, cache_dir.as_ref()).map_err(|e| {
+        super::load_wiki_talk(&dataset_dir, cache_dir.as_ref()).map_err(|e| {
             PyIOError::new_err(format!("Failed to read {:?} dataset: {}", dataset_dir, e))
         })
     }

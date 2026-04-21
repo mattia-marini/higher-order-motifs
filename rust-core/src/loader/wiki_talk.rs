@@ -7,10 +7,10 @@ use crate::graph::Hypergraph;
 use crate::graph::types::H2;
 use crate::loader::common::{get_dataset_paths, parse};
 
-const PATH: &str = "wiki-talk.txt";
+const PATH: &str = "wiki/wiki-talk.txt";
 
 // #[timed]
-pub fn load_wiki_talk_cached<P1, P2>(
+pub fn load_wiki_talk<P1, P2>(
     dataset_dir: &P1,
     cache_dir: Option<&P2>,
 ) -> Result<Hypergraph, Box<dyn Error>>
@@ -19,25 +19,38 @@ where
     P2: AsRef<Path> + ?Sized,
 {
     if let Some(cache_dir) = cache_dir {
-        let (dataset_path, cache_path) = get_dataset_paths(dataset_dir, cache_dir, PATH)?;
-
-        if cache_path.exists() {
-            Hypergraph::load_from_file(cache_path)
-        } else {
-            let rv = load_wiki_talk(&dataset_path)?;
-            rv.save_to_file(cache_path)?;
-            Ok(rv)
-        }
+        load_wiki_talk_cached(dataset_dir, cache_dir)
     } else {
-        Ok(load_wiki_talk(&dataset_dir)?)
+        Ok(load_wiki_talk_uncached(&dataset_dir)?)
     }
 }
 
-pub fn load_wiki_talk<P1>(dataset_dir: &P1) -> Result<Hypergraph, Box<dyn Error>>
+fn load_wiki_talk_cached<P1, P2>(
+    dataset_dir: &P1,
+    cache_dir: &P2,
+) -> Result<Hypergraph, Box<dyn Error>>
+where
+    P1: AsRef<Path> + ?Sized,
+    P2: AsRef<Path> + ?Sized,
+{
+    let (_dataset_path, cache_path) = get_dataset_paths(dataset_dir, cache_dir, PATH)?;
+
+    if cache_path.exists() {
+        Hypergraph::load_from_file(cache_path)
+    } else {
+        let rv = load_wiki_talk_uncached(dataset_dir)?;
+        rv.save_to_file(cache_path)?;
+        Ok(rv)
+    }
+}
+
+fn load_wiki_talk_uncached<P1>(dataset_dir: &P1) -> Result<Hypergraph, Box<dyn Error>>
 where
     P1: AsRef<Path> + ?Sized,
 {
     let dataset_path = dataset_dir.as_ref().join(PATH);
+
+    println!("Loading wiki-talk dataset from {:?}...", dataset_path);
     let file = File::open(dataset_path)?;
 
     let mut reader = BufReader::with_capacity(1_048_576, file); // 1MB buffer for faster I/O

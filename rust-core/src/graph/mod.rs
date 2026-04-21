@@ -10,3 +10,13 @@ pub use adj_list::*;
 pub use adj_mat::*;
 pub use flat_adj_list::*;
 pub use hypergraph::*;
+
+use pyo3::pymodule;
+
+#[pymodule]
+pub mod graph {
+    // use pyo3::pymodule;
+
+    #[pymodule_export]
+    use super::Hypergraph;
+}

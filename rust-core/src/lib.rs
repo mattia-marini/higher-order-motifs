@@ -24,6 +24,12 @@ pub mod core {
     #[pymodule_export]
     use super::motifs::motifs;
 
+    #[pymodule_export]
+    use super::graph::graph;
+
+    #[pymodule_export]
+    use super::loader::loader;
+
     #[pymodule_init]
     pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.init_submodules()?;

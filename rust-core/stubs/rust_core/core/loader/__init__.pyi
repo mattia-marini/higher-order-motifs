@@ -2,10 +2,17 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
-from rust_core import core
+import os
+import pathlib
+import typing
+
+from rust_core.core import graph
+
 __all__ = [
     "load_wiki_talk",
 ]
 
-def load_wiki_talk(path: builtins.str) -> core.Hypergraph: ...
-
+def load_wiki_talk(
+    dataset_dir: builtins.str | os.PathLike | pathlib.Path,
+    cache_dir: typing.Optional[builtins.str | os.PathLike | pathlib.Path],
+) -> graph.Hypergraph: ...

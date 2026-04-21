@@ -1,8 +1,6 @@
 from collections import deque
 from typing import Any, Callable
 
-from rust_core.triangle import common as rc_common
-
 
 def bfs(adj: list[list[int]], start_vertex=0):
     if len(adj) == 0:
@@ -202,11 +200,3 @@ def degeneracy_ordering(adj: list[list[int]]) -> tuple[list[int], list[int], int
                 deg[u] -= 1
 
     return order, pos, k
-
-
-def sort_adj_list_rust(adj: list[list[int]]) -> list[list[int]]:
-    """
-    Sort each adjacency list using Rust implementation
-    """
-
-    return rc_common.sort_adj_list(adj)

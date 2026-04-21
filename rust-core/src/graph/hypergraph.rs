@@ -7,7 +7,7 @@ use super::types::*;
 use pyo3::{pyclass, pymethods};
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)] // <--- Add this
-#[gen_stub_pyclass]
+#[gen_stub_pyclass(module = "rust_core.core.graph")]
 #[pyclass]
 pub struct Hypergraph {
     pub h2: Vec<H2>,
@@ -21,7 +21,7 @@ pub struct Hypergraph {
     m: usize,
 }
 
-#[gen_stub_pymethods]
+#[gen_stub_pymethods(module = "rust_core.core.graph")]
 #[pymethods]
 impl Hypergraph {
     #[new]
