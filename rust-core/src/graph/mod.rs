@@ -2,7 +2,6 @@ pub mod adj_list;
 pub mod adj_mat;
 pub mod flat_adj_list;
 
-pub mod _bin_writer;
 pub mod hypergraph;
 pub mod types;
 
@@ -12,11 +11,13 @@ pub use flat_adj_list::*;
 pub use hypergraph::*;
 
 use pyo3::pymodule;
+use pyo3_stub_gen::reexport_module_members;
 
 #[pymodule]
 pub mod graph {
-    // use pyo3::pymodule;
 
     #[pymodule_export]
-    use super::Hypergraph;
+    use super::UnweightedHypergraph;
 }
+
+reexport_module_members!("rust_core.graph" from "rust_core.core.graph");

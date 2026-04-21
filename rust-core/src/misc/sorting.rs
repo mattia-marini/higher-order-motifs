@@ -1,17 +1,16 @@
-use pyo3::prelude::{PyAnyMethods, PyListMethods};
-use pyo3::types::PyList;
-use pyo3::{Bound, PyResult};
+use crate::graph::AdjList;
+use pyo3::prelude::PyResult;
 
 /// Returns a degree ordering of the vertices, the position of each vertex in that ordering, and
 /// the maximum degree of the graph.
 /// Time Complexity: O(n)
-pub fn degree_ordering(adj: &Vec<Vec<usize>>, decreasing: bool) -> (Vec<usize>, Vec<usize>, usize) {
-    let n = adj.len();
+pub fn degree_ordering(adj: &AdjList, decreasing: bool) -> (Vec<usize>, Vec<usize>, usize) {
+    let n = adj.n();
     if n == 0 {
         return (Vec::new(), Vec::new(), 0);
     }
 
-    let deg: Vec<usize> = adj.iter().map(|neighbors| neighbors.len()).collect();
+    let deg: Vec<usize> = adj.adj.iter().map(|neighbors| neighbors.len()).collect();
     let max_deg = *deg.iter().max().unwrap_or(&0);
 
     // Count how many vertices have each degree
@@ -54,17 +53,17 @@ pub fn degree_ordering(adj: &Vec<Vec<usize>>, decreasing: bool) -> (Vec<usize>, 
 /// Efficiently sorts each adjacency list in-place.
 /// Time Complexity: O(n + m)
 /// Space Complexity: O(n + m)
-pub fn sort_adj_list(adj: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
-    let n = adj.len();
+pub fn sort_adj_list(adj: &AdjList) -> Vec<Vec<usize>> {
+    let n = adj.n();
     let mut rv = vec![Vec::new(); n];
 
     for u in 0..n {
-        rv[u].reserve(adj[u].len());
+        rv[u].reserve(adj.adj[u].len());
     }
 
     for u in 0..n {
-        for &v in &adj[u] {
-            rv[v].push(u);
+        for &v in &adj.adj[u] {
+            rv[v as usize].push(u);
         }
     }
     rv
@@ -74,14 +73,14 @@ pub fn sort_adj_list(adj: &Vec<Vec<usize>>) -> Vec<Vec<usize>> {
 /// and the degeneracy (k) of the graph.
 ///
 /// Complexity: O(n + m)
-pub fn degeneracy_ordering(adj: &[Vec<usize>]) -> (Vec<usize>, Vec<usize>, usize) {
-    let n = adj.len();
+pub fn degeneracy_ordering(adj: &AdjList) -> (Vec<usize>, Vec<usize>, usize) {
+    let n = adj.n();
     if n == 0 {
         return (vec![], vec![], 0);
     }
 
     // 1. Calculate degrees and find max degree
-    let mut deg: Vec<usize> = adj.iter().map(|neighbors| neighbors.len()).collect();
+    let mut deg: Vec<usize> = adj.adj.iter().map(|neighbors| neighbors.len()).collect();
     let max_deg = *deg.iter().max().unwrap_or(&0);
 
     // 2. Create bins to count how many nodes have each degree
@@ -114,7 +113,8 @@ pub fn degeneracy_ordering(adj: &[Vec<usize>]) -> (Vec<usize>, Vec<usize>, usize
         let v = order[i];
         k = std::cmp::max(k, deg[v]);
 
-        for &u in &adj[v] {
+        for &u_node in &adj.adj[v] {
+            let u = u_node as usize;
             if pos[u] > i {
                 // Only look at neighbors still "in the graph"
                 let u_deg = deg[u];
@@ -142,18 +142,13 @@ pub fn degeneracy_ordering(adj: &[Vec<usize>]) -> (Vec<usize>, Vec<usize>, usize
 
 /// A version of degeneracy_ordering that accepts Python objects.
 /// It maps Python objects to internal indices to perform the O(n + m) sort.
-pub fn degeneracy_ordering_py(
-    adj_py: Bound<'_, PyList>,
-) -> PyResult<(Vec<usize>, Vec<usize>, usize)> {
-    let n = adj_py.len();
+pub fn degeneracy_ordering_py(adj: &AdjList) -> PyResult<(Vec<usize>, Vec<usize>, usize)> {
+    let n = adj.n();
     if n == 0 {
         return Ok((vec![], vec![], 0));
     }
 
-    let mut deg: Vec<usize> = adj_py
-        .iter()
-        .map(|neighbors| neighbors.len().unwrap())
-        .collect();
+    let mut deg: Vec<usize> = adj.adj.iter().map(|neighbors| neighbors.len()).collect();
     let max_deg = *deg.iter().max().unwrap_or(&0);
 
     let mut bin_count = vec![0; max_deg + 1];
@@ -181,9 +176,8 @@ pub fn degeneracy_ordering_py(
     for i in 0..n {
         let v = order_idx[i];
         k = std::cmp::max(k, deg[v]);
-        let neigboors = adj_py.get_item(v).unwrap().cast_into::<PyList>().unwrap();
-        for u in neigboors.iter() {
-            let u = u.extract::<usize>().unwrap();
+        for &u_node in &adj.adj[v] {
+            let u = u_node as usize;
             if pos[u] > i {
                 let u_deg = deg[u];
                 let u_pos = pos[u];

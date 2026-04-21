@@ -34,9 +34,9 @@ pub fn count_neighbors_sorted_list(a: &[usize], b: &[usize]) -> usize {
     count
 }
 
-pub fn count_neighbors_sorted_list_cloj<F>(a: &[usize], b: &[usize], mut f: F)
+pub fn neighbors_sorted_list_cloj<F>(a: &[usize], b: &[usize], mut f: F)
 where
-    F: FnMut(usize) -> usize,
+    F: FnMut(usize),
 {
     let (mut i, mut j) = (0, 0);
     while i < a.len() && j < b.len() {

@@ -1,4 +1,5 @@
 use crate::misc::{degeneracy_ordering, degeneracy_ordering_py};
+use crate::graph::{AdjList, types::NodeId};
 use pyo3::{prelude::*, types::PyList};
 use pyo3_stub_gen::reexport_module_members;
 
@@ -6,11 +7,19 @@ use pyo3_stub_gen::reexport_module_members;
 pub mod kclist {
     use pyo3::{pyfunction, types::PyList, Bound, PyResult};
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
+    use crate::graph::types::NodeId;
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core.core.triangle.kclist")]
     pub fn kclist(adj: Vec<Vec<usize>>) -> usize {
-        super::kclist(&adj)
+        let n = adj.len();
+        let mut al = AdjList::with_nodes(n);
+        for u in 0..n {
+            for &v in &adj[u] {
+                al.adj[u].push(v as NodeId);
+            }
+        }
+        super::kclist(&al)
     }
 
     #[pyfunction]
@@ -23,8 +32,8 @@ pub mod kclist {
 /// Counts the number of triangles in the graph using the Chiba-Nishizeki algorithm.
 ///
 /// Complexity: O(m * k) where k is the degeneracy.
-pub fn kclist(adj: &[Vec<usize>]) -> usize {
-    let n = adj.len();
+pub fn kclist(adj: &AdjList) -> usize {
+    let n = adj.n();
     if n < 3 {
         return 0;
     }
@@ -36,7 +45,8 @@ pub fn kclist(adj: &[Vec<usize>]) -> usize {
     // This creates a Directed Acyclic Graph (DAG)
     let mut out_adj: Vec<Vec<usize>> = vec![vec![]; n];
     for u in 0..n {
-        for &v in &adj[u] {
+        for &v_node in &adj.adj[u] {
+            let v = v_node as usize;
             if pos[u] < pos[v] {
                 out_adj[u].push(v);
             }
@@ -74,18 +84,25 @@ pub fn kclist_py(adj_py: Bound<'_, PyList>) -> PyResult<usize> {
         return Ok(0);
     }
 
-    // 1. Get the degeneracy ordering using your conversion
-    // We call it directly as a Rust function
-    let (order, pos, _) = degeneracy_ordering_py(adj_py.clone())?;
-
-    // 2. Re-orient edges: only keep edges u -> v where pos[u] < pos[v]
-    // We'll build this in Rust memory to ensure the triangle counting is fast.
-    let mut out_adj: Vec<Vec<usize>> = vec![vec![]; n];
-
+    // Build an AdjList from the Python adjacency list
+    let mut al = AdjList::with_nodes(n);
     for u in 0..n {
         let neighbors = adj_py.get_item(u)?.cast_into::<PyList>()?;
         for v_any in neighbors.iter() {
             let v = v_any.extract::<usize>()?;
+            al.adj[u].push(v as NodeId);
+        }
+    }
+
+    // 1. Get the degeneracy ordering using the Rust implementation
+    let (order, pos, _) = degeneracy_ordering(&al);
+
+    // 2. Re-orient edges: only keep edges u -> v where pos[u] < pos[v]
+    let mut out_adj: Vec<Vec<usize>> = vec![vec![]; n];
+
+    for u in 0..n {
+        for &v_node in &al.adj[u] {
+            let v = v_node as usize;
             if pos[u] < pos[v] {
                 out_adj[u].push(v);
             }

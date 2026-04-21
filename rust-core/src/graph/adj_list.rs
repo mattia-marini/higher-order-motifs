@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::ops::Index;
 
 use super::types::NodeId;
 
@@ -8,6 +9,15 @@ pub struct AdjList {
     pub adj: Vec<Vec<NodeId>>,
     n: usize,
     m: usize,
+}
+
+impl Index<usize> for AdjList {
+    type Output = [NodeId];
+
+    #[inline(always)]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.adj[index]
+    }
 }
 
 impl Default for AdjList {
@@ -90,7 +100,7 @@ impl AdjList {
             // rv.add_edge(v_idx, u_idx);
         }
 
-        println!("Constructed adjacency list. n: {}, m: {}", rv.n(), rv.m());
+        // println!("Constructed adjacency list. n: {}, m: {}", rv.n(), rv.m());
 
         rv.m = edges.len();
         rv

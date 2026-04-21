@@ -3,8 +3,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 
-use crate::graph::Hypergraph;
-use crate::graph::types::H2;
+use crate::graph::UnweightedHypergraph;
 use crate::loader::common::{get_dataset_paths, parse};
 
 const PATH: &str = "wiki/wiki-talk.txt";
@@ -13,7 +12,7 @@ const PATH: &str = "wiki/wiki-talk.txt";
 pub fn load_wiki_talk<P1, P2>(
     dataset_dir: &P1,
     cache_dir: Option<&P2>,
-) -> Result<Hypergraph, Box<dyn Error>>
+) -> Result<UnweightedHypergraph, Box<dyn Error>>
 where
     P1: AsRef<Path> + ?Sized,
     P2: AsRef<Path> + ?Sized,
@@ -28,7 +27,7 @@ where
 fn load_wiki_talk_cached<P1, P2>(
     dataset_dir: &P1,
     cache_dir: &P2,
-) -> Result<Hypergraph, Box<dyn Error>>
+) -> Result<UnweightedHypergraph, Box<dyn Error>>
 where
     P1: AsRef<Path> + ?Sized,
     P2: AsRef<Path> + ?Sized,
@@ -36,7 +35,7 @@ where
     let (_dataset_path, cache_path) = get_dataset_paths(dataset_dir, cache_dir, PATH)?;
 
     if cache_path.exists() {
-        Hypergraph::load_from_file(cache_path)
+        UnweightedHypergraph::load_from_file(cache_path)
     } else {
         let rv = load_wiki_talk_uncached(dataset_dir)?;
         rv.save_to_file(cache_path)?;
@@ -44,7 +43,7 @@ where
     }
 }
 
-fn load_wiki_talk_uncached<P1>(dataset_dir: &P1) -> Result<Hypergraph, Box<dyn Error>>
+fn load_wiki_talk_uncached<P1>(dataset_dir: &P1) -> Result<UnweightedHypergraph, Box<dyn Error>>
 where
     P1: AsRef<Path> + ?Sized,
 {
@@ -109,8 +108,8 @@ where
         }
     }
 
-    let mut rv = Hypergraph::new();
-    rv.extends_h2(edges.into_iter().map(|(u, v)| H2::new(u, v)).collect());
+    let mut rv = UnweightedHypergraph::new();
+    rv.extends_h2(edges);
 
     Ok(rv)
 }

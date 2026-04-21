@@ -1,4 +1,5 @@
 use crate::misc::{bfs, common_neighbors_sorted_list, sort_adj_list};
+use crate::graph::AdjList;
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
 
@@ -27,7 +28,7 @@ pub fn cetc(adj: &mut Vec<Vec<usize>>) -> usize {
     let mut count = 0;
 
     sort_adj_list(adj);
-    let levels = bfs(adj);
+    let levels = bfs(&AdjList { adj: adj.to_vec(), n, m: 0 });
 
     for u in 0..n {
         for &v in &adj[u] {
@@ -53,7 +54,7 @@ pub fn cetc_s(adj: &Vec<Vec<usize>>) -> usize {
     let mut hash = vec![false; n];
     let mut count = 0;
 
-    let levels = bfs(adj);
+    let levels = bfs(&AdjList { adj: adj.to_vec(), n, m: 0 });
 
     // Partition edges based on levels
     for u in 0..n {
