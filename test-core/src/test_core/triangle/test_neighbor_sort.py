@@ -37,5 +37,4 @@ def run():
     adj2, _ = time_function_p(lambda: sort_adj_list(adj2))
     adj3, _ = time_function_p(lambda: sort_adj_list_rust(adj3))
 
-
     assert adj1 == adj2 == adj3, "Sorted adjacency lists do not match"

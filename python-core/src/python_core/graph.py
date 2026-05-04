@@ -240,7 +240,7 @@ class Hypergraph:
         self._adjacency: Optional[Dict[int, List[HyperedgeHandle]]] = None
 
     def __str__(self) -> str:
-        return f"Hypergraph(n= {self.n}, m={self.e})"
+        return f"Hypergraph(n= {self.n}, m={self.m})"
 
     @property
     def n(self) -> int:
@@ -251,11 +251,11 @@ class Hypergraph:
         pass
 
     @property
-    def e(self) -> int:
+    def m(self) -> int:
         return len(self._edges)
 
-    @e.setter
-    def e(self, value: int):
+    @m.setter
+    def m(self, value: int):
         pass
 
     @property
