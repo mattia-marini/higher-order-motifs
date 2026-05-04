@@ -1,15 +1,15 @@
 import math
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.ticker import MaxNLocator
-import numpy as np
 import os
-import config as cfg
+
 import hypergraphx as hx
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import MaxNLocator
 
 
 def plot_dist_hyperedges(edges, title):
-    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+    os.makedirs(os.environ["PLOT_OUT_DIR"], exist_ok=True)
 
     x = []
     for i in edges:
@@ -33,7 +33,7 @@ def plot_dist_hyperedges(edges, title):
         histtype="bar",
         ec="black",
     )
-    plt.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
+    plt.savefig("{}/{}.pdf".format(os.environ["PLOT_OUT_DIR"], title))
 
 
 def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
@@ -48,11 +48,9 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
             size2weights.setdefault(size, []).append(weight)
 
     # 2. Plot distributions
-    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+    os.makedirs(os.environ["PLOT_OUT_DIR"], exist_ok=True)
 
-    fig, ax = plt.subplots(
-        2, 1, figsize=(5, 10), gridspec_kw={"height_ratios": [1, 1], "hspace": 0.6}
-    )
+    fig, ax = plt.subplots(2, 1, figsize=(5, 10), gridspec_kw={"height_ratios": [1, 1], "hspace": 0.6})
     ax[0].xaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax[0].set_xlabel("w")
@@ -92,9 +90,7 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
         expected_value += w * p
 
     target_count = round(0.8 * len(edges))  # I want to include at least 80% of edges
-    current_count = total_weight_count[
-        round(expected_value)
-    ]  # Start from expected value
+    current_count = total_weight_count[round(expected_value)]  # Start from expected value
     l = round(expected_value) - 1
     r = round(expected_value) + 1
 
@@ -156,12 +152,12 @@ def plot_dist_hyperedges_weights(edges, title, min_size=2, max_size=20):
         alpha=0.5,
     )
 
-    fig.savefig(f"{cfg.PLOT_OUT_DIR}/{title}_weights_by_size.pdf", bbox_inches="tight")
+    fig.savefig(f"{os.environ['PLOT_OUT_DIR']}/{title}_weights_by_size.pdf", bbox_inches="tight")
     plt.close()
 
 
 def plot_dist_motifs(motifs, title, graphs_per_row=None):
-    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+    os.makedirs(os.environ["PLOT_OUT_DIR"], exist_ok=True)
 
     if graphs_per_row is None:
         graphs_per_row = len(motifs)
@@ -178,7 +174,7 @@ def plot_dist_motifs(motifs, title, graphs_per_row=None):
     main_axes.bar(range(len(counts)), counts, align="center", alpha=0.7)
 
     fig.tight_layout()
-    fig.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
+    fig.savefig("{}/{}.pdf".format(os.environ["PLOT_OUT_DIR"], title))
 
 
 def plot_leading_motifs(motifs, title, graphs_per_row=None, percentile=1, limit=None):
@@ -193,7 +189,7 @@ def plot_leading_motifs(motifs, title, graphs_per_row=None, percentile=1, limit=
         percentile (float, optional): Percentile of motifs to be plotted.
         limit (int, optional): Maximum number of motifs to be plotted.
     """
-    os.makedirs(cfg.PLOT_OUT_DIR, exist_ok=True)
+    os.makedirs(os.environ["PLOT_OUT_DIR"], exist_ok=True)
 
     if graphs_per_row is None:
         graphs_per_row = len(motifs)
@@ -220,7 +216,7 @@ def plot_leading_motifs(motifs, title, graphs_per_row=None, percentile=1, limit=
     main_axes.bar(range(idx), motifs_counts, align="center", alpha=0.7)
 
     fig.tight_layout()
-    fig.savefig("{}/{}.pdf".format(cfg.PLOT_OUT_DIR, title))
+    fig.savefig("{}/{}.pdf".format(os.environ["PLOT_OUT_DIR"], title))
 
 
 def get_bisected_motifs_layout(motifs, graphs_per_row):
@@ -243,9 +239,7 @@ def get_bisected_motifs_layout(motifs, graphs_per_row):
     n = len(motifs)
     m = math.ceil(n / graphs_per_row)
     fig = plt.figure(figsize=(5, 5 + 5 / graphs_per_row * m))
-    gs = gridspec.GridSpec(
-        1 + m, graphs_per_row, height_ratios=[graphs_per_row] + [1] * m, wspace=0
-    )
+    gs = gridspec.GridSpec(1 + m, graphs_per_row, height_ratios=[graphs_per_row] + [1] * m, wspace=0)
 
     main_axes = fig.add_subplot(gs[0, :])
     for i, motif in enumerate(motifs):

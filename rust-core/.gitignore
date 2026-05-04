@@ -13,6 +13,8 @@ __pycache__/
 .venv/
 env/
 bin/
+!rust-core/src/bin
+
 build/
 develop-eggs/
 dist/

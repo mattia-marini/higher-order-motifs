@@ -110,6 +110,7 @@ def load_conference(
         for k in graph.keys():
             e_k = graph[k]
             G = nx.Graph(e_k, directed=False)
+            # print(f"{G}")
             c = list(nx.find_cliques(G))
             for i in c:
                 i = tuple(sorted(i))
