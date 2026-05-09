@@ -10,7 +10,7 @@ use pyo3_stub_gen::{
 };
 use rkyv::{Archive, Archived, Deserialize, Serialize};
 
-use crate::graph::{ArchivedUnweightedHypergraph, UnweightedHypergraph};
+// use crate::graph::{ArchivedUnweightedHypergraph, UnweightedHypergraph};
 
 use super::error::GraphError;
 

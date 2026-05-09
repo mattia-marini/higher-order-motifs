@@ -1,9 +1,9 @@
 #![allow(unused)]
 pub mod graph;
-pub mod loader;
-pub mod misc;
-pub mod motifs;
-pub mod triangle;
+// pub mod loader;
+// pub mod misc;
+// pub mod motifs;
+// pub mod triangle;
 
 #[cfg(test)]
 mod test;
@@ -16,26 +16,26 @@ pub mod util;
 
 #[pymodule]
 pub mod core {
-    use crate::util::submodules_initializer::PyModuleSubmoduleExt;
-    use pyo3::{Bound, PyResult, types::PyModule};
-
-    #[pymodule_export]
-    use super::triangle::triangle;
-
-    #[pymodule_export]
-    use super::motifs::motifs;
-
-    #[pymodule_export]
-    use super::graph::graph;
-
-    #[pymodule_export]
-    use super::loader::loader;
-
-    #[pymodule_init]
-    pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
-        m.init_submodules()?;
-        Ok(())
-    }
+    // use crate::util::submodules_initializer::PyModuleSubmoduleExt;
+    // use pyo3::{Bound, PyResult, types::PyModule};
+    //
+    // #[pymodule_export]
+    // use super::triangle::triangle;
+    //
+    // #[pymodule_export]
+    // use super::motifs::motifs;
+    //
+    // // #[pymodule_export]
+    // // use super::graph::graph;
+    //
+    // #[pymodule_export]
+    // use super::loader::loader;
+    //
+    // #[pymodule_init]
+    // pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    //     m.init_submodules()?;
+    //     Ok(())
+    // }
 }
 
 reexport_module_members!("rust_core" from "rust_core.core");

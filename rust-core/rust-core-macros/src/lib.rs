@@ -18,3 +18,8 @@ pub fn inherent(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn ct_map(attr: TokenStream, item: TokenStream) -> TokenStream {
     ct_map::ct_map(attr, item)
 }
+
+#[proc_macro_attribute]
+pub fn ct_map_accessor(attr: TokenStream, item: TokenStream) -> TokenStream {
+    ct_map::ct_map_accessor(attr, item)
+}

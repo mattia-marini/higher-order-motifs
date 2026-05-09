@@ -1,45 +1,21 @@
 use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, quote};
+use quote::{ToTokens, format_ident, quote};
 use syn::{
-    Expr, ExprRange, Ident, ItemStruct, Type, parenthesized,
-    parse::{Parse, ParseStream},
-    spanned::Spanned,
+    Expr, ExprRange, Ident, ItemStruct, ItemTrait, Path, TraitItem, TraitItemFn, Type,
+    parenthesized, parse::Parse, parse::ParseStream, parse_macro_input, spanned::Spanned,
 };
 
-#[derive(Clone, Copy, Debug, Default)]
-struct GenFlags {
-    take: bool,
-    get: bool,
-    get_mut: bool,
-    new: bool,
+#[derive(Clone, Copy, Debug)]
+enum SkipKind {
+    New,
 }
 
-impl GenFlags {
-    fn all() -> Self {
-        Self {
-            take: true,
-            get: true,
-            get_mut: true,
-            new: true,
-        }
-    }
-
-    fn none() -> Self {
-        Self::default()
-    }
-
-    fn disable(&mut self, other: GenFlags) {
-        if other.take {
-            self.take = false;
-        }
-        if other.get {
-            self.get = false;
-        }
-        if other.get_mut {
-            self.get_mut = false;
-        }
-        if other.new {
-            self.new = false;
+impl SkipKind {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let ident: Ident = input.parse()?;
+        match ident.to_string().as_str() {
+            "new" => Ok(SkipKind::New),
+            _ => Err(syn::Error::new(ident.span(), "unknown skip option")),
         }
     }
 }
@@ -48,8 +24,8 @@ struct Args {
     ty: Type,
     range: ExprRange,
     default_expr: Option<Expr>,
-    generate: Option<GenFlags>,
-    skip: Option<GenFlags>,
+    allocator: Option<Type>,
+    skip: Option<SkipKind>,
 }
 
 struct ArgsFinalized {
@@ -57,7 +33,8 @@ struct ArgsFinalized {
     range_start: usize,
     range_end: usize,
     default_expr: Expr,
-    gen_flags: GenFlags,
+    allocator: Type,
+    gen_new: bool,
 }
 
 impl Parse for Args {
@@ -65,7 +42,7 @@ impl Parse for Args {
         let mut ty = None;
         let mut range = None;
         let mut default_expr = None;
-        let mut generate = None;
+        let mut allocator = None;
         let mut skip = None;
 
         while !input.is_empty() {
@@ -77,27 +54,10 @@ impl Parse for Args {
                 "ty" => ty = Some(content.parse()?),
                 "rg" => range = Some(content.parse()?),
                 "default" => default_expr = Some(content.parse()?),
-                "gen" => {
-                    if skip.is_some() {
-                        return Err(syn::Error::new(
-                            ident.span(),
-                            "cannot specify both gen(...) and skip(...)",
-                        ));
-                    }
-                    generate = Some(parse_flags(&content)?);
-                }
-                "skip" => {
-                    if generate.is_some() {
-                        return Err(syn::Error::new(
-                            ident.span(),
-                            "cannot specify both gen(...) and skip(...)",
-                        ));
-                    }
-                    skip = Some(parse_flags(&content)?);
-                }
+                "allocator" => allocator = Some(content.parse()?),
+                "skip" => skip = Some(SkipKind::parse(&content)?),
                 _ => return Err(syn::Error::new(ident.span(), "unknown ct_map option")),
             }
-
             if input.peek(syn::Token![,]) {
                 input.parse::<syn::Token![,]>()?;
             }
@@ -107,7 +67,7 @@ impl Parse for Args {
             ty: ty.ok_or_else(|| syn::Error::new(Span::call_site(), "missing ty(...)"))?,
             range: range.ok_or_else(|| syn::Error::new(Span::call_site(), "missing rg(...)"))?,
             default_expr,
-            generate,
+            allocator,
             skip,
         })
     }
@@ -115,82 +75,89 @@ impl Parse for Args {
 
 impl Args {
     fn finalize(self) -> syn::Result<ArgsFinalized> {
-        let range_expr = self.range;
-
-        let start_expr = range_expr
-            .clone()
+        let start_expr = self
+            .range
             .start
-            .ok_or_else(|| syn::Error::new(range_expr.span(), "range must have start"))?;
-
-        let end_expr = range_expr
-            .clone()
+            .as_ref()
+            .ok_or_else(|| syn::Error::new(self.range.span(), "range must have start"))?;
+        let end_expr = self
+            .range
             .end
-            .ok_or_else(|| syn::Error::new(range_expr.span(), "range must have end"))?;
+            .as_ref()
+            .ok_or_else(|| syn::Error::new(self.range.span(), "range must have end"))?;
 
-        let range_start = expr_to_usize(&start_expr)?;
-        let range_end = expr_to_usize(&end_expr)?;
-
-        if range_end <= range_start {
-            return Err(syn::Error::new(
-                Span::call_site(),
-                "range end must be > range start",
-            ));
-        }
-
-        let gen_flags = if let Some(generate) = self.generate {
-            generate
-        } else if let Some(skip) = self.skip {
-            let mut flags = GenFlags::all();
-            flags.disable(skip);
-            flags
-        } else {
-            GenFlags::all()
-        };
+        let range_start = expr_to_usize(start_expr)?;
+        let range_end = expr_to_usize(end_expr)?;
 
         let ty = self.ty;
-        let default_expr = self.default_expr.unwrap_or_else(|| {
-            syn::parse_quote! { <#ty as ::core::default::Default>::default() }
-        });
+        let allocator = self
+            .allocator
+            .unwrap_or_else(|| syn::parse_quote! { Vec<T> });
+
+        let ty_stream = ty.to_token_stream();
+        let allocator_stream = allocator.to_token_stream();
+        let allocator_with_ty_stream = replace_ident_with_stream(allocator_stream, "T", ty_stream);
+
+        let default_expr = match self.default_expr {
+            Some(expr) => expr,
+            None => syn::parse2(quote! {
+                <#allocator_with_ty_stream as ::core::default::Default>::default()
+            })?,
+        };
+
+        let gen_new = match self.skip {
+            Some(SkipKind::New) => false,
+            None => true,
+        };
 
         Ok(ArgsFinalized {
             ty,
             range_start,
             range_end,
             default_expr,
-            gen_flags,
+            allocator,
+            gen_new,
         })
     }
 }
 
 fn expr_to_usize(expr: &Expr) -> syn::Result<usize> {
     match expr {
-        Expr::Lit(expr_lit) => match &expr_lit.lit {
-            syn::Lit::Int(lit) => lit.base10_parse(),
-            _ => Err(syn::Error::new(expr.span(), "expected integer literal")),
+        Expr::Lit(e) => match &e.lit {
+            syn::Lit::Int(l) => l.base10_parse(),
+            _ => Err(syn::Error::new(expr.span(), "expected int")),
         },
-        _ => Err(syn::Error::new(expr.span(), "expected integer literal")),
+        _ => Err(syn::Error::new(expr.span(), "expected int")),
     }
 }
 
-fn parse_flags(input: ParseStream) -> syn::Result<GenFlags> {
-    let mut flags = GenFlags::none();
+fn replace_ident_with_stream(
+    stream: TokenStream,
+    target: &str,
+    replacement: TokenStream,
+) -> TokenStream {
+    use proc_macro2::{Group, TokenTree};
 
-    while !input.is_empty() {
-        let ident: Ident = input.parse()?;
-        match ident.to_string().as_str() {
-            "take" => flags.take = true,
-            "get" => flags.get = true,
-            "get_mut" => flags.get_mut = true,
-            "new" => flags.new = true,
-            _ => return Err(syn::Error::new(ident.span(), "unknown generation flag")),
-        }
+    let mut out = TokenStream::new();
 
-        if input.peek(syn::Token![,]) {
-            input.parse::<syn::Token![,]>()?;
+    for tt in stream {
+        match tt {
+            TokenTree::Ident(ref ident) if ident == target => {
+                out.extend(replacement.clone());
+            }
+            TokenTree::Group(group) => {
+                let mut new_group = Group::new(
+                    group.delimiter(),
+                    replace_ident_with_stream(group.stream(), target, replacement.clone()),
+                );
+                new_group.set_span(group.span());
+                out.extend([TokenTree::Group(new_group)]);
+            }
+            other => out.extend([other]),
         }
     }
 
-    Ok(flags)
+    out
 }
 
 fn replace_idents(stream: TokenStream, n_val: i64, i_val: i64) -> TokenStream {
@@ -206,11 +173,11 @@ fn replace_idents(stream: TokenStream, n_val: i64, i_val: i64) -> TokenStream {
                 TokenTree::Literal(Literal::i64_unsuffixed(i_val))
             }
             TokenTree::Group(group) => {
-                let delim = group.delimiter();
-                let span = group.span();
-                let inner = replace_idents(group.stream(), n_val, i_val);
-                let mut new_group = Group::new(delim, inner);
-                new_group.set_span(span);
+                let mut new_group = Group::new(
+                    group.delimiter(),
+                    replace_idents(group.stream(), n_val, i_val),
+                );
+                new_group.set_span(group.span());
                 TokenTree::Group(new_group)
             }
             other => other,
@@ -218,97 +185,104 @@ fn replace_idents(stream: TokenStream, n_val: i64, i_val: i64) -> TokenStream {
         .collect()
 }
 
+fn replace_idents_with_metavars(stream: TokenStream, n_var: &str, i_var: &str) -> TokenStream {
+    use proc_macro2::{Group, Punct, Spacing, TokenTree};
+
+    let mut out = TokenStream::new();
+
+    for tt in stream {
+        match tt {
+            TokenTree::Ident(ref ident) if ident == "N" => {
+                out.extend([
+                    TokenTree::Punct(Punct::new('$', Spacing::Alone)),
+                    TokenTree::Ident(Ident::new(n_var, Span::call_site())),
+                ]);
+            }
+            TokenTree::Ident(ref ident) if ident == "I" => {
+                out.extend([
+                    TokenTree::Punct(Punct::new('$', Spacing::Alone)),
+                    TokenTree::Ident(Ident::new(i_var, Span::call_site())),
+                ]);
+            }
+            TokenTree::Group(group) => {
+                let mut new_group = Group::new(
+                    group.delimiter(),
+                    replace_idents_with_metavars(group.stream(), n_var, i_var),
+                );
+                new_group.set_span(group.span());
+                out.extend([TokenTree::Group(new_group)]);
+            }
+            other => out.extend([other]),
+        }
+    }
+
+    out
+}
+
 fn expand_ct_map(args: ArgsFinalized, input: ItemStruct) -> TokenStream {
-    let struct_name = input.ident;
+    let struct_name = &input.ident;
+    let vis = &input.vis;
+    let attrs = &input.attrs; // Captures #[derive(...)] and other attributes
+
     let min = args.range_start;
     let max = args.range_end;
     let count = max - min;
 
     let ty_stream = args.ty.to_token_stream();
     let default_stream = args.default_expr.to_token_stream();
-    let flags = args.gen_flags;
+    let allocator_stream = args.allocator.to_token_stream();
 
     let fields = (min..max).enumerate().map(|(i, n)| {
         let specialized_type = replace_idents(ty_stream.clone(), n as i64, i as i64);
-        quote! { #specialized_type }
+        let allocator_with_specialized =
+            replace_ident_with_stream(allocator_stream.clone(), "T", specialized_type);
+        quote! { #allocator_with_specialized }
     });
 
-    let get_immutable = if flags.get {
-        let methods = (min..max).enumerate().map(|(i, n)| {
-            let method_name = quote::format_ident!("get_{}", n);
-            let specialized_type = replace_idents(ty_stream.clone(), n as i64, i as i64);
-            let tuple_index = syn::Index::from(i);
-            quote! {
-                pub fn #method_name(&self) -> &#specialized_type {
-                    &self.#tuple_index
-                }
-            }
+    let new_fn = if args.gen_new {
+        let defaults = (min..max).enumerate().map(|(i, n)| {
+            let expr = replace_idents(default_stream.clone(), n as i64, i as i64);
+            quote! { #expr }
         });
-        quote! { #(#methods)* }
-    } else {
-        quote! {}
-    };
-
-    let get_mutable = if flags.get_mut {
-        let methods = (min..max).enumerate().map(|(i, n)| {
-            let method_name = quote::format_ident!("get_{}_mut", n);
-            let specialized_type = replace_idents(ty_stream.clone(), n as i64, i as i64);
-            let tuple_index = syn::Index::from(i);
-            quote! {
-                pub fn #method_name(&mut self) -> &mut #specialized_type {
-                    &mut self.#tuple_index
-                }
-            }
-        });
-        quote! { #(#methods)* }
-    } else {
-        quote! {}
-    };
-
-    let take = if flags.take {
-        let methods = (min..max).enumerate().map(|(i, n)| {
-            let method_name = quote::format_ident!("take_{}", n);
-            let specialized_type = replace_idents(ty_stream.clone(), n as i64, i as i64);
-            let tuple_index = syn::Index::from(i);
-            quote! {
-                pub fn #method_name(&mut self) -> #specialized_type {
-                    ::core::mem::take(&mut self.#tuple_index)
-                }
-            }
-        });
-        quote! { #(#methods)* }
-    } else {
-        quote! {}
-    };
-
-    let new_fn = if flags.new {
-        let defaults = (min..max)
-            .enumerate()
-            .map(|(i, n)| replace_idents(default_stream.clone(), n as i64, i as i64));
 
         quote! {
             pub fn new() -> Self {
-                Self(
-                    #(#defaults),*
-                )
+                Self {
+                    buckets: (#(#defaults),*)
+                }
             }
         }
     } else {
         quote! {}
     };
 
+    let helper_macro_name = format_ident!("__ct_map_for_{}", struct_name);
+
+    let helper_expansions = (min..max).enumerate().map(|(i, n)| {
+        let n_lit = syn::LitInt::new(&n.to_string(), Span::call_site());
+        let i_lit = syn::LitInt::new(&i.to_string(), Span::call_site());
+        quote! { $m!(#n_lit, #i_lit); }
+    });
+
     quote! {
-        pub struct #struct_name(
-            #(#fields),*
-        );
+        #(#attrs)* // Re-emits the derives and other attributes here
+        #vis struct #struct_name {
+            pub buckets: (#(#fields),*)
+        }
 
         impl #struct_name {
+            pub const START: usize = #min;
+            pub const END: usize = #max;
             pub const SIZE: usize = #count;
-
             #new_fn
-            #get_immutable
-            #get_mutable
-            #take
+        }
+
+        #[doc(hidden)]
+        #[macro_export]
+        macro_rules! #helper_macro_name {
+            ($m:ident) => {
+                #(#helper_expansions)*
+            };
         }
     }
 }
@@ -317,13 +291,128 @@ pub fn ct_map(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let args = syn::parse_macro_input!(attr as Args);
-
+    let args = parse_macro_input!(attr as Args);
     let finalized = match args.finalize() {
         Ok(v) => v,
         Err(e) => return e.into_compile_error().into(),
     };
-
-    let input_struct = syn::parse_macro_input!(item as ItemStruct);
+    let input_struct = parse_macro_input!(item as ItemStruct);
     expand_ct_map(finalized, input_struct).into()
+}
+
+struct AccessorArgs {
+    target: Path,
+}
+
+impl Parse for AccessorArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut target = None;
+
+        while !input.is_empty() {
+            let ident: Ident = input.parse()?;
+            let content;
+            parenthesized!(content in input);
+
+            match ident.to_string().as_str() {
+                "target" => target = Some(content.parse()?),
+                _ => {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        "unknown ct_map_accessor option",
+                    ));
+                }
+            }
+
+            if input.peek(syn::Token![,]) {
+                input.parse::<syn::Token![,]>()?;
+            }
+        }
+
+        Ok(Self {
+            target: target
+                .ok_or_else(|| syn::Error::new(Span::call_site(), "missing target(...)"))?,
+        })
+    }
+}
+
+fn extract_accessor_attr(attrs: &mut Vec<syn::Attribute>) -> syn::Result<TokenStream> {
+    let mut found = None;
+
+    attrs.retain(|attr| {
+        if attr.path().is_ident("accessor") {
+            found = Some(attr.clone());
+            false
+        } else {
+            true
+        }
+    });
+
+    match found {
+        Some(attr) => attr.parse_args(),
+        None => Err(syn::Error::new(
+            Span::call_site(),
+            "missing #[accessor(...)] on method",
+        )),
+    }
+}
+
+pub fn ct_map_accessor(
+    attr: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let args = parse_macro_input!(attr as AccessorArgs);
+    let mut input_trait = parse_macro_input!(item as ItemTrait);
+
+    let trait_ident = input_trait.ident.clone();
+    let target = args.target;
+
+    let target_ident = target
+        .segments
+        .last()
+        .map(|seg| seg.ident.clone())
+        .unwrap_or_else(|| Ident::new("Target", Span::call_site()));
+
+    let helper_macro_name = format_ident!("__ct_map_for_{}", target_ident);
+
+    let mut method_tokens = Vec::new();
+
+    for item in &mut input_trait.items {
+        if let TraitItem::Fn(TraitItemFn { attrs, sig, .. }) = item {
+            let body_tokens = match extract_accessor_attr(attrs) {
+                Ok(tokens) => tokens,
+                Err(err) => return err.into_compile_error().into(),
+            };
+
+            let sig_tokens = replace_idents_with_metavars(sig.to_token_stream(), "n", "i");
+            let body_tokens = replace_idents_with_metavars(body_tokens, "n", "i");
+
+            method_tokens.push(quote! {
+                #(#attrs)*
+                #sig_tokens {
+                    #body_tokens
+                }
+            });
+        }
+    }
+
+    let impl_macro = quote! {
+        macro_rules! __ct_map_accessor_impls {
+            ($n:literal, $i:tt) => {
+                impl #trait_ident<$n> for #target {
+                    #(#method_tokens)*
+                }
+            };
+        }
+    };
+
+    let helper_call = quote! {
+        #helper_macro_name!(__ct_map_accessor_impls);
+    };
+
+    quote! {
+        #input_trait
+        #impl_macro
+        #helper_call
+    }
+    .into()
 }

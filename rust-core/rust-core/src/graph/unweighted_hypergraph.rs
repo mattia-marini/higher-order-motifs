@@ -6,55 +6,97 @@ use std::{
 };
 
 use duplicate::duplicate_item;
-use rust_core_macros::inherent;
+use rust_core_macros::{ct_map_accessor, inherent};
 
+use pyo3::{Bound, FromPyObject, PyRef, PyResult, pyclass, pymethods};
 use pyo3_stub_gen::{
     PyStubType,
     derive::{gen_stub_pyclass, gen_stub_pymethods},
     impl_stub_type, type_alias,
 };
+
 use rkyv::{
     Archive, Deserialize, Serialize, collections::swiss_table::ArchivedHashSet, rend::u32_le,
 };
 
-use crate::graph::traits::{HypergraphBase, LiveUnweightedHypergraph, StaticUnweightedHypergraph};
-
+// use super::traits::{HypergraphBase, LiveUnweightedHypergraph, StaticUnweightedHypergraph};
 use super::types::*;
-use pyo3::{Bound, FromPyObject, PyRef, PyResult, pyclass, pymethods};
 
+use rust_core_macros::ct_map;
+
+#[ct_map(ty(Hx<N, NodeId>), rg(2..6), allocator(Vec<T>))]
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
-#[gen_stub_pyclass(module = "rust_core.core.graph")]
-#[pyclass]
+pub struct CtHxVec {}
+
+#[ct_map_accessor(target(CtHxVec))]
+pub trait CtHxVecAccessor<const N: usize> {
+    #[accessor(&self.buckets.I)]
+    #[inline(always)]
+    fn get(&self) -> &Vec<Hx<N, NodeId>>;
+
+    #[accessor(&mut self.buckets.I)]
+    #[inline(always)]
+    fn get_mut(&mut self) -> &mut Vec<Hx<N, NodeId>>;
+
+    #[accessor(self.buckets.I.push(e))]
+    #[inline(always)]
+    fn push(&mut self, e: Hx<N, NodeId>);
+
+    #[accessor(self.buckets.I.contains(&e))]
+    #[inline(always)]
+    fn contains(&self, e: &Hx<N, NodeId>) -> bool;
+}
+
+// impl CtHxVec {
+//     pub fn get2<const N: usize>(&self) -> &Vec<Hx<N, NodeId>> {
+//         (self).get()
+//     }
+// }
+
+#[ct_map(ty(Hx<N, NodeId>), rg(2..6), allocator(HashSet<T>))]
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+pub struct CtHxSet {}
+
+#[ct_map_accessor(target(CtHxSet))]
+pub trait CtHxSetAccessor<const N: usize> {
+    #[accessor(&self.buckets.I)]
+    #[inline(always)]
+    fn get(&self) -> &HashSet<Hx<N, NodeId>>;
+
+    #[accessor(&mut self.buckets.I)]
+    #[inline(always)]
+    fn get_mut(&mut self) -> &mut HashSet<Hx<N, NodeId>>;
+
+    #[accessor(self.buckets.I.insert(e))]
+    #[inline(always)]
+    fn insert(&mut self, e: Hx<N, NodeId>) -> bool;
+
+    #[accessor(self.buckets.I.contains(&e))]
+    #[inline(always)]
+    fn contains(&self, e: &Hx<N, NodeId>) -> bool;
+}
+
+// pub fn test() {
+//     let mut map = CtHxVec::new();
+//     // map.push(Hx::new_unchecked([1, 2, 3, 4, 5]));
+// }
+
+// #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+// #[gen_stub_pyclass(module = "rust_core.core.graph")]
+// #[pyclass]
 // #[rkyv(attr(gen_stub_pyclass(module = "rust_core.core.graph")), attr(pyclass))]
 pub struct UnweightedHypergraph {
-    pub h2: Vec<Hx<2, NodeId>>,
-    pub h3: Vec<Hx<3, NodeId>>,
-    pub h4: Vec<Hx<4, NodeId>>,
-    pub h5: Vec<Hx<5, NodeId>>,
+    pub edge_vec: CtHxVec,
+    pub edge_set: CtHxSet,
 
-    // pub bigger_edges: HashMap<usize, Vec<WHx>>,
-    //
-    // // #[rkyv(with = rkyv::with::Skip)]
-    // // pub edges: HashSet<Hx>,
-    // // #[rkyv(with = rkyv::with::Skip)]
-    // h2_set: HashSet<H2>,
-    // #[rkyv(with = rkyv::with::Skip)]
-    // h3_set: HashSet<H3>,
-    // #[rkyv(with = rkyv::with::Skip)]
-    // h4_set: HashSet<H4>,
-    // #[rkyv(with = rkyv::with::Skip)]
-    // h5_set: HashSet<H5>,
-    //
-    // #[rkyv(with = rkyv::with::Skip)]
-    // bigger_edges_set: HashSet<WHx>,
-    //
-    // #[rkyv(with = rkyv::with::Skip)]
-    // pub nodes: HashMap<NodeId, usize>, // track number of edges insisting on a certain node
-    #[pyo3(get)]
+    pub nodes: HashMap<NodeId, usize>, // track number of edges insisting on a certain node
+
+    // #[pyo3(get)]
     n: usize,
-    #[pyo3(get)]
+    // #[pyo3(get)]
     m: usize,
 }
+/*
 
 #[gen_stub_pymethods(module = "rust_core.core.graph")]
 #[pymethods]
@@ -384,3 +426,4 @@ impl UnweightedHypergraph {
 // All operations that only require read access to the hypergraph should be defined in this trait,
 // so that they can be implemented for both `UnweightedHypergraph` and
 // `ArchivedUnweightedHypergraph`.
+*/
