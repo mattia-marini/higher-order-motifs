@@ -26,7 +26,7 @@ pub struct WeightedHypergraph {
 
     pub bigger_edges: HashMap<usize, Vec<WHx>>,
 
-    pub edges: HashSet<Hx>,
+    pub edges: HashSet<WHx>,
     pub nodes: HashMap<NodeId, usize>, // track number of edges insisting on a certain node
 
     #[pyo3(get)]

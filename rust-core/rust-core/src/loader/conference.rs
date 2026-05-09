@@ -9,7 +9,7 @@ use std::{
 use crate::{
     graph::{
         AdjList, UnweightedHypergraph,
-        types::{Hx, NodeId},
+        types::{WHx, NodeId},
     },
     loader::common::get_dataset_paths,
 };
@@ -104,7 +104,7 @@ where
             cliques
                 .into_iter()
                 .map(|edge| {
-                    Hx::new(
+                    WHx::new(
                         edge.into_iter()
                             .map(|n| rev_node_map[&n])
                             .collect::<Vec<NodeId>>(),

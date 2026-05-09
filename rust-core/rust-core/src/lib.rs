@@ -1,3 +1,4 @@
+#![allow(unused)]
 pub mod graph;
 pub mod loader;
 pub mod misc;
@@ -9,7 +10,7 @@ mod test;
 
 use pyo3::prelude::*;
 
-use pyo3_stub_gen::{define_stub_info_gatherer, reexport_module_members};
+use pyo3_stub_gen::{StubInfo, define_stub_info_gatherer, reexport_module_members};
 
 pub mod util;
 
@@ -39,4 +40,15 @@ pub mod core {
 
 reexport_module_members!("rust_core" from "rust_core.core");
 
-define_stub_info_gatherer!(stub_info);
+pub fn stub_info() -> pyo3_stub_gen::Result<StubInfo> {
+    let project_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let workspace_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "CARGO_MANIFEST_DIR has no parent",
+        ))?;
+
+    let infos = StubInfo::from_pyproject_toml(workspace_dir.join("pyproject.toml"))?;
+    Ok(infos)
+}

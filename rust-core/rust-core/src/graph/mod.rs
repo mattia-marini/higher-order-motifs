@@ -1,9 +1,11 @@
 pub mod adj_list;
 pub mod flat_adj_list;
+pub mod test;
 
 pub mod error;
 pub mod traits;
 pub mod types;
+pub mod ct_map;
 pub mod unweighted_hypergraph;
 pub mod weighted_hypergraph;
 
