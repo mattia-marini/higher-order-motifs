@@ -5,17 +5,37 @@ use syn::{
     parenthesized, parse::Parse, parse::ParseStream, parse_macro_input, spanned::Spanned,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SkipKind {
     New,
+    InternalGetters,
+    TotalSizeFn,
+    All,
 }
 
 impl SkipKind {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let ident: Ident = input.parse()?;
+    fn parse(ident: &Ident) -> syn::Result<Self> {
         match ident.to_string().as_str() {
             "new" => Ok(SkipKind::New),
+            "internal_getters" => Ok(SkipKind::InternalGetters),
+            "total_size_fn" => Ok(SkipKind::TotalSizeFn),
+            "all" => Ok(SkipKind::All),
             _ => Err(syn::Error::new(ident.span(), "unknown skip option")),
+        }
+    }
+}
+
+struct GenFlags {
+    new: bool,
+    internal_getters: bool,
+    total_size_fn: bool,
+}
+impl Default for GenFlags {
+    fn default() -> Self {
+        Self {
+            new: true,
+            internal_getters: true,
+            total_size_fn: true,
         }
     }
 }
@@ -25,7 +45,7 @@ struct Args {
     range: ExprRange,
     default_expr: Option<Expr>,
     allocator: Option<Type>,
-    skip: Option<SkipKind>,
+    skip: Vec<SkipKind>,
 }
 
 struct ArgsFinalized {
@@ -34,7 +54,7 @@ struct ArgsFinalized {
     range_end: usize,
     default_expr: Expr,
     allocator: Type,
-    gen_new: bool,
+    gen_flags: GenFlags,
 }
 
 impl Parse for Args {
@@ -43,7 +63,7 @@ impl Parse for Args {
         let mut range = None;
         let mut default_expr = None;
         let mut allocator = None;
-        let mut skip = None;
+        let mut skip = Vec::new();
 
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
@@ -55,7 +75,21 @@ impl Parse for Args {
                 "rg" => range = Some(content.parse()?),
                 "default" => default_expr = Some(content.parse()?),
                 "allocator" => allocator = Some(content.parse()?),
-                "skip" => skip = Some(SkipKind::parse(&content)?),
+                "skip" => {
+                    let list =
+                        syn::punctuated::Punctuated::<Ident, syn::Token![,]>::parse_terminated(
+                            &content,
+                        )?;
+                    if list.is_empty() {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "skip(...) requires at least one option",
+                        ));
+                    }
+                    for item in list {
+                        skip.push(SkipKind::parse(&item)?);
+                    }
+                }
                 _ => return Err(syn::Error::new(ident.span(), "unknown ct_map option")),
             }
             if input.peek(syn::Token![,]) {
@@ -105,10 +139,22 @@ impl Args {
             })?,
         };
 
-        let gen_new = match self.skip {
-            Some(SkipKind::New) => false,
-            None => true,
-        };
+        let mut gen_flags = GenFlags::default();
+        if self.skip.iter().any(|k| *k == SkipKind::All) {
+            gen_flags.new = false;
+            gen_flags.internal_getters = false;
+        } else {
+            if self.skip.iter().any(|k| *k == SkipKind::New) {
+                gen_flags.new = false;
+            }
+            if self.skip.iter().any(|k| *k == SkipKind::InternalGetters) {
+                gen_flags.internal_getters = false;
+            }
+
+            if self.skip.iter().any(|k| *k == SkipKind::TotalSizeFn) {
+                gen_flags.total_size_fn = false;
+            }
+        }
 
         Ok(ArgsFinalized {
             ty,
@@ -116,7 +162,7 @@ impl Args {
             range_end,
             default_expr,
             allocator,
-            gen_new,
+            gen_flags,
         })
     }
 }
@@ -239,7 +285,7 @@ fn expand_ct_map(args: ArgsFinalized, input: ItemStruct) -> TokenStream {
         quote! { #allocator_with_specialized }
     });
 
-    let new_fn = if args.gen_new {
+    let new_fn = if args.gen_flags.new {
         let defaults = (min..max).enumerate().map(|(i, n)| {
             let expr = replace_idents(default_stream.clone(), n as i64, i as i64);
             quote! { #expr }
@@ -252,6 +298,55 @@ fn expand_ct_map(args: ArgsFinalized, input: ItemStruct) -> TokenStream {
                 }
             }
         }
+    } else {
+        quote! {}
+    };
+
+    let total_size_fn = if args.gen_flags.total_size_fn {
+        let mut rv = vec![quote! {0}];
+        for (i, _) in (min..max).enumerate() {
+            let i_idx = syn::Index::from(i); // Required for tuple indexing like .0, .1
+            rv.push(quote! { + self.buckets.#i_idx.len() })
+        }
+
+        quote! {
+            pub fn tot_size(&self) -> usize {
+                #(#rv)*
+            }
+        }
+    } else {
+        quote! {}
+    };
+
+    let internal_getters = if args.gen_flags.internal_getters {
+        let mut getters = Vec::new();
+        for (i, n) in (min..max).enumerate() {
+            let specialized_ty = replace_idents(ty_stream.clone(), n as i64, i as i64);
+            let full_ty = replace_ident_with_stream(allocator_stream.clone(), "T", specialized_ty);
+            let immutable_function_name = format_ident!("get_bucket_{}", n);
+            let mutable_function_name = format_ident!("get_bucket_{}_mut", n);
+            let take_function_name = format_ident!("take_bucket_{}", n);
+
+            let i_idx = syn::Index::from(i); // Required for tuple indexing like .0, .1
+
+            getters.push(quote! {
+                #[inline(always)]
+                pub fn #immutable_function_name(&self) -> &#full_ty {
+                    &self.buckets.#i_idx
+                }
+
+                #[inline(always)]
+                pub fn #mutable_function_name(&mut self) -> &mut #full_ty {
+                    &mut self.buckets.#i_idx
+                }
+
+                #[inline(always)]
+                pub fn #take_function_name(&mut self) -> #full_ty {
+                    std::mem::take(&mut self.buckets.#i_idx)
+                }
+            });
+        }
+        quote! { #(#getters)* }
     } else {
         quote! {}
     };
@@ -275,6 +370,8 @@ fn expand_ct_map(args: ArgsFinalized, input: ItemStruct) -> TokenStream {
             pub const END: usize = #max;
             pub const SIZE: usize = #count;
             #new_fn
+            #total_size_fn
+            #internal_getters
         }
 
         #[doc(hidden)]

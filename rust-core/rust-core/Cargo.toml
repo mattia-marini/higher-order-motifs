@@ -21,3 +21,4 @@ inherent = "1.0.13"
 rust-core-macros = { workspace = true }
 duplicate = "2.0.1"
 thiserror = "2.0.18"
+ouroboros = "0.18.5"

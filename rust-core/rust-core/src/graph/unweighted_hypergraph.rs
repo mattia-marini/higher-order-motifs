@@ -1,3 +1,4 @@
+use ouroboros::self_referencing;
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -19,13 +20,15 @@ use rkyv::{
     Archive, Deserialize, Serialize, collections::swiss_table::ArchivedHashSet, rend::u32_le,
 };
 
+use crate::graph::traits::{HypergraphAccessor, HypergraphBase};
+
 // use super::traits::{HypergraphBase, LiveUnweightedHypergraph, StaticUnweightedHypergraph};
 use super::types::*;
 
 use rust_core_macros::ct_map;
 
 #[ct_map(ty(Hx<N, NodeId>), rg(2..6), allocator(Vec<T>))]
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct CtHxVec {}
 
 #[ct_map_accessor(target(CtHxVec))]
@@ -47,14 +50,8 @@ pub trait CtHxVecAccessor<const N: usize> {
     fn contains(&self, e: &Hx<N, NodeId>) -> bool;
 }
 
-// impl CtHxVec {
-//     pub fn get2<const N: usize>(&self) -> &Vec<Hx<N, NodeId>> {
-//         (self).get()
-//     }
-// }
-
 #[ct_map(ty(Hx<N, NodeId>), rg(2..6), allocator(HashSet<T>))]
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct CtHxSet {}
 
 #[ct_map_accessor(target(CtHxSet))]
@@ -76,27 +73,20 @@ pub trait CtHxSetAccessor<const N: usize> {
     fn contains(&self, e: &Hx<N, NodeId>) -> bool;
 }
 
-// pub fn test() {
-//     let mut map = CtHxVec::new();
-//     // map.push(Hx::new_unchecked([1, 2, 3, 4, 5]));
-// }
-
-// #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
-// #[gen_stub_pyclass(module = "rust_core.core.graph")]
-// #[pyclass]
-// #[rkyv(attr(gen_stub_pyclass(module = "rust_core.core.graph")), attr(pyclass))]
+#[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[gen_stub_pyclass(module = "rust_core.core.graph")]
+#[pyclass]
 pub struct UnweightedHypergraph {
     pub edge_vec: CtHxVec,
     pub edge_set: CtHxSet,
 
     pub nodes: HashMap<NodeId, usize>, // track number of edges insisting on a certain node
 
-    // #[pyo3(get)]
+    #[pyo3(get)]
     n: usize,
-    // #[pyo3(get)]
+    #[pyo3(get)]
     m: usize,
 }
-/*
 
 #[gen_stub_pymethods(module = "rust_core.core.graph")]
 #[pymethods]
@@ -104,37 +94,26 @@ impl UnweightedHypergraph {
     #[new]
     pub fn new() -> Self {
         UnweightedHypergraph {
-            h2: vec![],
-            h3: vec![],
-            h4: vec![],
-            h5: vec![],
-            bigger_edges: HashMap::new(),
-
-            h2_set: HashSet::new(),
-            h3_set: HashSet::new(),
-            h4_set: HashSet::new(),
-            h5_set: HashSet::new(),
-            bigger_edges_set: HashSet::new(),
-
-            // edges: HashSet::new(),
             nodes: HashMap::new(),
             n: 0,
             m: 0,
+            edge_vec: CtHxVec::new(),
+            edge_set: CtHxSet::new(),
         }
     }
 
-    #[staticmethod]
-    pub fn from_edges(edges: Vec<WHx>) -> Self {
-        let mut hg = UnweightedHypergraph::new();
-        hg.extend_with_edges(edges);
-        hg
-    }
+    // #[staticmethod]
+    // pub fn from_edges(edges: Vec<Hx>) -> Self {
+    //     let mut hg = UnweightedHypergraph::new();
+    //     hg.extend_with_edges(edges);
+    //     hg
+    // }
 }
 
 #[duplicate_item(
         graph_type to_native(data);
         [UnweightedHypergraph] [data];
-        [ArchivedUnweightedHypergraph] [data.to_native()];
+        // [ArchivedUnweightedHypergraph] [data.to_native()];
     )]
 #[inherent(
     attr(pymethods),
@@ -142,28 +121,41 @@ impl UnweightedHypergraph {
 )]
 impl HypergraphBase for graph_type {
     pub fn count_2(&self) -> usize {
-        self.h2.len()
+        self.edge_vec.get_bucket_2().len()
     }
 
     pub fn count_3(&self) -> usize {
-        self.h3.len()
+        self.edge_vec.get_bucket_3().len()
     }
 
     pub fn count_4(&self) -> usize {
-        self.h4.len()
+        self.edge_vec.get_bucket_4().len()
     }
 
     pub fn count_5(&self) -> usize {
-        self.h5.len()
+        self.edge_vec.get_bucket_5().len()
     }
 
     pub fn m(&self) -> usize {
-        to_native([self.m]) as usize
+        self.edge_vec.tot_size()
     }
 
     pub fn n(&self) -> usize {
-        to_native([self.n]) as usize
+        self.nodes.len()
     }
+}
+
+#[duplicate_item(hx_size; [2]; [3]; [4]; [5];)]
+impl HypergraphAccessor<hx_size> for UnweightedHypergraph {
+    fn count(&self) -> usize {
+        CtHxVecAccessor::<2>::get(&self.edge_vec).len()
+    }
+}
+
+pub fn test() {
+    let mut hg = UnweightedHypergraph::new();
+    let c = HypergraphAccessor::<5>::count(&hg);
+    // hg.count(); // type annotation needed
 }
 
 // #[inherent(attr(pymethods), gen_stub_pymethods(module = "rust_core.core.graph"))]
@@ -350,7 +342,19 @@ impl UnweightedHypergraph {
         Ok(())
     }
 
-    pub fn load_from_file<P: AsRef<Path>>(
+    pub fn load_from_file_archived<'a, P: AsRef<Path>>(
+        path: P,
+    ) -> Result<ArchivedUnweightedHypergraphHandle, Box<dyn std::error::Error>> {
+        let bytes = std::fs::read(path)?;
+
+        let start = std::time::Instant::now();
+        let archived = ArchivedUnweightedHypergraphHandle::try_new(bytes, |b| {
+            rkyv::access::<ArchivedUnweightedHypergraph, rkyv::rancor::Error>(&b[..])
+        })?;
+        Ok(archived)
+    }
+
+    pub fn load_from_file_deserialized<P: AsRef<Path>>(
         path: P,
     ) -> Result<UnweightedHypergraph, Box<dyn std::error::Error>> {
         let bytes = std::fs::read(path)?;
@@ -366,64 +370,21 @@ impl UnweightedHypergraph {
         let mut rv = rkyv::deserialize::<UnweightedHypergraph, rkyv::rancor::Error>(archived)?;
         println!("Loading Hypergraph{:?}", start.elapsed());
 
-        // rv.edges.reserve(rv.m);
-        rv.nodes.reserve(rv.n);
-
-        rv.h2_set.reserve(rv.h2.len());
-        for edge in rv.h2.iter() {
-            rv.h2_set.insert(edge.clone());
-        }
-
-        rv.h2_set.reserve(rv.h2.len());
-        rv.h3_set.reserve(rv.h3.len());
-        rv.h4_set.reserve(rv.h4.len());
-        rv.h5_set.reserve(rv.h5.len());
-
-        rv.h2_set.extend(rv.h2.clone().into_iter());
-        rv.h3_set.extend(rv.h3.clone().into_iter());
-        rv.h4_set.extend(rv.h4.clone().into_iter());
-        rv.h5_set.extend(rv.h5.clone().into_iter());
-
-        for edge in rv.h2.clone().into_iter() {
-            // rv.update_n(&edge);
-            // rv.edges.insert(edge.into());
-        }
-        for edge in rv.h3.clone().into_iter() {
-            // rv.update_n(&edge);
-            // rv.edges.insert(edge.into());
-        }
-        for edge in rv.h4.clone().into_iter() {
-            // rv.update_n(&edge);
-            // rv.edges.insert(edge.into());
-        }
-        for edge in rv.h5.clone().into_iter() {
-            // rv.update_n(&edge);
-            // rv.edges.insert(edge.into());
-        }
-        for edges in rv.bigger_edges.clone().into_values() {
-            for edge in edges.iter() {
-                // rv.update_n(edge);
-            }
-            // rv.edges.extend(edges);
-        }
-
         Ok(rv)
     }
-
-    // pub fn load_from_file_archived<P: AsRef<Path>, 'a>(
-    //     path: P,
-    // ) -> Result<&'a mut ArchivedUnweightedHypergraph, Box<dyn std::error::Error>> {
-    //     let bytes = std::fs::read(path)?;
-    //
-    //     let archived =
-    //         rkyv::access::<ArchivedUnweightedHypergraph, rkyv::rancor::Error>(&bytes[..])?;
-    //
-    //
-    //     Ok(archived.)
-    // }
 }
+
+#[self_referencing]
+pub struct ArchivedUnweightedHypergraphHandle {
+    bytes: Vec<u8>,
+    #[borrows(bytes)]
+    pub archived: &'this super::ArchivedUnweightedHypergraph,
+}
+
+// impl ArchivedUnweightedHypergraphHandle{
+//     pub fn new
+// }
 
 // All operations that only require read access to the hypergraph should be defined in this trait,
 // so that they can be implemented for both `UnweightedHypergraph` and
 // `ArchivedUnweightedHypergraph`.
-*/
