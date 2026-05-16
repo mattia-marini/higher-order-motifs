@@ -73,6 +73,14 @@ impl<T, W> Hypergraph<T, W> {
         }
     }
 
+    pub fn n(&self) -> usize {
+        self.n
+    }
+
+    pub fn m(&self) -> usize {
+        self.m
+    }
+
     pub fn edges<const N: usize>(&self) -> &HashSet<Hx<N, T, W>>
     where
         Self: HypergraphAccessor<N, T, W>,

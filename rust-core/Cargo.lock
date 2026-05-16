@@ -1034,6 +1034,7 @@ dependencies = [
  "hashbrown",
  "inherent",
  "itertools 0.14.0",
+ "log",
  "num-traits",
  "ouroboros",
  "pyo3",

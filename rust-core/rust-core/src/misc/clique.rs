@@ -1,15 +1,9 @@
-use std::collections::HashSet;
-
 use crate::{
-    graph::{
-        AdjList,
-        types::{H2, H3, H4, NodeId},
-    },
+    graph::{AdjList, NodeId},
     misc::neighbors_sorted_list_cloj,
 };
 
-use super::degree_ordering;
-
+// use super::degree_ordering;
 // pub fn clique_3_cloj<F>(adj: &AdjList, sort_degrees: bool, mut cloj: F)
 // where
 //     F: FnMut(NodeId, NodeId, NodeId),

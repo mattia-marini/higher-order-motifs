@@ -1,7 +1,7 @@
 #![allow(unused)]
 pub mod graph;
 pub mod loader;
-// pub mod misc;
+pub mod misc;
 // pub mod motifs;
 // pub mod triangle;
 

@@ -15,8 +15,20 @@ use std::{error::Error, io::Write};
 
 use crate::graph::{ArchivedHx, ArchivedHypergraph, Hx, Hypergraph};
 
-impl<T, W> Hypergraph<T, W>
-where
+pub trait StdSerializable:
+    for<'a> rkyv::Serialize<
+        rkyv::rancor::Strategy<
+            rkyv::ser::Serializer<
+                rkyv::util::AlignedVec,
+                rkyv::ser::allocator::ArenaHandle<'a>,
+                rkyv::ser::sharing::Share,
+            >,
+            rkyv::rancor::Error,
+        >,
+    >
+{
+}
+impl<T> StdSerializable for T where
     T: for<'a> rkyv::Serialize<
             rkyv::rancor::Strategy<
                 rkyv::ser::Serializer<
@@ -26,22 +38,33 @@ where
                 >,
                 rkyv::rancor::Error,
             >,
-        > + Hash
-        + Eq,
-    W: for<'a> rkyv::Serialize<
-            rkyv::rancor::Strategy<
-                rkyv::ser::Serializer<
-                    rkyv::util::AlignedVec,
-                    rkyv::ser::allocator::ArenaHandle<'a>,
-                    rkyv::ser::sharing::Share,
-                >,
-                rkyv::rancor::Error,
-            >,
-        >,
-    <T as Archive>::Archived: Hash + Eq,
-    <W as Archive>::Archived: Hash + Eq,
+        >
 {
-    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn Error>> {
+}
+
+pub trait StdDeserializable<T>: Deserialize<T, Strategy<Pool, rkyv::rancor::Error>> {}
+impl<T, U> StdDeserializable<T> for U where U: Deserialize<T, Strategy<Pool, rkyv::rancor::Error>> {}
+
+pub trait StdCheckBytes<'a>:
+    CheckBytes<Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>>
+{
+}
+impl<'a, T> StdCheckBytes<'a> for T where
+    T: CheckBytes<Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>>
+{
+}
+
+impl<T, W> Hypergraph<T, W>
+where
+    T: Archive,
+    W: Archive,
+{
+    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn Error>>
+    where
+        T: StdSerializable + Hash + Eq,
+        <T as Archive>::Archived: Hash + Eq,
+        W: StdSerializable,
+    {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
 
         let mut file = File::create(path)?;
@@ -52,14 +75,12 @@ where
 
     pub fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Hypergraph<T, W>, Box<dyn Error>>
     where
-        for<'a> <T as Archive>::Archived: CheckBytes<
-            Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>,
-        >,
-        for<'a> <W as Archive>::Archived: CheckBytes<
-            Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>,
-        >,
-        <T as Archive>::Archived: Deserialize<T, Strategy<Pool, rkyv::rancor::Error>>,
-        <W as Archive>::Archived: Deserialize<W, Strategy<Pool, rkyv::rancor::Error>>,
+        for<'a> <T as Archive>::Archived: StdCheckBytes<'a>,
+        <T as Archive>::Archived: StdDeserializable<T>,
+        <T as Archive>::Archived: Hash + Eq,
+        T: Hash + Eq,
+        for<'a> <W as Archive>::Archived: StdCheckBytes<'a>,
+        <W as Archive>::Archived: StdDeserializable<W>,
     {
         let mut file = std::fs::File::open(path)?;
         let mut bytes: AlignedVec = rkyv::util::AlignedVec::new();
@@ -80,14 +101,10 @@ where
         path: P,
     ) -> Result<ArchivedHypergraphHandle<T, W>, Box<dyn Error>>
     where
-        for<'a> <T as Archive>::Archived: CheckBytes<
-            Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>,
-        >,
-        for<'a> <W as Archive>::Archived: CheckBytes<
-            Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>,
-        >,
-        <T as Archive>::Archived: Deserialize<T, Strategy<Pool, rkyv::rancor::Error>>,
-        <W as Archive>::Archived: Deserialize<W, Strategy<Pool, rkyv::rancor::Error>>,
+        for<'a> <T as Archive>::Archived: StdCheckBytes<'a>,
+        for<'a> <W as Archive>::Archived: StdCheckBytes<'a>,
+        <T as Archive>::Archived: Hash + Eq,
+        T: Hash + Eq,
     {
         let mut file = std::fs::File::open(path)?;
         let mut bytes: AlignedVec = rkyv::util::AlignedVec::new();
@@ -136,7 +153,6 @@ where
     T: Archive + Hash + Eq + 'static,
     W: Archive + 'static,
     <T as Archive>::Archived: Hash + Eq,
-    <W as Archive>::Archived: Hash + Eq,
 {
     bytes: AlignedVec,
     #[borrows(bytes)]

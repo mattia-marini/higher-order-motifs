@@ -1,10 +1,12 @@
+pub mod adj_list;
 pub mod edge_collection;
 pub mod error;
 pub mod flat_adj_list;
 pub mod hypergraph;
-pub mod types;
 pub mod serialize;
+pub mod types;
 
+pub use adj_list::*;
 pub use edge_collection::*;
 pub use error::*;
 pub use flat_adj_list::*;

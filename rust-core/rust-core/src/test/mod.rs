@@ -1,5 +1,5 @@
 // mod algos;
-// mod cache;
+mod cache;
 // mod motifs;
 // mod graph;
 mod edge_set;

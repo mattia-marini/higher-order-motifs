@@ -1,42 +1,28 @@
 use std::{
-    collections::HashMap,
     error::Error,
     fs::File,
     io::{BufRead, BufReader},
     path::Path,
 };
 
-use crate::{
-    graph::{
-        AdjList, Hypergraph, UnweightedHypergraph,
-        types::{NodeId, WHx},
-    },
-    loader::common::get_dataset_paths,
-};
+use hashbrown::HashMap;
+use rust_core_macros::loader;
+
+use crate::graph::{AdjList, Hypergraph, NodeId, NodeWeight};
 
 const PATH: &str = "conference.dat";
 
-// pub fn load_conference<P1, P2>(
-//     dataset_dir: &P1,
-//     cache_dir: Option<&P2>,
-// ) -> Result<UnweightedHypergraph, Box<dyn Error>>
-// where
-//     P1: AsRef<Path> + ?Sized,
-//     P2: AsRef<Path> + ?Sized,
-// {
-//     if let Some(cache_dir) = cache_dir {
-//         load_conference_cached(dataset_dir, cache_dir)
-//     } else {
-//         load_conference_uncached(&dataset_dir)
-//     }
-// }
-
-pub fn load_conference<P1, T, W>(dataset_dir: &P1) -> Result<Hypergraph<T, W>, Box<dyn Error>>
+#[loader(cache = "conference_unweighted.bin")]
+pub fn load_conference<P1>(dataset_path: &P1) -> Result<Hypergraph<NodeId, ()>, Box<dyn Error>>
 where
     P1: AsRef<Path> + ?Sized,
 {
-    let dataset_path = dataset_dir.as_ref().join(PATH);
+    // let dataset_path = dataset_path.as_ref().join(PATH);
 
+    println!(
+        "Loading conference dataset from {}...",
+        dataset_path.as_ref().display()
+    );
     let file = File::open(dataset_path)?;
     let reader = BufReader::new(file);
 
@@ -98,19 +84,19 @@ where
 
         let cliques = adj_list.enum_cliques();
 
-        hg.extend_with_edges(
-            cliques
-                .into_iter()
-                .map(|edge| {
-                    WHx::new(
-                        edge.into_iter()
-                            .map(|n| rev_node_map[&n])
-                            .collect::<Vec<NodeId>>(),
-                    )
-                    .unwrap()
-                })
-                .collect(),
-        );
+        // hg.extend_with_edges(
+        //     cliques
+        //         .into_iter()
+        //         .map(|edge| {
+        //             WHx::new(
+        //                 edge.into_iter()
+        //                     .map(|n| rev_node_map[&n])
+        //                     .collect::<Vec<NodeId>>(),
+        //             )
+        //             .unwrap()
+        //         })
+        //         .collect(),
+        // );
     }
 
     // hg.remove_multiedges();
@@ -118,22 +104,3 @@ where
 
     Ok(hg)
 }
-
-// pub fn load_conference_cached<P1, P2>(
-//     dataset_dir: &P1,
-//     cache_dir: &P2,
-// ) -> Result<UnweightedHypergraph, Box<dyn Error>>
-// where
-//     P1: AsRef<Path> + ?Sized,
-//     P2: AsRef<Path> + ?Sized,
-// {
-//     let (_dataset_path, cache_path) = get_dataset_paths(dataset_dir, cache_dir, PATH)?;
-//
-//     if cache_path.exists() {
-//         UnweightedHypergraph::load_from_file(cache_path)
-//     } else {
-//         let rv = load_conference_uncached(dataset_dir)?;
-//         rv.save_to_file(cache_path)?;
-//         Ok(rv)
-//     }
-// }
