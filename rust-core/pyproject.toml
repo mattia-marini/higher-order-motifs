@@ -14,7 +14,7 @@ build-backend = "maturin"
 
 
 [tool.uv]
-cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }, { file = "rust_core.pyi" }]
+cache-keys = [{ file = "pyproject.toml" }, { file = "**/src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }, { file = "rust_core.pyi" }]
 
 [tool.maturin]
 python-source = "stubs"

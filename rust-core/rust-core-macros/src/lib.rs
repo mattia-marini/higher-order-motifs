@@ -1,8 +1,14 @@
 mod ct_map;
 mod hoist_mod;
 mod inherent;
+mod repeat;
 
 use proc_macro::TokenStream;
+
+#[proc_macro_attribute]
+pub fn repeat(attr: TokenStream, item: TokenStream) -> TokenStream {
+    repeat::repeat(attr, item)
+}
 
 #[proc_macro_attribute]
 pub fn hoist_mod(attr: TokenStream, item: TokenStream) -> TokenStream {

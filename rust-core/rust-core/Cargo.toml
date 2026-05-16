@@ -22,3 +22,6 @@ rust-core-macros = { workspace = true }
 duplicate = "2.0.1"
 thiserror = "2.0.18"
 ouroboros = "0.18.5"
+seq-macro = "0.3.6"
+hashbrown = "0.17.1"
+foldhash = "0.2.0"

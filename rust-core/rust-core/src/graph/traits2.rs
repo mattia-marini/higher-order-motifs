@@ -14,9 +14,8 @@ use super::unweighted_hypergraph::{ArchivedUnweightedHypergraph, UnweightedHyper
 
 
 
-struct X{
-    orders: HashMap<usize, >,
-}
+// pub trait trait_name<const N:usize> {
+// }
 
 #[duplicate_item(
     trait_name      hx_type; 

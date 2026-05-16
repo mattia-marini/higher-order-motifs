@@ -3,12 +3,13 @@
 # from test_core.util import time_function_p
 #
 # from .triangle import test_degree_ordering, test_neighbor_sort, test_triangle_counting
-import os
+# import os
 
-from .rust import test_loader
+# from .rust import test_loader
 
 
 def main() -> None:
+    pass
     # rc.loader.load_wiki_talk(os.environ["dataset"])
     # edges2 = [(1, 2) for _ in range(100_000)]
     # edges3 = [(1, 2, 3) for _ in range(100_000)]
@@ -16,10 +17,26 @@ def main() -> None:
 
     # time_function_p(lambda: rc.motifs.count_motifs_3((edges2, edges3)))
     # time_function_p(lambda: rc.motifs.count_motifs_4((edges2, edges3, edges4)))
-    import rust_core as rc
 
-    hg = rc.graph.UnweightedHypergraph()
-    print(hg.n)
+
+
+    # x = rc.graph.WeightedHypergraph()
+    # x = rc.graph.WeightedHypergraph()
+    # x.insert_hx_tuple(((1,2,3),1))
+    # x.insert_hx((1,2,3),1)
+    # x.insert_hx((3, 2),1)
+    # x.insert_hx((9,2,1),1)
+    # x.insert_hx((2,1),1)
+
+    # x.insert_hx_tuple(((2,1,3,5),42))
+    # x.insert_hx((2,1,33),1)
+
+    # print(x.n())
+    # print(x.edges())
+
+
+    # hg = rc.graph.WeightedHypergraph()
+    # print(hg.n)
 
     # hg1 = rc.graph.UnweightedHypergraph()
     # hh2 = rc.loader.load_wiki_talk("prova", os.environ["dataset"])

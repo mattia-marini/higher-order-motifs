@@ -1,21 +1,39 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use std::fmt;
+use std::fmt::{self, Display};
 use thiserror::Error;
 
-use super::types::NodeId;
+use super::types2::NodeId;
+use crate::graph::edge_collection::{MAX_HX_SIZE, MIN_HX_SIZE};
 
 #[derive(Error, Debug)]
-pub enum GraphError {
-    #[error("H2 cannot have duplicate nodes: {0}")]
-    DuplicateNodes(NodeId),
+pub enum GraphError<T> {
+    // thiserror is smart enough to only require T: Display
+    // for the generated impl Display for GraphError<T>
+    #[error("Hyperedges cannot have duplicate nodes: {0}")]
+    DuplicateNodes(T),
 
-    #[error("H2 cannot have duplicate nodes: expected {expected} , got {got}")]
-    InvalidHyperedgeSize { expected: usize, got: usize },
+    #[error("Unexpected hyperedge size: expected {expected}, got {got}")]
+    InvalidHyperedgeSize { expected: T, got: T },
+
+    #[error("Hyperedges supports orders {MAX_HX_SIZE} to {MIN_HX_SIZE}; got hyperedge of size {0}")]
+    UnsupportedHyperedgeSize(T),
+
+    #[error("Generic error: {0}")]
+    GenericError(String),
 }
 
-impl From<GraphError> for PyErr {
-    fn from(err: GraphError) -> PyErr {
+impl<T> From<GraphError<T>> for PyErr
+where
+    T: Display,
+{
+    fn from(err: GraphError<T>) -> PyErr {
         PyValueError::new_err(err.to_string())
     }
 }
+
+// impl<T> From<PyErr> for GraphError<T> {
+//     fn from(err: PyErr) -> Self {
+//         GraphError::GenericError(format!("Python error: {}", err))
+//     }
+// }

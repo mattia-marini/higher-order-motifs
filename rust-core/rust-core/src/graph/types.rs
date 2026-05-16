@@ -1,8 +1,12 @@
 use duplicate::{duplicate, duplicate_item};
 use rust_core_macros::hoist_mod;
+use seq_macro::seq;
 use std::{hash::Hash, ops::Index};
 
-use pyo3::{Bound, FromPyObject, PyResult, pyclass, pymethods};
+use pyo3::{
+    Bound, FromPyObject, IntoPyObject, PyErr, PyResult, Python, pyclass, pymethods,
+    types::{PyAnyMethods, PyTuple},
+};
 use pyo3_stub_gen::{
     derive::{gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods},
     impl_stub_type,
@@ -212,6 +216,40 @@ mod __ {
         fn into_iter(self) -> Self::IntoIter {
             self.nodes.iter_mut()
         }
+    }
+}
+
+impl<'py, const N: usize> IntoPyObject<'py> for Hx<N, NodeId> {
+    type Target = PyTuple;
+    type Output = Bound<'py, Self::Target>;
+    type Error = std::convert::Infallible;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        Ok(PyTuple::new(py, self.nodes()).unwrap())
+    }
+}
+
+#[duplicate_item(hx_size; [2]; [3]; [4]; [5];)]
+impl<'py> FromPyObject<'_, 'py> for Hx<hx_size, NodeId> {
+    type Error = PyErr;
+
+    fn extract(obj: pyo3::Borrowed<'_, 'py, pyo3::PyAny>) -> Result<Self, Self::Error> {
+        let tuple = obj.cast::<PyTuple>()?;
+
+        let order = tuple.len()?;
+        if order != hx_size {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "Expected a tuple of length {}, got {}",
+                hx_size, order
+            )));
+        }
+
+        let mut v: [NodeId; hx_size] = [0; hx_size];
+        for i in 0..hx_size {
+            v[i] = tuple.get_item(i)?.extract::<NodeId>()?
+        }
+
+        Ok(Self::new(v)?)
     }
 }
 
