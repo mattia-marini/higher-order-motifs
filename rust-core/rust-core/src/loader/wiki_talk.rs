@@ -4,8 +4,7 @@ use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 
 use crate::graph::UnweightedHypergraph;
-use crate::graph::types::H2;
-use crate::loader::common::{get_dataset_paths, parse};
+use crate::loader::common::{get_dataset_paths, parse_u32};
 
 const PATH: &str = "wiki/wiki-talk.txt";
 
@@ -25,7 +24,7 @@ where
     }
 }
 
-fn load_wiki_talk_cached<P1, P2>(
+pub fn load_wiki_talk_cached<P1, P2>(
     dataset_dir: &P1,
     cache_dir: &P2,
 ) -> Result<UnweightedHypergraph, Box<dyn Error>>
@@ -89,8 +88,8 @@ where
         if c.is_ascii_whitespace() {
             if is_first {
                 if pos == 1 {
-                    let u = parse(&buffs[0][..sizes[0]]);
-                    let v = parse(&buffs[1][..sizes[1]]);
+                    let u = parse_u32(&buffs[0][..sizes[0]]);
+                    let v = parse_u32(&buffs[1][..sizes[1]]);
                     edges.push(H2::new(u, v).unwrap());
 
                     pos = 0;

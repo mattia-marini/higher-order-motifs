@@ -2,7 +2,7 @@ use hashbrown::HashSet;
 
 use crate::graph::{
     edge_collection::{StaticEdgeSet, StaticEdgeSetAccessor},
-    types2::Hx,
+    types::Hx,
 };
 
 #[test]

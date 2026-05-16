@@ -1,4 +1,5 @@
 use foldhash::fast::FixedState;
+use rkyv::{Archive, Deserialize, Serialize};
 use std::hash::Hash;
 
 use rust_core_macros::{ct_map, ct_map_accessor, hoist_mod, repeat};
@@ -6,7 +7,7 @@ use seq_macro::seq;
 
 use crate::graph::{
     error::GraphError,
-    types2::{Hx, NodeId, NodeWeight},
+    types::{Hx, NodeId, NodeWeight},
 };
 
 pub const MIN_HX_SIZE: usize = 2;
@@ -18,6 +19,7 @@ pub type HashSet<T> = hashbrown::HashSet<T, FixedState>;
 #[hoist_mod(attr(repeat(rg(2..11), abs = "N", rel = "I", bucket_name = "__bucket_$N")))]
 mod __ {
 
+    #[derive(Archive, Serialize, Deserialize)]
     pub struct StaticEdgeSet<T, W> {
         #[repeat_item]
         #[doc(hidden)]

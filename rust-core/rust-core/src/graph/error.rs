@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use std::fmt::{self, Display};
 use thiserror::Error;
 
-use super::types2::NodeId;
+use super::types::NodeId;
 use crate::graph::edge_collection::{MAX_HX_SIZE, MIN_HX_SIZE};
 
 #[derive(Error, Debug)]

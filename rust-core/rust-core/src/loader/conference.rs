@@ -8,32 +8,30 @@ use std::{
 
 use crate::{
     graph::{
-        AdjList, UnweightedHypergraph,
-        types::{WHx, NodeId},
+        AdjList, Hypergraph, UnweightedHypergraph,
+        types::{NodeId, WHx},
     },
     loader::common::get_dataset_paths,
 };
 
 const PATH: &str = "conference.dat";
 
-pub fn load_conference<P1, P2>(
-    dataset_dir: &P1,
-    cache_dir: Option<&P2>,
-) -> Result<UnweightedHypergraph, Box<dyn Error>>
-where
-    P1: AsRef<Path> + ?Sized,
-    P2: AsRef<Path> + ?Sized,
-{
-    if let Some(cache_dir) = cache_dir {
-        load_conference_cached(dataset_dir, cache_dir)
-    } else {
-        load_conference_uncached(&dataset_dir)
-    }
-}
+// pub fn load_conference<P1, P2>(
+//     dataset_dir: &P1,
+//     cache_dir: Option<&P2>,
+// ) -> Result<UnweightedHypergraph, Box<dyn Error>>
+// where
+//     P1: AsRef<Path> + ?Sized,
+//     P2: AsRef<Path> + ?Sized,
+// {
+//     if let Some(cache_dir) = cache_dir {
+//         load_conference_cached(dataset_dir, cache_dir)
+//     } else {
+//         load_conference_uncached(&dataset_dir)
+//     }
+// }
 
-pub fn load_conference_uncached<P1>(
-    dataset_dir: &P1,
-) -> Result<UnweightedHypergraph, Box<dyn Error>>
+pub fn load_conference<P1, T, W>(dataset_dir: &P1) -> Result<Hypergraph<T, W>, Box<dyn Error>>
 where
     P1: AsRef<Path> + ?Sized,
 {
@@ -70,7 +68,7 @@ where
         }
     }
 
-    let mut hg = UnweightedHypergraph::new();
+    let mut hg = Hypergraph::new();
 
     for edge_list in edges.into_values() {
         let mut curr = 0;
@@ -115,27 +113,27 @@ where
         );
     }
 
-    hg.remove_multiedges();
+    // hg.remove_multiedges();
     // println!("{:?}", hg.h2);
 
     Ok(hg)
 }
 
-pub fn load_conference_cached<P1, P2>(
-    dataset_dir: &P1,
-    cache_dir: &P2,
-) -> Result<UnweightedHypergraph, Box<dyn Error>>
-where
-    P1: AsRef<Path> + ?Sized,
-    P2: AsRef<Path> + ?Sized,
-{
-    let (_dataset_path, cache_path) = get_dataset_paths(dataset_dir, cache_dir, PATH)?;
-
-    if cache_path.exists() {
-        UnweightedHypergraph::load_from_file(cache_path)
-    } else {
-        let rv = load_conference_uncached(dataset_dir)?;
-        rv.save_to_file(cache_path)?;
-        Ok(rv)
-    }
-}
+// pub fn load_conference_cached<P1, P2>(
+//     dataset_dir: &P1,
+//     cache_dir: &P2,
+// ) -> Result<UnweightedHypergraph, Box<dyn Error>>
+// where
+//     P1: AsRef<Path> + ?Sized,
+//     P2: AsRef<Path> + ?Sized,
+// {
+//     let (_dataset_path, cache_path) = get_dataset_paths(dataset_dir, cache_dir, PATH)?;
+//
+//     if cache_path.exists() {
+//         UnweightedHypergraph::load_from_file(cache_path)
+//     } else {
+//         let rv = load_conference_uncached(dataset_dir)?;
+//         rv.save_to_file(cache_path)?;
+//         Ok(rv)
+//     }
+// }

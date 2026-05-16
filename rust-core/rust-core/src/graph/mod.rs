@@ -1,22 +1,15 @@
-// pub mod adj_list;
-// pub mod flat_adj_list;
-// pub mod test;
-// pub mod traits2;
 pub mod edge_collection;
 pub mod error;
-pub mod types2;
-pub mod unweighted_hypergraph2;
+pub mod flat_adj_list;
+pub mod hypergraph;
+pub mod types;
+pub mod serialize;
 
-// pub mod traits;
-// pub mod types;
-// pub mod unweighted_hypergraph;
-// pub mod weighted_hypergraph;
-
-// pub use adj_list::*;
-// pub use flat_adj_list::*;
-// pub use types::*;
-// pub use unweighted_hypergraph::*;
-// pub use weighted_hypergraph::*;
+pub use edge_collection::*;
+pub use error::*;
+pub use flat_adj_list::*;
+pub use hypergraph::*;
+pub use types::*;
 
 use pyo3::pymodule;
 use pyo3_stub_gen::reexport_module_members;
@@ -25,10 +18,10 @@ use pyo3_stub_gen::reexport_module_members;
 pub mod graph {
 
     #[pymodule_export]
-    use super::unweighted_hypergraph2::UnweightedHypergraph;
+    use super::hypergraph::UnweightedHypergraph;
 
     #[pymodule_export]
-    use super::unweighted_hypergraph2::WeightedHypergraph;
+    use super::hypergraph::WeightedHypergraph;
 }
 
 reexport_module_members!("rust_core.graph" from "rust_core.core.graph");

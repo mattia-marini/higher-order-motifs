@@ -26,7 +26,7 @@ where
 }
 
 #[inline(always)]
-pub fn parse(chars: &[u8]) -> u32 {
+pub fn parse_u32(chars: &[u8]) -> u32 {
     let mut rv = 0;
     let mut base = 1;
     for c in chars.iter().rev() {

@@ -2,6 +2,7 @@ use ouroboros::self_referencing;
 use pyo3::PyErr;
 use pyo3::exceptions::PyValueError;
 use seq_macro::seq;
+use std::error::Error;
 use std::hash::Hash;
 use std::{collections::HashMap, fs::File, io::Write, path::Path};
 
@@ -26,13 +27,10 @@ use rust_core_macros::ct_map;
 
 use crate::graph::edge_collection::{HashSet, MAX_HX_SIZE, MIN_HX_SIZE};
 use crate::graph::error::GraphError;
-use crate::graph::types2::{NodeId, NodeWeight};
-use crate::graph::{edge_collection::StaticEdgeSet, types2::Hx};
+use crate::graph::types::{NodeId, NodeWeight};
+use crate::graph::{edge_collection::StaticEdgeSet, types::Hx};
 
-// #[derive(Archive, Serialize, Deserialize, Debug, PartialEq, Eq)]
-// #[gen_stub_pyclass(module = "rust_core.core.graph")]
-// #[pyclass]
-// #[pyo3(get)]
+#[derive(Archive, Serialize, Deserialize, Debug)]
 pub struct Hypergraph<T, W> {
     pub edge_set: StaticEdgeSet<T, W>,
     pub nodes: HashMap<T, usize>,
