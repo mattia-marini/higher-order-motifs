@@ -8,8 +8,15 @@
 # from .rust import test_loader
 
 
+from test_core.rust import test_loader
+
+# from test_core.rust import test_clique
+
+
 def main() -> None:
-    pass
+    test_loader.run()
+    # test_clique.run()
+
     # rc.loader.load_wiki_talk(os.environ["dataset"])
     # edges2 = [(1, 2) for _ in range(100_000)]
     # edges3 = [(1, 2, 3) for _ in range(100_000)]

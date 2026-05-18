@@ -111,7 +111,10 @@ def load_conference(
             e_k = graph[k]
             G = nx.Graph(e_k, directed=False)
             # print(f"{G}")
-            c = list(nx.find_cliques(G))
+            cliques = nx.find_cliques(G)
+            # print(cliques)
+            c = list(cliques)
+
             for i in c:
                 i = tuple(sorted(i))
 
@@ -386,7 +389,7 @@ def load_random_hypergraph(N, E):
     return hg
 
 
-def load_gene_disease(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
+def load_gene_disease(construction_method: StandardConstructionMethod = StandardConstructionMethod()):
     name2id_gene = {}
     id_gene2name = {}
 
@@ -408,16 +411,18 @@ def load_gene_disease(construction_method: ConstructionMethodBase = StandardCons
                 diseases[dis] = []
             diseases[dis].append(gene)
 
+    
     for d in diseases.keys():
-        if len(diseases[d]) > 1 and len(diseases[d]):
-            if not hg.has_edge_with_nodes(diseases[d]):
-                hg.add_edge(Hyperedge(diseases[d], 0.0))
-            hg.get_edges_by_nodes(diseases[d])[0].weight += 1.0
+        if len(diseases[d]) > 1:
+            if construction_method.limit_edge_size is None or  len(diseases[d]) <= construction_method.limit_edge_size:
+                if not hg.has_edge_with_nodes(diseases[d]):
+                    hg.add_edge(Hyperedge(diseases[d], 0.0))
+                hg.get_edges_by_nodes(diseases[d])[0].weight += 1.0
 
     return hg
 
 
-def load_PACS_common():
+def load_pacs_common():
     import polars as pl
 
     dtypes = {"ArticleID": pl.Utf8, "PACS": pl.Utf8, "AuthorDAIS": pl.Utf8, "FullName": pl.Utf8}
@@ -450,8 +455,8 @@ def load_PACS_common():
     return papers
 
 
-def load_PACS(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
-    papers = load_PACS_common()
+def load_pacs(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
+    papers = load_pacs_common()
     hg = Hypergraph()
     for id, paper in papers.items():
         autohrs = paper["authors"]
@@ -471,7 +476,7 @@ def load_PACS(construction_method: ConstructionMethodBase = StandardConstruction
     return hg
 
 
-def pickle_PACS():
+def pickle_pacs():
     import pandas as pd
 
     tb = pd.read_csv("{}/PACS.csv".format(os.environ["DATASET_DIR"]))
@@ -516,7 +521,7 @@ def pickle_PACS():
     #    print(papers[k])
 
 
-def load_PACS_pickled(N):
+def load_pacs_pickled(N):
     import pickle
 
     papers = pickle.load(open("PACS.pickle", "rb"))
@@ -536,7 +541,7 @@ def load_PACS_pickled(N):
     return edges
 
 
-def load_PACS_single_pickled(N, S):
+def load_pacs_single_pickled(N, S):
     import pickle
 
     papers = pickle.load(open("PACS.pickle", "rb"))

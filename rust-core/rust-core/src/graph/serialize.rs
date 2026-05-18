@@ -54,17 +54,27 @@ impl<'a, T> StdCheckBytes<'a> for T where
 {
 }
 
-impl<T, W> Hypergraph<T, W>
+pub trait DumpCacheToFile {
+    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn Error>>;
+}
+
+pub trait LoadFromCacheDeserialized: Sized {
+    fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>>;
+}
+
+pub trait LoadFromCacheArchived: Sized {
+    type Container;
+
+    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>>;
+}
+
+impl<T, W> DumpCacheToFile for Hypergraph<T, W>
 where
-    T: Archive,
-    W: Archive,
+    T: Archive + StdSerializable + Hash + Eq,
+    <T as Archive>::Archived: Hash + Eq,
+    W: StdSerializable,
 {
-    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn Error>>
-    where
-        T: StdSerializable + Hash + Eq,
-        <T as Archive>::Archived: Hash + Eq,
-        W: StdSerializable,
-    {
+    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn Error>> {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
 
         let mut file = File::create(path)?;
@@ -72,48 +82,56 @@ where
 
         Ok(())
     }
+}
 
-    pub fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Hypergraph<T, W>, Box<dyn Error>>
-    where
-        for<'a> <T as Archive>::Archived: StdCheckBytes<'a>,
-        <T as Archive>::Archived: StdDeserializable<T>,
-        <T as Archive>::Archived: Hash + Eq,
-        T: Hash + Eq,
-        for<'a> <W as Archive>::Archived: StdCheckBytes<'a>,
-        <W as Archive>::Archived: StdDeserializable<W>,
-    {
-        let mut file = std::fs::File::open(path)?;
-        let mut bytes: AlignedVec = rkyv::util::AlignedVec::new();
+impl<T, W> LoadFromCacheDeserialized for Hypergraph<T, W>
+where
+    T: Hash + Eq + Archive,
+    W: rkyv::Archive,
+    <T as Archive>::Archived: Hash + Eq,
+    for<'a> <T as Archive>::Archived: StdCheckBytes<'a>,
+    for<'a> <W as Archive>::Archived: StdCheckBytes<'a>,
+    <T as Archive>::Archived: StdDeserializable<T>,
+    <W as Archive>::Archived: StdDeserializable<W>,
+{
+    fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let mut file = File::open(path)?;
+
+        // Fix: Explicitly type your AlignedVec if the compiler gets confused
+        let mut bytes: AlignedVec = AlignedVec::new();
         bytes.extend_from_reader(&mut file)?;
 
-        // let start = std::time::Instant::now();
         let archived = rkyv::access::<ArchivedHypergraph<T, W>, rkyv::rancor::Error>(&bytes[..])?;
-        // println!("Loading ArchivedHypergraph {:?}", start.elapsed());
-
-        // let start = std::time::Instant::now();
-        let mut rv = rkyv::deserialize::<Hypergraph<T, W>, rkyv::rancor::Error>(archived)?;
-        // println!("Loading Hypergraph{:?}", start.elapsed());
+        let rv = rkyv::deserialize::<Hypergraph<T, W>, rkyv::rancor::Error>(archived)?;
 
         Ok(rv)
     }
+}
 
-    pub fn load_archived<P: AsRef<Path>>(
-        path: P,
-    ) -> Result<ArchivedHypergraphHandle<T, W>, Box<dyn Error>>
-    where
-        for<'a> <T as Archive>::Archived: StdCheckBytes<'a>,
-        for<'a> <W as Archive>::Archived: StdCheckBytes<'a>,
-        <T as Archive>::Archived: Hash + Eq,
-        T: Hash + Eq,
-    {
-        let mut file = std::fs::File::open(path)?;
-        let mut bytes: AlignedVec = rkyv::util::AlignedVec::new();
+impl<T, W> LoadFromCacheArchived for Hypergraph<T, W>
+where
+    T: Archive + Hash + Eq + 'static,
+    for<'a> <T as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<T> + Hash + Eq,
+    W: Archive + 'static,
+    for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
+{
+    type Container = ArchivedHypergraphHandle<T, W>;
+
+    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>> {
+        let mut file = File::open(path)?;
+        let mut bytes = AlignedVec::new();
         bytes.extend_from_reader(&mut file)?;
 
-        let archived = ArchivedHypergraphHandle::<T, W>::try_new(bytes, |b| {
-            rkyv::access::<ArchivedHypergraph<T, W>, rkyv::rancor::Error>(&b[..])
-        })?;
-        Ok(archived)
+        let container = ArchivedHypergraphHandleTryBuilder {
+            bytes,
+            archived_builder: |bytes_ref| {
+                rkyv::access::<ArchivedHypergraph<T, W>, rkyv::rancor::Error>(&bytes_ref[..])
+                    .map_err(|e| Box::new(e) as Box<dyn Error>)
+            },
+        }
+        .try_build()?;
+
+        Ok(container)
     }
 }
 
@@ -156,5 +174,21 @@ where
 {
     bytes: AlignedVec,
     #[borrows(bytes)]
+    // #[not_covariant]
     pub archived: &'this super::ArchivedHypergraph<T, W>,
 }
+
+// #[self_referencing]
+// pub struct ArchivedHypergraphContainer<T, W>
+// where
+//     T: 'static,
+//     W: 'static,
+// {
+//     // The "owner" - this stays alive in memory
+//     bytes: AlignedVec,
+//
+//     // The "dependent" - this borrows directly from the bytes field above
+//     #[borrows(bytes)]
+//     #[not_covariant]
+//     archived: &'this ArchivedHypergraph<T, W>,
+// }

@@ -85,18 +85,37 @@ fn loader_impl(raw_args: LoaderArgs, input_fn: ItemFn) -> Result<TokenStream> {
         }
     }
 
-    let cache_ty = format_ident!("__LoaderCachePath");
+    let cache_ty = format_ident!("P2");
     wrapper_sig
         .generics
         .params
-        .push(syn::parse_quote!(#cache_ty: ::std::convert::AsRef<::std::path::Path> + ?Sized));
+        .push(syn::parse_quote!(#cache_ty));
     wrapper_sig
         .inputs
         .push(syn::parse_quote!(cache_path: &#cache_ty));
+    wrapper_sig
+        .generics
+        .where_clause
+        .get_or_insert_with(|| syn::WhereClause {
+            where_token: Default::default(),
+            predicates: Default::default(),
+        })
+        .predicates
+        .push(syn::parse_quote!(P2: AsRef<Path> + ?Sized));
 
     let cache_file_name = args.cache;
 
     let wrapper_block = quote!({
+        if !cache_path.as_ref().exists() {
+            log::warn!(
+                "Cache dir '{}' does not exist. Falling back to uncached loading.",
+                cache_path.as_ref().display()
+            );
+            log::info!("Loading hypergraph from source");
+            let rv = #uncached_name(#(#arg_idents),*)?;
+            return Ok(rv);
+        }
+
         let cache_file = cache_path.as_ref().join(#cache_file_name);
         if cache_file.exists() {
             match Hypergraph::load_deserialized(&cache_file) {
@@ -112,8 +131,8 @@ fn loader_impl(raw_args: LoaderArgs, input_fn: ItemFn) -> Result<TokenStream> {
                 }
             }
         } else {
-            log::warn!(
-                "Cache file {} does not exist. Falling back to uncached loading.",
+            log::info!(
+                "Loading hypergraph from source and caching to {}...",
                 cache_file.display()
             );
             let rv = #uncached_name(#(#arg_idents),*)?;

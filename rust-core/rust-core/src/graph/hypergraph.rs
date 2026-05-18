@@ -177,6 +177,16 @@ impl<T, W> Hypergraph<T, W> {
 
     pub fn has_hyperedge<const N: usize>(&self, hyperedge: &[T; N]) -> bool
     where
+        T: Hash + Eq + Clone + Ord,
+        Self: HypergraphAccessor<N, T, W>,
+    {
+        let mut sorted = (*hyperedge).clone();
+        sorted.sort_unstable();
+        self.has_hyperedge_unchecked(&sorted)
+    }
+
+    pub fn has_hyperedge_unchecked<const N: usize>(&self, hyperedge: &[T; N]) -> bool
+    where
         T: Hash + Eq,
         Self: HypergraphAccessor<N, T, W>,
     {
@@ -189,6 +199,25 @@ impl<T, W> Hypergraph<T, W> {
         Self: HypergraphAccessor<N, T, W>,
     {
         self.edges().get(hyperedge)
+    }
+
+    pub fn modify_hx_weigth_with<const N: usize, F>(&mut self, hyperedge: &[T; N], f: F) -> bool
+    where
+        T: Hash + Eq + Clone,
+        Self: HypergraphAccessor<N, T, W>,
+        F: FnOnce(W) -> W,
+    {
+        match self.edges_mut().take(hyperedge) {
+            Some(old_hx) => {
+                let new_weight = f(old_hx.weight);
+                self.edges_mut().insert(Hx {
+                    nodes: old_hx.nodes,
+                    weight: new_weight,
+                });
+                true
+            }
+            None => false,
+        }
     }
 
     pub fn remove_hyperedge<const N: usize>(&mut self, hyperedge: &[T; N]) -> bool
@@ -272,6 +301,18 @@ impl<const N: usize> Into<WeightedHx<N>> for Hx<N, NodeId, NodeWeight> {
 impl<const N: usize> Into<UnweightedHx<N>> for Hx<N, NodeId, ()> {
     fn into(self) -> UnweightedHx<N> {
         UnweightedHx(self)
+    }
+}
+
+impl Into<UnweightedHypergraph> for Hypergraph<NodeId, ()> {
+    fn into(self) -> UnweightedHypergraph {
+        UnweightedHypergraph(self)
+    }
+}
+
+impl Into<WeightedHypergraph> for Hypergraph<NodeId, NodeWeight> {
+    fn into(self) -> WeightedHypergraph {
+        WeightedHypergraph(self)
     }
 }
 
@@ -482,19 +523,19 @@ impl WeightedHypergraph {
         let order = nodes.len()?;
 
         seq!(N in 2..11 {
-        match order {
-            #(
-                N => {
-                    let mut nodes_v = [0; N];
-                    for i in 0..N {
-                        nodes_v[i] = nodes.get_item(i)?.extract::<NodeId>()?;
-                    }
-                    let hx: WeightedHx<N> = WeightedHx::new(nodes_v, weight)?;
-                    Ok(self.0.add_edge(hx.0))
-                },
-            )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-        }
+            match order {
+                #(
+                    N => {
+                        let mut nodes_v = [0; N];
+                        for i in 0..N {
+                            nodes_v[i] = nodes.get_item(i)?.extract::<NodeId>()?;
+                        }
+                        let hx: WeightedHx<N> = WeightedHx::new(nodes_v, weight)?;
+                        Ok(self.0.add_edge(hx.0))
+                    },
+                )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+            }
         })
     }
 }

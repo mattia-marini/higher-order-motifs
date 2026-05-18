@@ -42,7 +42,7 @@ impl FlatAdjList {
 
     #[staticmethod]
     pub fn from_edges(edges: Vec<(NodeId, NodeId)>, _directed: bool) -> Self {
-        let mut adj_list = AdjList::from_edges(edges);
+        let (mut adj_list, _, _) = AdjList::from_edges_mapped(edges);
         adj_list.remove_self_loops();
         adj_list.make_undirected();
 
@@ -87,11 +87,11 @@ impl FlatAdjList {
         let start = Instant::now();
         let archived = rkyv::access::<ArchivedFlatAdjList, rkyv::rancor::Error>(&bytes[..])?;
         // let archived = unsafe { rkyv::access_unchecked::<ArchivedFlatAdjList>(&bytes[..]) }; // Faster
-        println!("Loading ArchivedFlatAdjList {:?}", start.elapsed());
+        // println!("Loading ArchivedFlatAdjList {:?}", start.elapsed());
 
         let start = Instant::now();
         let rv = rkyv::deserialize::<FlatAdjList, rkyv::rancor::Error>(archived)?;
-        println!("Loading FlatAdjList{:?}", start.elapsed());
+        // println!("Loading FlatAdjList{:?}", start.elapsed());
 
         Ok(rv)
     }

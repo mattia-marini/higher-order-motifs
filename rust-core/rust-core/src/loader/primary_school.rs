@@ -18,7 +18,7 @@ pub struct Unweighted;
 pub struct Weighted;
 
 impl Loader for Unweighted {
-    const NAME: &'static str = "UW_conference";
+    const NAME: &'static str = "UW_primary_school";
 
     type Output = Hypergraph<NodeId, ()>;
 
@@ -35,13 +35,13 @@ impl Loader for Unweighted {
             let l = line?;
             let parts: Vec<&str> = l.split_whitespace().collect();
 
-            if parts.len() == 3 {
+            if parts.len() >= 3 {
                 // Parse values (t, a, b)
                 let t_raw: i32 = parts[0].parse().unwrap_or(0);
                 let a = parts[1].parse().unwrap_or(0);
                 let b = parts[2].parse().unwrap_or(0);
 
-                let t = t_raw - 32520;
+                let t = t_raw - 31220;
 
                 edges
                     .entry(t as usize)
@@ -52,13 +52,9 @@ impl Loader for Unweighted {
 
         let mut hg = Hypergraph::new();
 
-        for (t, edge_list) in edges.into_iter() {
-            let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list, // .iter()
-                          // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                          // .collect(),
-            );
+        for (_t, edge_list) in edges.into_iter() {
+            let (mut adj_list, original_index, _compressed_index) =
+                AdjList::from_edges_mapped(edge_list);
 
             adj_list.make_undirected();
 
@@ -86,6 +82,7 @@ impl Loader for Unweighted {
                     }
                 })
             }
+
             seq!(N in 2..11 {
                 hg.extend_with_edges(bucket_~N);
             });
@@ -96,7 +93,7 @@ impl Loader for Unweighted {
 }
 
 impl Loader for Weighted {
-    const NAME: &'static str = "W_conference";
+    const NAME: &'static str = "W_primary_school";
 
     type Output = Hypergraph<NodeId, NodeWeight>;
 
@@ -113,13 +110,13 @@ impl Loader for Weighted {
             let l = line?;
             let parts: Vec<&str> = l.split_whitespace().collect();
 
-            if parts.len() == 3 {
+            if parts.len() >= 3 {
                 // Parse values (t, a, b)
                 let t_raw: i32 = parts[0].parse().unwrap_or(0);
                 let a = parts[1].parse().unwrap_or(0);
                 let b = parts[2].parse().unwrap_or(0);
 
-                let t = t_raw - 32520;
+                let t = t_raw - 31220;
 
                 edges
                     .entry(t as usize)
@@ -130,13 +127,9 @@ impl Loader for Weighted {
 
         let mut hg = Hypergraph::new();
 
-        for (t, edge_list) in edges.into_iter() {
-            let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list, // .iter()
-                          // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                          // .collect(),
-            );
+        for (_t, edge_list) in edges.into_iter() {
+            let (mut adj_list, original_index, _compressed_index) =
+                AdjList::from_edges_mapped(edge_list);
 
             adj_list.make_undirected();
 
