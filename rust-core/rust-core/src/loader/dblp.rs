@@ -26,10 +26,11 @@ impl Loader for Unweighted {
         let reader = BufReader::new(file);
 
         let mut graph: HashMap<String, Vec<NodeId>> = HashMap::new();
-
-        for line in reader.lines() {
+        for line in reader.lines().skip(1) {
             let l = line?;
-            if l.trim().is_empty() { continue; }
+            if l.trim().is_empty() {
+                continue;
+            }
             let parts: Vec<&str> = l.split(',').collect();
             if parts.len() >= 2 {
                 let paper = parts[0].to_string();
@@ -43,6 +44,8 @@ impl Loader for Unweighted {
 
         for (_paper, authors) in graph.into_iter() {
             let mut a = authors;
+            a.sort_unstable();
+            a.dedup();
             if a.len() > 1 && a.len() <= 10 {
                 seq!(N in 2..11 {
                     if a.len() == N {
@@ -73,7 +76,9 @@ impl Loader for Weighted {
 
         for line in reader.lines() {
             let l = line?;
-            if l.trim().is_empty() { continue; }
+            if l.trim().is_empty() {
+                continue;
+            }
             let parts: Vec<&str> = l.split(',').collect();
             if parts.len() >= 2 {
                 let paper = parts[0].to_string();
@@ -87,6 +92,9 @@ impl Loader for Weighted {
 
         for (_paper, authors) in graph.into_iter() {
             let mut a = authors;
+            a.sort_unstable();
+            a.dedup();
+
             if a.len() > 1 && a.len() <= 10 {
                 seq!(N in 2..11 {
                     if a.len() == N {

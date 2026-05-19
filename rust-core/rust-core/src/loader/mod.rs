@@ -11,6 +11,7 @@ pub mod hospital;
 pub mod justice;
 pub mod pacs;
 pub mod primary_school;
+pub mod wiki_talk;
 pub mod workspace;
 // pub mod babbuini;
 pub mod enron;
@@ -51,7 +52,7 @@ macro_rules! generate_loader_module {
             use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
             use crate::{
-                graph::{UnweightedHypergraph, WeightedHypergraph},
+                graph::{UnweightedHypergraph, WeightedHypergraph, AdjList},
                 loader::common::Loader,
             };
 
@@ -216,6 +217,11 @@ generate_loader_module!(
         super::enron::Unweighted
     ),
     (load_enron_w, WeightedHypergraph, super::enron::Weighted),
+    (
+        load_wiki_talk_2_uniform,
+        AdjList,
+        super::wiki_talk::Unweighted2Uniform
+    )
 );
 
 reexport_module_members!("rust_core.loader" from "rust_core.core.loader");

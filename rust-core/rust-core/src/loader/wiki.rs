@@ -30,22 +30,31 @@ impl Loader for Unweighted {
             if l.is_empty() {
                 // flush votes
                 for (_k, v) in votes.drain() {
-                    let mut uids: Vec<NodeId> = v.into_iter().filter_map(|s| s.parse::<NodeId>().ok()).collect();
-                    if uids.len() > 1 && uids.len() <= 10 {
-                        seq!(N in 2..11 {
-                            if uids.len() == N {
+                    let uids: Vec<NodeId> = v
+                        .into_iter()
+                        .filter_map(|s| s.parse::<NodeId>().ok())
+                        .collect();
+                    let order = uids.len();
+                    seq!(N in 2..11 {
+                        match order {
+                            N => {
                                 let mut arr = [0 as NodeId; N];
-                                for i in 0..N { arr[i] = uids[i]; }
-                                hg.add_edge(Hx::new_unchecked(arr, ()));
-                            }
-                        });
-                    }
+                                arr.copy_from_slice(&uids);
+                                hg.add_edge(Hx::new(arr, ()).expect("wiki: found malformed hyperedge"));
+                            },
+                            _ => ()
+                        }
+                    });
                 }
                 continue;
             }
-            if !l.starts_with('V') { continue; }
+            if !l.starts_with('V') {
+                continue;
+            }
             let parts: Vec<&str> = l.split_whitespace().collect();
-            if parts.len() < 3 { continue; }
+            if parts.len() < 3 {
+                continue;
+            }
             let vote = parts[1].to_string();
             let u_id = parts[2].to_string();
             votes.entry(vote).or_insert_with(Vec::new).push(u_id);
@@ -72,23 +81,32 @@ impl Loader for Weighted {
             let l = line.trim();
             if l.is_empty() {
                 for (_k, v) in votes.drain() {
-                    let mut uids: Vec<NodeId> = v.into_iter().filter_map(|s| s.parse::<NodeId>().ok()).collect();
-                    if uids.len() > 1 && uids.len() <= 10 {
-                        seq!(N in 2..11 {
-                            if uids.len() == N {
+                    let mut uids: Vec<NodeId> = v
+                        .into_iter()
+                        .filter_map(|s| s.parse::<NodeId>().ok())
+                        .collect();
+                    let order = uids.len();
+                    seq!(N in 2..11 {
+                        match order {
+                            N => {
                                 let mut arr = [0 as NodeId; N];
-                                for i in 0..N { arr[i] = uids[i]; }
-                                if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new_unchecked(arr, 0.0)); }
+                                arr.copy_from_slice(&uids);
+                                if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new(arr, 0.0).expect("wiki: found malformed hyperedge")); }
                                 hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
-                            }
-                        });
-                    }
+                            },
+                            _ => ()
+                        }
+                    });
                 }
                 continue;
             }
-            if !l.starts_with('V') { continue; }
+            if !l.starts_with('V') {
+                continue;
+            }
             let parts: Vec<&str> = l.split_whitespace().collect();
-            if parts.len() < 3 { continue; }
+            if parts.len() < 3 {
+                continue;
+            }
             let vote = parts[1].to_string();
             let u_id = parts[2].to_string();
             votes.entry(vote).or_insert_with(Vec::new).push(u_id);

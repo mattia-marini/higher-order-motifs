@@ -55,9 +55,10 @@ impl Loader for Unweighted {
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
             let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list, // .iter()
-                          // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                          // .collect(),
+                edge_list,
+                // .iter()
+                // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
+                // .collect(),
             );
 
             adj_list.make_undirected();

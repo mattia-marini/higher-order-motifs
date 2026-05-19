@@ -16,29 +16,63 @@ from test_core.util import  time_function, time_function_p
 
 
 def run() -> None:
-    # test_conference_uw()
-    # test_conference_w()
-    #
-    # test_primary_school_uw()
-    # test_primary_school_w()
-    #
-    # test_high_school_uw()
-    # test_high_school_w()
-    #
-    # test_hospital_uw()
-    # test_hospital_w()
-    #
-    # test_facebook_hs_uw()
-    #
-    # test_friendship_hs_uw()
-    # test_friendship_hs_w()
-    #
-    # test_gene_disease_w()
+    test_conference_uw()
+    test_conference_w()
+
+    test_primary_school_uw()
+    test_primary_school_w()
+
+    test_high_school_uw()
+    test_high_school_w()
+
+    test_hospital_uw()
+    test_hospital_w()
+
+    test_facebook_hs_uw()
+
+    test_friendship_hs_uw()
+    test_friendship_hs_w()
+
+    test_gene_disease_w()
 
     test_pacs_uw()
     test_pacs_w()
 
+    test_workspace_uw()
+    test_workspace_w()
+  
+    test_dblp_uw()
+    test_dblp_w()
+  
+    test_history_uw()
+    test_history_w()
 
+    test_geology_uw()
+    test_geology_w()
+
+    test_justice_uw()
+    test_justice_w()
+
+    test_babbuini_uw()
+    test_babbuini_w()
+
+
+    test_wiki_uw()
+    test_wiki_w()
+
+    test_ndc_substances_uw()
+    test_ndc_substances_w()
+
+    test_ndc_classes_uw()
+    test_ndc_classes_w()
+
+    test_eu_uw()
+    test_eu_w()
+
+    test_enron_uw()
+    test_enron_w()
+
+    test_wiki_talk()
 
 
 
@@ -130,16 +164,185 @@ def test_gene_disease_w():
 def test_pacs_uw():
     console.print(test_loader(
         "PACS Unweighted",
-        lambda: pc.loaders.load_pacs(StandardConstructionMethod(weighted=False)),
+        lambda: pc.loaders.load_pacs(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
         lambda: rc.loader.load_pacs_uw(dataset_path("PACS.csv"), None)
     ))
 
 def test_pacs_w():
     console.print(test_loader(
         "PACS Weighted",
-        lambda: pc.loaders.load_pacs(StandardConstructionMethod(weighted=True)),
+        lambda: pc.loaders.load_pacs(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
         lambda: rc.loader.load_pacs_w(dataset_path("PACS.csv"), None)
     ))
+
+
+# New dataset tests added for Rust/Python loader parity
+
+def test_workspace_uw():
+    console.print(test_loader(
+        "Workspace Unweighted",
+        lambda: pc.loaders.load_workspace(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_workspace_uw(dataset_path("workspace.dat"), None)
+    ))
+
+def test_workspace_w():
+    console.print(test_loader(
+        "Workspace Weighted",
+        lambda: pc.loaders.load_workspace(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_workspace_w(dataset_path("workspace.dat"), None)
+    ))
+
+def test_dblp_uw():
+    console.print(test_loader(
+        "DBLP Unweighted",
+        lambda: pc.loaders.load_DBLP(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_dblp_uw(dataset_path("dblp.csv"), None)
+    ))
+
+def test_dblp_w():
+    console.print(test_loader(
+        "DBLP Weighted",
+        lambda: pc.loaders.load_DBLP(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_dblp_w(dataset_path("dblp.csv"), None)
+    ))
+
+def test_history_uw():
+    console.print(test_loader(
+        "History Unweighted",
+        lambda: pc.loaders.load_history(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_history_uw(dataset_path("history.csv"), None)
+    ))
+
+def test_history_w():
+    console.print(test_loader(
+        "History Weighted",
+        lambda: pc.loaders.load_history(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_history_w(dataset_path("history.csv"), None)
+    ))
+
+def test_geology_uw():
+    console.print(test_loader(
+        "Geology Unweighted",
+        lambda: pc.loaders.load_geology(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_geology_uw(dataset_path("geology.csv"), None)
+    ))
+
+def test_geology_w():
+    console.print(test_loader(
+        "Geology Weighted",
+        lambda: pc.loaders.load_geology(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_geology_w(dataset_path("geology.csv"), None)
+    ))
+
+def test_justice_uw():
+    console.print(test_loader(
+        "Justice Unweighted",
+        lambda: pc.loaders.load_justice(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_justice_uw(dataset_path("justice.csv"), None)
+    ))
+
+def test_justice_w():
+    console.print(test_loader(
+        "Justice Weighted",
+        lambda: pc.loaders.load_justice(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_justice_w(dataset_path("justice.csv"), None)
+    ))
+
+# def test_babbuini_uw():
+#     console.print(test_loader(
+#         "Babbuini Unweighted",
+#         lambda: pc.loaders.load_babbuini(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+#         lambda: rc.loader.load_babbuini_uw(dataset_path("babbuini.txt"), None)
+#     ))
+#
+# def test_babbuini_w():
+#     console.print(test_loader(
+#         "Babbuini Weighted",
+#         lambda: pc.loaders.load_babbuini(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+#         lambda: rc.loader.load_babbuini_w(dataset_path("babbuini.txt"), None)
+#     ))
+
+def test_wiki_uw():
+    console.print(test_loader(
+        "Wiki Unweighted",
+        lambda: pc.loaders.load_wiki(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_wiki_uw(dataset_path("wiki/wiki.txt"), None)
+    ))
+
+def test_wiki_w():
+    console.print(test_loader(
+        "Wiki Weighted",
+        lambda: pc.loaders.load_wiki(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_wiki_w(dataset_path("wiki/wiki.txt"), None)
+    ))
+
+def test_ndc_substances_uw():
+    console.print(test_loader(
+        "NDC Substances Unweighted",
+        lambda: pc.loaders.load_NDC_substances(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_ndc_substances_uw(dataset_path("NDC-substances"), None)
+    ))
+
+def test_ndc_substances_w():
+    console.print(test_loader(
+        "NDC Substances Weighted",
+        lambda: pc.loaders.load_NDC_substances(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_ndc_substances_w(dataset_path("NDC-substances"), None)
+    ))
+
+def test_ndc_classes_uw():
+    console.print(test_loader(
+        "NDC Classes Unweighted",
+        lambda: pc.loaders.load_NDC_classes(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_ndc_classes_uw(dataset_path("NDC-classes"), None)
+    ))
+
+def test_ndc_classes_w():
+    console.print(test_loader(
+        "NDC Classes Weighted",
+        lambda: pc.loaders.load_NDC_classes(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_ndc_classes_w(dataset_path("NDC-classes"), None)
+    ))
+
+def test_eu_uw():
+    console.print(test_loader(
+        "EU Unweighted",
+        lambda: pc.loaders.load_eu(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_eu_uw(dataset_path("email-Eu"), None)
+    ))
+
+def test_eu_w():
+    console.print(test_loader(
+        "EU Weighted",
+        lambda: pc.loaders.load_eu(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_eu_w(dataset_path("email-Eu"), None)
+    ))
+
+def test_enron_uw():
+    console.print(test_loader(
+        "Enron Unweighted",
+        lambda: pc.loaders.load_enron(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
+        lambda: rc.loader.load_enron_uw(dataset_path("email-Enron"), None)
+    ))
+
+def test_enron_w():
+    console.print(test_loader(
+        "Enron Weighted",
+        lambda: pc.loaders.load_enron(StandardConstructionMethod(weighted=True, limit_edge_size=10)),
+        lambda: rc.loader.load_enron_w(dataset_path("email-Enron"), None)
+    ))
+
+def test_wiki_talk():
+    adj, time = time_function( lambda: rc.loader.load_wiki_talk_2_uniform(dataset_path("wiki/wiki-talk.txt"), None))
+    table = Table()
+    table.add_column("N")
+    table.add_column("M")
+    table.add_column("time")
+    table.add_row(str(adj.n()), str(adj.m()), str(time))
+
+    
+    console.print(Panel(Align.center(table), title="Wiki talk loader test"))
+
 
 def dataset_path(name):
     return os.path.join(os.environ["DATASET_DIR"], name)

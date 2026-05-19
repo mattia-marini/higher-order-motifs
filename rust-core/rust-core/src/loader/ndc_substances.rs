@@ -16,8 +16,13 @@ fn read_ints_from_file<P: AsRef<Path>>(path: &P) -> Result<Vec<NodeId>, Box<dyn 
     let s = read_to_string(path)?;
     let mut v = Vec::new();
     for line in s.lines() {
-        let t = line.trim(); if t.is_empty() { continue; }
-        if let Ok(x) = t.parse::<NodeId>() { v.push(x); }
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        if let Ok(x) = t.parse::<NodeId>() {
+            v.push(x);
+        }
     }
     Ok(v)
 }
@@ -31,8 +36,22 @@ impl Loader for Unweighted {
         P: AsRef<Path> + ?Sized,
     {
         let base = dataset_location.as_ref();
-        let nverts_path = if base.is_dir() { base.join(format!("{}-nverts.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-nverts.txt") };
-        let simplices_path = if base.is_dir() { base.join(format!("{}-simplices.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-simplices.txt") };
+        let nverts_path = if base.is_dir() {
+            base.join(format!(
+                "{}-nverts.txt",
+                base.file_name().and_then(|n| n.to_str()).unwrap_or("")
+            ))
+        } else {
+            base.with_extension("-nverts.txt")
+        };
+        let simplices_path = if base.is_dir() {
+            base.join(format!(
+                "{}-simplices.txt",
+                base.file_name().and_then(|n| n.to_str()).unwrap_or("")
+            ))
+        } else {
+            base.with_extension("-simplices.txt")
+        };
 
         let v = read_ints_from_file(&nverts_path)?;
         let mut s = read_ints_from_file(&simplices_path)?;
@@ -42,7 +61,9 @@ impl Loader for Unweighted {
         for mut i in v.into_iter() {
             let mut e: Vec<NodeId> = Vec::new();
             for _ in 0..i {
-                if s.is_empty() { break; }
+                if s.is_empty() {
+                    break;
+                }
                 e.push(s.remove(0));
             }
             if e.len() > 1 && e.len() <= 10 {
@@ -50,7 +71,7 @@ impl Loader for Unweighted {
                     if e.len() == N {
                         let mut arr = [0 as NodeId; N];
                         for j in 0..N { arr[j] = e[j]; }
-                        hg.add_edge(Hx::new_unchecked(arr, ()));
+                        hg.add_edge(Hx::new(arr, ()).expect(format!("[{}] Malformed edge", Self::NAME).as_str()));
                     }
                 });
             }
@@ -69,8 +90,22 @@ impl Loader for Weighted {
         P: AsRef<Path> + ?Sized,
     {
         let base = dataset_location.as_ref();
-        let nverts_path = if base.is_dir() { base.join(format!("{}-nverts.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-nverts.txt") };
-        let simplices_path = if base.is_dir() { base.join(format!("{}-simplices.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-simplices.txt") };
+        let nverts_path = if base.is_dir() {
+            base.join(format!(
+                "{}-nverts.txt",
+                base.file_name().and_then(|n| n.to_str()).unwrap_or("")
+            ))
+        } else {
+            base.with_extension("-nverts.txt")
+        };
+        let simplices_path = if base.is_dir() {
+            base.join(format!(
+                "{}-simplices.txt",
+                base.file_name().and_then(|n| n.to_str()).unwrap_or("")
+            ))
+        } else {
+            base.with_extension("-simplices.txt")
+        };
 
         let v = read_ints_from_file(&nverts_path)?;
         let mut s = read_ints_from_file(&simplices_path)?;
@@ -80,7 +115,9 @@ impl Loader for Weighted {
         for mut i in v.into_iter() {
             let mut e: Vec<NodeId> = Vec::new();
             for _ in 0..i {
-                if s.is_empty() { break; }
+                if s.is_empty() {
+                    break;
+                }
                 e.push(s.remove(0));
             }
             if e.len() > 1 && e.len() <= 10 {
@@ -88,7 +125,8 @@ impl Loader for Weighted {
                     if e.len() == N {
                         let mut arr = [0 as NodeId; N];
                         for j in 0..N { arr[j] = e[j]; }
-                        if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new_unchecked(arr, 0.0)); }
+                        if !hg.has_hyperedge(&arr) {
+                            hg.add_edge(Hx::new(arr, 0.0).expect(format!("[{}] Malformed edge", Self::NAME).as_str())); }
                         hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
                     }
                 });

@@ -13,7 +13,7 @@ use std::hash::Hash;
 use std::path::Path;
 use std::{error::Error, io::Write};
 
-use crate::graph::{ArchivedHx, ArchivedHypergraph, Hx, Hypergraph};
+use crate::graph::{AdjList, ArchivedAdjList, ArchivedHx, ArchivedHypergraph, Hx, Hypergraph};
 
 pub trait StdSerializable:
     for<'a> rkyv::Serialize<
@@ -66,6 +66,57 @@ pub trait LoadFromCacheArchived: Sized {
     type Container;
 
     fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>>;
+}
+
+impl<const N: usize, T, W> Hash for ArchivedHx<N, T, W>
+where
+    T: Hash + Archive,
+    W: Archive,
+    <T as Archive>::Archived: Hash,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.nodes.hash(state);
+    }
+}
+
+impl<const N: usize, T, W> PartialEq for ArchivedHx<N, T, W>
+where
+    T: Archive,
+    <T as Archive>::Archived: PartialEq,
+    W: Archive,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.nodes == other.nodes
+    }
+}
+
+impl<const N: usize, T, W> Eq for ArchivedHx<N, T, W>
+where
+    T: Archive,
+    <T as Archive>::Archived: Eq,
+    W: Archive,
+{
+}
+
+#[self_referencing]
+pub struct ArchivedHypergraphHandle<T, W>
+where
+    T: Archive + Hash + Eq + 'static,
+    W: Archive + 'static,
+    <T as Archive>::Archived: Hash + Eq,
+{
+    bytes: AlignedVec,
+    #[borrows(bytes)]
+    // #[not_covariant]
+    pub archived: &'this super::ArchivedHypergraph<T, W>,
+}
+
+#[self_referencing]
+pub struct ArchivedAdjListHandle {
+    bytes: AlignedVec,
+    #[borrows(bytes)]
+    // #[not_covariant]
+    pub archived: &'this ArchivedAdjList,
 }
 
 impl<T, W> DumpCacheToFile for Hypergraph<T, W>
@@ -135,60 +186,53 @@ where
     }
 }
 
-impl<const N: usize, T, W> Hash for ArchivedHx<N, T, W>
-where
-    T: Hash + Archive,
-    W: Archive,
-    <T as Archive>::Archived: Hash,
-{
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.nodes.hash(state);
+impl DumpCacheToFile for AdjList {
+    fn save_to_file<P: AsRef<std::path::Path>>(
+        &self,
+        path: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
+
+        let mut file = File::create(path)?;
+        file.write_all(&bytes)?;
+
+        Ok(())
     }
 }
 
-impl<const N: usize, T, W> PartialEq for ArchivedHx<N, T, W>
-where
-    T: Archive,
-    <T as Archive>::Archived: PartialEq,
-    W: Archive,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.nodes == other.nodes
+impl LoadFromCacheDeserialized for AdjList {
+    fn load_deserialized<P: AsRef<std::path::Path>>(
+        path: P,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut file = File::open(path)?;
+
+        let mut bytes: AlignedVec = AlignedVec::new();
+        bytes.extend_from_reader(&mut file)?;
+
+        let archived = rkyv::access::<ArchivedAdjList, rkyv::rancor::Error>(&bytes[..])?;
+        let rv = rkyv::deserialize::<AdjList, rkyv::rancor::Error>(archived)?;
+
+        Ok(rv)
     }
 }
 
-impl<const N: usize, T, W> Eq for ArchivedHx<N, T, W>
-where
-    T: Archive,
-    <T as Archive>::Archived: Eq,
-    W: Archive,
-{
-}
+impl LoadFromCacheArchived for AdjList {
+    type Container = ArchivedAdjListHandle;
 
-#[self_referencing]
-pub struct ArchivedHypergraphHandle<T, W>
-where
-    T: Archive + Hash + Eq + 'static,
-    W: Archive + 'static,
-    <T as Archive>::Archived: Hash + Eq,
-{
-    bytes: AlignedVec,
-    #[borrows(bytes)]
-    // #[not_covariant]
-    pub archived: &'this super::ArchivedHypergraph<T, W>,
-}
+    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>> {
+        let mut file = File::open(path)?;
+        let mut bytes = AlignedVec::new();
+        bytes.extend_from_reader(&mut file)?;
 
-// #[self_referencing]
-// pub struct ArchivedHypergraphContainer<T, W>
-// where
-//     T: 'static,
-//     W: 'static,
-// {
-//     // The "owner" - this stays alive in memory
-//     bytes: AlignedVec,
-//
-//     // The "dependent" - this borrows directly from the bytes field above
-//     #[borrows(bytes)]
-//     #[not_covariant]
-//     archived: &'this ArchivedHypergraph<T, W>,
-// }
+        let container = ArchivedAdjListHandleTryBuilder {
+            bytes,
+            archived_builder: |bytes_ref| {
+                rkyv::access::<ArchivedAdjList, rkyv::rancor::Error>(&bytes_ref[..])
+                    .map_err(|e| Box::new(e) as Box<dyn Error>)
+            },
+        }
+        .try_build()?;
+
+        Ok(container)
+    }
+}

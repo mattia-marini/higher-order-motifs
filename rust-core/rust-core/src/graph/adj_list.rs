@@ -7,6 +7,8 @@ use pyo3_stub_gen::PyStubType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use rkyv::{Archive, Deserialize, Serialize};
 
+use crate::graph::serialize::DumpCacheToFile;
+
 use super::types::NodeId;
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]

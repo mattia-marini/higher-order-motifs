@@ -29,7 +29,9 @@ impl Loader for Unweighted {
 
         for line in reader.lines() {
             let l = line?;
-            if l.trim().is_empty() { continue; }
+            if l.trim().is_empty() {
+                continue;
+            }
             let parts: Vec<&str> = l.split(',').collect();
             if parts.len() >= 2 {
                 let paper = parts[0].to_string();
@@ -48,7 +50,7 @@ impl Loader for Unweighted {
                     if a.len() == N {
                         let mut arr = [0 as NodeId; N];
                         for i in 0..N { arr[i] = a[i]; }
-                        hg.add_edge(Hx::new_unchecked(arr, ()));
+                        hg.add_edge(Hx::new(arr, ()).expect(format!("[{}] Malformed edge", Self::NAME).as_str()));
                     }
                 });
             }
@@ -73,7 +75,9 @@ impl Loader for Weighted {
 
         for line in reader.lines() {
             let l = line?;
-            if l.trim().is_empty() { continue; }
+            if l.trim().is_empty() {
+                continue;
+            }
             let parts: Vec<&str> = l.split(',').collect();
             if parts.len() >= 2 {
                 let paper = parts[0].to_string();
@@ -92,7 +96,7 @@ impl Loader for Weighted {
                     if a.len() == N {
                         let mut arr = [0 as NodeId; N];
                         for i in 0..N { arr[i] = a[i]; }
-                        if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new_unchecked(arr, 0.0)); }
+                        if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new(arr, 0.0).expect(format!("[{}] Malformed edge", Self::NAME).as_str())); }
                         hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
                     }
                 });

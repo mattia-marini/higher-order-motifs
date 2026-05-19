@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 
-use crate::loader::{common::Loader, conference};
+use crate::loader::{common::Loader, conference, pacs::load_pacs_common_from_csv};
 
 #[test]
 pub fn big() {
@@ -33,4 +33,11 @@ pub fn small() {
         Err(e) => assert!(false, "Failed to load dataset: {}", e),
     }
     println!("Total time: {:?}", time.elapsed());
+}
+
+#[test]
+pub fn polars() {
+    let dataset_dir = std::env::var("DATASET_DIR").unwrap();
+    let pacs_location = PathBuf::from(dataset_dir).join("PACS.csv");
+    load_pacs_common_from_csv(&pacs_location).unwrap();
 }

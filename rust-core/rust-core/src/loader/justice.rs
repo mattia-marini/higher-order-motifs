@@ -14,6 +14,9 @@ use crate::{
 pub struct Unweighted;
 pub struct Weighted;
 
+use polars::prelude::*;
+use std::sync::Arc;
+
 impl Loader for Unweighted {
     const NAME: &'static str = "UW_justice";
     type Output = Hypergraph<NodeId, ()>;
@@ -22,48 +25,82 @@ impl Loader for Unweighted {
     where
         P: AsRef<Path> + ?Sized,
     {
-        let file = File::open(dataset_location)?;
-        let reader = BufReader::new(file);
+        let path = dataset_location.as_ref();
 
-        let mut cases: HashMap<String, HashMap<i32, Vec<NodeId>>> = HashMap::new();
-        let mut nodes: HashMap<String, NodeId> = HashMap::new();
-        let mut idx: NodeId = 0;
+        // 1. Read the CSV lazily without headers to access columns by their index.
+        // Polars automatically names them "column_1", "column_2", etc.
+        let lf = LazyCsvReader::new(path).with_ignore_errors(true).finish()?;
 
-        for line in reader.lines() {
-            let l = line?;
-            if l.trim().is_empty() { continue; }
-            let parts: Vec<&str> = l.split(',').collect();
-            if parts.len() <= 55 { continue; }
+        // 2. Select and cast only the columns we need (indices 0, 54, 55 map to 1, 55, 56)
+        let lf = lf
+            .select([
+                col("caseId").alias("case_id"),
+                col("justiceName").alias("justice_name"),
+                col("vote").cast(DataType::Int32).alias("vote"),
+            ])
+            // Drop rows where vote failed to parse, or where core fields are missing
+            .filter(col("vote").is_not_null())
+            .filter(col("justice_name").is_not_null())
+            .filter(col("case_id").is_not_null());
 
-            let case_id = parts[0].trim().to_string();
-            let justice_name = parts[54].trim().to_string();
-            let vote_raw = parts[55].trim();
-            let v = match vote_raw.parse::<i32>() { Ok(x) => x, Err(_) => continue };
+        // 3. Extract unique justices and assign a NodeId (row_index)
+        let names_lf = lf
+            .clone()
+            .select([col("justice_name")])
+            .unique(
+                Some(vec!["justice_name".to_string()]),
+                UniqueKeepStrategy::First,
+            )
+            .with_row_index("justice_id", None);
 
-            let n = if let Some(&nid) = nodes.get(&justice_name) { nid } else {
-                nodes.insert(justice_name.clone(), idx);
-                idx += 1;
-                idx - 1
+        // 4. Join the NodeIds back, group by Case AND Vote, and collect the justices
+        let grouped_lf = lf
+            .join_builder()
+            .with(names_lf)
+            .on([col("justice_name")])
+            .how(JoinType::Left)
+            .finish()
+            // Grouping by both gives us the exact equivalent of your nested HashMaps
+            .group_by([col("case_id"), col("vote")])
+            .agg([col("justice_id").unique().alias("justices")]);
+
+        let df = grouped_lf.collect()?;
+
+        // 5. Build the Hypergraph
+        let mut hg = Hypergraph::new();
+        let justices_col = df.column("justices")?.list()?;
+
+        for opt_justice_series in justices_col.into_iter() {
+            let Some(series) = opt_justice_series else {
+                continue;
             };
 
-            let entry = cases.entry(case_id).or_insert_with(HashMap::new);
-            entry.entry(v).or_insert_with(Vec::new).push(n);
-        }
+            // Polars row indices are generated as u32 (UInt32Chunked)
+            let mut justice_ids: Vec<NodeId> = series
+                .u32()
+                .expect("Justices inner list was not a UInt32 type")
+                .into_iter()
+                .flatten()
+                .map(|val| val as NodeId)
+                .collect();
 
-        let mut hg = Hypergraph::new();
+            justice_ids.sort_unstable();
+            justice_ids.dedup();
 
-        for (_c, votes) in cases.into_iter() {
-            for (_v, e) in votes.into_iter() {
-                if e.len() > 1 && e.len() <= 10 {
-                    seq!(N in 2..11 {
-                        if e.len() == N {
-                            let mut arr = [0 as NodeId; N];
-                            for i in 0..N { arr[i] = e[i]; }
+            let len = justice_ids.len();
+
+            seq!(N in 2..11 {
+                match len {
+                    #(
+                        N => {
+                            let mut arr =  [0 as NodeId; N];
+                            arr.copy_from_slice(&justice_ids);
                             hg.add_edge(Hx::new_unchecked(arr, ()));
-                        }
-                    });
+                        },
+                    )*
+                    _ => ()
                 }
-            }
+            });
         }
 
         Ok(hg)
@@ -78,49 +115,83 @@ impl Loader for Weighted {
     where
         P: AsRef<Path> + ?Sized,
     {
-        let file = File::open(dataset_location)?;
-        let reader = BufReader::new(file);
+        let path = dataset_location.as_ref();
 
-        let mut cases: HashMap<String, HashMap<i32, Vec<NodeId>>> = HashMap::new();
-        let mut nodes: HashMap<String, NodeId> = HashMap::new();
-        let mut idx: NodeId = 0;
+        // 1. Read the CSV lazily without headers to access columns by their index.
+        // Polars automatically names them "column_1", "column_2", etc.
+        let lf = LazyCsvReader::new(path).with_ignore_errors(true).finish()?;
 
-        for line in reader.lines() {
-            let l = line?;
-            if l.trim().is_empty() { continue; }
-            let parts: Vec<&str> = l.split(',').collect();
-            if parts.len() <= 55 { continue; }
+        // 2. Select and cast only the columns we need (indices 0, 54, 55 map to 1, 55, 56)
+        let lf = lf
+            .select([
+                col("caseId").alias("case_id"),
+                col("justiceName").alias("justice_name"),
+                col("vote").cast(DataType::Int32).alias("vote"),
+            ])
+            // Drop rows where vote failed to parse, or where core fields are missing
+            .filter(col("vote").is_not_null())
+            .filter(col("justice_name").is_not_null())
+            .filter(col("case_id").is_not_null());
 
-            let case_id = parts[0].trim().to_string();
-            let justice_name = parts[54].trim().to_string();
-            let vote_raw = parts[55].trim();
-            let v = match vote_raw.parse::<i32>() { Ok(x) => x, Err(_) => continue };
+        // 3. Extract unique justices and assign a NodeId (row_index)
+        let names_lf = lf
+            .clone()
+            .select([col("justice_name")])
+            .unique(
+                Some(vec!["justice_name".to_string()]),
+                UniqueKeepStrategy::First,
+            )
+            .with_row_index("justice_id", None);
 
-            let n = if let Some(&nid) = nodes.get(&justice_name) { nid } else {
-                nodes.insert(justice_name.clone(), idx);
-                idx += 1;
-                idx - 1
+        // 4. Join the NodeIds back, group by Case AND Vote, and collect the justices
+        let grouped_lf = lf
+            .join_builder()
+            .with(names_lf)
+            .on([col("justice_name")])
+            .how(JoinType::Left)
+            .finish()
+            // Grouping by both gives us the exact equivalent of your nested HashMaps
+            .group_by([col("case_id"), col("vote")])
+            .agg([col("justice_id").unique().alias("justices")]);
+
+        let df = grouped_lf.collect()?;
+
+        // 5. Build the Hypergraph
+        let mut hg = Hypergraph::new();
+        let justices_col = df.column("justices")?.list()?;
+
+        for opt_justice_series in justices_col.into_iter() {
+            let Some(series) = opt_justice_series else {
+                continue;
             };
 
-            let entry = cases.entry(case_id).or_insert_with(HashMap::new);
-            entry.entry(v).or_insert_with(Vec::new).push(n);
-        }
+            // Polars row indices are generated as u32 (UInt32Chunked)
+            let mut justice_ids: Vec<NodeId> = series
+                .u32()
+                .expect("Justices inner list was not a UInt32 type")
+                .into_iter()
+                .flatten()
+                .map(|val| val as NodeId)
+                .collect();
 
-        let mut hg = Hypergraph::new();
+            justice_ids.sort_unstable();
+            justice_ids.dedup();
 
-        for (_c, votes) in cases.into_iter() {
-            for (_v, e) in votes.into_iter() {
-                if e.len() > 1 && e.len() <= 10 {
-                    seq!(N in 2..11 {
-                        if e.len() == N {
-                            let mut arr = [0 as NodeId; N];
-                            for i in 0..N { arr[i] = e[i]; }
+            let len = justice_ids.len();
+
+            seq!(N in 2..11 {
+                match len {
+                    #(
+                        N => {
+                            let mut arr =  [0 as NodeId; N];
+                            arr.copy_from_slice(&justice_ids);
                             if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new_unchecked(arr, 0.0)); }
                             hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
-                        }
-                    });
+                        },
+                    )*
+                    _ => ()
                 }
-            }
+            });
         }
 
         Ok(hg)
