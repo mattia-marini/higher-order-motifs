@@ -18,9 +18,12 @@ def main() -> None:
     # time_function_p(lambda: rc.motifs.count_motifs_4((edges2, edges3, edges4)))
     import rust_core as rc
 
-    hg1 = rc.graph.UnweightedHypergraph()
+    hg = rc.graph.UnweightedHypergraph()
+    print(hg.n)
+
+    # hg1 = rc.graph.UnweightedHypergraph()
     # hh2 = rc.loader.load_wiki_talk("prova", os.environ["dataset"])
-    hg1.count_5()
+    # hg1.count_5()
 
     # rc.graph.bfs(hg, 10)
 

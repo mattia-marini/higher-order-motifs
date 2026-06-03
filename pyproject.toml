@@ -19,4 +19,3 @@ members = [
 
 [tool.ruff]
 line-length = 120  # default is 88
-

@@ -1,29 +1,18 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use std::fmt;
+use thiserror::Error;
 
 use super::types::NodeId;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum GraphError {
+    #[error("H2 cannot have duplicate nodes: {0}")]
     DuplicateNodes(NodeId),
-    InvalidHyperedgeSize(usize, usize),
-}
 
-impl fmt::Display for GraphError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            GraphError::DuplicateNodes(u) => {
-                write!(f, "H2 cannot have duplicate nodes: {} ", u)
-            }
-            GraphError::InvalidHyperedgeSize(expected, got) => {
-                write!(f, "Wrong node size; expected {}, got{} ", expected, got)
-            }
-        }
-    }
+    #[error("H2 cannot have duplicate nodes: expected {expected} , got {got}")]
+    InvalidHyperedgeSize { expected: usize, got: usize },
 }
-
-impl std::error::Error for GraphError {}
 
 impl From<GraphError> for PyErr {
     fn from(err: GraphError) -> PyErr {

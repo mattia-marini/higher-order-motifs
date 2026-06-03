@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
-pyo3 = "0.27.0"
+pyo3 = {version = "0.27.0", features = ["multiple-pymethods"]}
 timed = "0.2.1"
 pyo3-stub-gen = "0.21.0"
 bit-set = "0.10"
@@ -19,3 +19,6 @@ rkyv = "0.8.15"
 itertools = "0.14.0"
 inherent = "1.0.13"
 duplicate = "2.0.1"
+thiserror = "2.0.18"
+ouroboros = "0.18.5"
+rust-core-macros = { workspace = true }
