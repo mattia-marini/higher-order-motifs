@@ -111,7 +111,10 @@ def load_conference(
             e_k = graph[k]
             G = nx.Graph(e_k, directed=False)
             # print(f"{G}")
-            c = list(nx.find_cliques(G))
+            cliques = nx.find_cliques(G)
+            # print(cliques)
+            c = list(cliques)
+
             for i in c:
                 i = tuple(sorted(i))
 
@@ -386,7 +389,7 @@ def load_random_hypergraph(N, E):
     return hg
 
 
-def load_gene_disease(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
+def load_gene_disease(construction_method: StandardConstructionMethod = StandardConstructionMethod()):
     name2id_gene = {}
     id_gene2name = {}
 
@@ -408,19 +411,21 @@ def load_gene_disease(construction_method: ConstructionMethodBase = StandardCons
                 diseases[dis] = []
             diseases[dis].append(gene)
 
+    
     for d in diseases.keys():
-        if len(diseases[d]) > 1 and len(diseases[d]):
-            if not hg.has_edge_with_nodes(diseases[d]):
-                hg.add_edge(Hyperedge(diseases[d], 0.0))
-            hg.get_edges_by_nodes(diseases[d])[0].weight += 1.0
+        if len(diseases[d]) > 1:
+            if construction_method.limit_edge_size is None or  len(diseases[d]) <= construction_method.limit_edge_size:
+                if not hg.has_edge_with_nodes(diseases[d]):
+                    hg.add_edge(Hyperedge(diseases[d], 0.0))
+                hg.get_edges_by_nodes(diseases[d])[0].weight += 1.0
 
     return hg
 
 
-def load_PACS_common():
+def load_pacs_common():
     import polars as pl
 
-    dtypes = {"ArticleID": pl.Utf8, "PACS": pl.Utf8, "AuthorDAIS": pl.Utf8, "FullName": pl.Utf8}
+    dtypes = {"ArticleID": pl.Utf8, "PACS": pl.UInt32, "AuthorDAIS": pl.UInt32, "FullName": pl.Utf8}
     dataset = f"{os.environ['DATASET_DIR']}/PACS.csv"
 
     # Scan lazily and read only the columns we need
@@ -445,13 +450,15 @@ def load_PACS_common():
     )
 
     grouped = grouped_lf.collect()
+    # print(grouped.height)
+    # print(grouped)
     papers = {row["ArticleID"]: {"authors": row["authors"], "PACS": row["PACS"]} for row in grouped.to_dicts()}
 
     return papers
 
 
-def load_PACS(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
-    papers = load_PACS_common()
+def load_pacs(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
+    papers = load_pacs_common()
     hg = Hypergraph()
     for id, paper in papers.items():
         autohrs = paper["authors"]
@@ -471,7 +478,7 @@ def load_PACS(construction_method: ConstructionMethodBase = StandardConstruction
     return hg
 
 
-def pickle_PACS():
+def pickle_pacs():
     import pandas as pd
 
     tb = pd.read_csv("{}/PACS.csv".format(os.environ["DATASET_DIR"]))
@@ -516,7 +523,7 @@ def pickle_PACS():
     #    print(papers[k])
 
 
-def load_PACS_pickled(N):
+def load_pacs_pickled(N):
     import pickle
 
     papers = pickle.load(open("PACS.pickle", "rb"))
@@ -536,7 +543,7 @@ def load_PACS_pickled(N):
     return edges
 
 
-def load_PACS_single_pickled(N, S):
+def load_pacs_single_pickled(N, S):
     import pickle
 
     papers = pickle.load(open("PACS.pickle", "rb"))
@@ -630,7 +637,7 @@ def load_DBLP(construction_method: ConstructionMethodBase = StandardConstruction
     dataset = "{}/dblp.csv".format(os.environ["DATASET_DIR"])
     chunksize = 100_000
     lines_count = 10_304_423
-    data = pd.read_csv(dataset, delimiter=",", chunksize=chunksize)
+    data = pd.read_csv(dataset, delimiter=",", chunksize=chunksize, skiprows=0)
     graph = defaultdict(list)
 
     for chunk in track(data, total=lines_count / chunksize, description="Reading csv file"):
@@ -653,7 +660,8 @@ def load_DBLP(construction_method: ConstructionMethodBase = StandardConstruction
         hg = Hypergraph()
 
         for paper, authors in track(graph.items(), description="Constructing hypergraph"):
-            if not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
+            authors = sorted(set(authors))
+            if len(authors)> 1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
                 if cm.weighted:
                     if hg.has_edge_with_nodes(authors):
                         handle = hg.get_first_edges_by_nodes(authors)
@@ -703,7 +711,7 @@ def load_history(construction_method: ConstructionMethodBase = StandardConstruct
         hg = Hypergraph()
 
         for paper, authors in track(graph.items(), description="Constructing hypergraph"):
-            if not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
+            if len(authors)>1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
                 if cm.weighted:
                     if hg.has_edge_with_nodes(authors):
                         handle = hg.get_first_edges_by_nodes(authors)
@@ -753,7 +761,7 @@ def load_geology(construction_method: ConstructionMethodBase = StandardConstruct
         hg = Hypergraph()
 
         for paper, authors in track(graph.items(), description="Constructing hypergraph"):
-            if not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
+            if len(authors)>1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
                 if cm.weighted:
                     if hg.has_edge_with_nodes(authors):
                         handle = hg.get_first_edges_by_nodes(authors)
@@ -1039,7 +1047,7 @@ def load_wiki(construction_method: ConstructionMethodBase = StandardConstruction
                 e = tuple(sorted(votes[k]))
                 tot.add(e)
 
-                if not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
+                if len(e)> 1 and not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
                     if cm.weighted:
                         if hg.has_edge_with_nodes(e):
                             handle = hg.get_first_edges_by_nodes(e)
@@ -1090,7 +1098,7 @@ def load_NDC_substances(construction_method: ConstructionMethodBase = StandardCo
             e.append(s.pop(0))
             cont += 1
 
-        if not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
+        if len(e) > 1 and not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
             if cm.weighted:
                 if hg.has_edge_with_nodes(e):
                     handle = hg.get_first_edges_by_nodes(e)
@@ -1124,7 +1132,7 @@ def load_NDC_classes(construction_method: ConstructionMethodBase = StandardConst
         while cont < i:
             e.append(s.pop(0))
             cont += 1
-        if not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
+        if len(e) > 1 and not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
             if cm.weighted:
                 if hg.has_edge_with_nodes(e):
                     handle = hg.get_first_edges_by_nodes(e)
@@ -1161,7 +1169,7 @@ def load_eu(construction_method: ConstructionMethodBase = StandardConstructionMe
             e.append(s[s_idx])
             s_idx += 1
             cont += 1
-        if not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
+        if len(e) > 1 and not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
             if cm.weighted:
                 if hg.has_edge_with_nodes(e):
                     handle = hg.get_first_edges_by_nodes(e)
@@ -1197,7 +1205,7 @@ def load_enron(construction_method: ConstructionMethodBase = StandardConstructio
         while cont < i:
             e.append(s.pop(0))
             cont += 1
-        if not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
+        if len(e) > 1 and not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
             if cm.weighted:
                 if hg.has_edge_with_nodes(e):
                     handle = hg.get_first_edges_by_nodes(e)

@@ -1,6 +1,8 @@
-use crate::graph::WeightedHypergraph;
+use crate::graph::{UnweightedHypergraph, WeightedHypergraph};
 
-pub fn count_motifs_3(hg: &WeightedHypergraph) {
+pub fn count_motifs_3_unweighted(hg: &UnweightedHypergraph) {
+    let hg = &hg.0;
+    println!("Motifs 3 counting: {}", hg.m());
     // let adj_list = AdjList::from_edges(&edges.0);
     // let mut count_2 = [0, 0]; // star, triangle
     //
@@ -12,6 +14,11 @@ pub fn count_motifs_3(hg: &WeightedHypergraph) {
     //forward_hashed_cloj(&adj_list.adj, false, |u, v, w| count_2[1] += 1);
 
     //3 counting
+}
+
+pub fn count_motifs_3_weighted(hg: &WeightedHypergraph) {
+    let hg = &hg.0;
+    println!("Motifs 3 counting: {}", hg.m());
 }
 
 pub fn count_motifs_4(hg: &WeightedHypergraph) {}

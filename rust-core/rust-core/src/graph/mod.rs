@@ -1,50 +1,33 @@
 pub mod adj_list;
-pub mod flat_adj_list;
-
+pub mod edge_collection;
 pub mod error;
-pub mod traits;
+pub mod flat_adj_list;
+pub mod hypergraph;
+pub mod serialize;
 pub mod types;
-pub mod unweighted_hypergraph;
-pub mod weighted_hypergraph;
+pub mod hyper_adj_list;
 
 pub use adj_list::*;
+pub use edge_collection::*;
+pub use error::*;
 pub use flat_adj_list::*;
+pub use hypergraph::*;
 pub use types::*;
-pub use unweighted_hypergraph::*;
-pub use weighted_hypergraph::*;
 
 use pyo3::pymodule;
 use pyo3_stub_gen::reexport_module_members;
 
-// #[pymodule(submodule)]
-// pub mod graph {
-//
-//     #[pymodule_export]
-//     use super::unweighted_hypergraph::UnweightedHypergraph;
-//
-//     #[pymodule_export]
-//     use super::types::H2;
-//
-//     #[pymodule_export]
-//     use super::types::H3;
-//
-//     #[pymodule_export]
-//     use super::types::H4;
-//
-//     #[pymodule_export]
-//     use super::types::H5;
-//
-//     #[pymodule_export]
-//     use super::types::WH2;
-//
-//     #[pymodule_export]
-//     use super::types::WH3;
-//
-//     #[pymodule_export]
-//     use super::types::WH4;
-//
-//     #[pymodule_export]
-//     use super::types::WH5;
-// }
-//
-// reexport_module_members!("rust_core.graph" from "rust_core.core.graph");
+#[pymodule(submodule)]
+pub mod graph {
+
+    #[pymodule_export]
+    use super::adj_list::AdjList;
+
+    #[pymodule_export]
+    use super::hypergraph::UnweightedHypergraph;
+
+    #[pymodule_export]
+    use super::hypergraph::WeightedHypergraph;
+}
+
+reexport_module_members!("rust_core.graph" from "rust_core.core.graph");

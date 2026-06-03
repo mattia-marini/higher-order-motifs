@@ -267,6 +267,8 @@ fn replace_idents_with_metavars(stream: TokenStream, n_var: &str, i_var: &str) -
 
 fn expand_ct_map(args: ArgsFinalized, input: ItemStruct) -> TokenStream {
     let struct_name = &input.ident;
+    let generics = &input.generics;
+
     let vis = &input.vis;
     let attrs = &input.attrs; // Captures #[derive(...)] and other attributes
 
@@ -361,11 +363,11 @@ fn expand_ct_map(args: ArgsFinalized, input: ItemStruct) -> TokenStream {
 
     quote! {
         #(#attrs)* // Re-emits the derives and other attributes here
-        #vis struct #struct_name {
+        #vis struct #struct_name #generics{
             pub buckets: (#(#fields),*)
         }
 
-        impl #struct_name {
+        impl #generics #struct_name #generics{
             pub const START: usize = #min;
             pub const END: usize = #max;
             pub const SIZE: usize = #count;

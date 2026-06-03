@@ -15,10 +15,16 @@ timed = "0.2.1"
 pyo3-stub-gen = "0.21.0"
 bit-set = "0.10"
 num-traits = "0.2"
-rkyv = "0.8.15"
+rkyv = {version = "0.8.15", features = ["hashbrown-0_17"]}
 itertools = "0.14.0"
 inherent = "1.0.13"
 duplicate = "2.0.1"
 thiserror = "2.0.18"
 ouroboros = "0.18.5"
 rust-core-macros = { workspace = true }
+seq-macro = "0.3.6"
+hashbrown = "0.17.1"
+foldhash = "0.2.0"
+log = "0.4.29"
+csv = "1.2"
+polars = {version="0.46.0", features=["lazy", "default"]}

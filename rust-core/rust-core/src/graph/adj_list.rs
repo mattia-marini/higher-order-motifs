@@ -7,6 +7,8 @@ use pyo3_stub_gen::PyStubType;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use rkyv::{Archive, Deserialize, Serialize};
 
+use crate::graph::serialize::DumpCacheToFile;
+
 use super::types::NodeId;
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
@@ -89,21 +91,23 @@ impl AdjList {
     // }
 
     #[staticmethod]
-    pub fn from_edges(edges: Vec<(NodeId, NodeId)>) -> Self {
+    pub fn from_edges_mapped(
+        edges: Vec<(NodeId, NodeId)>,
+    ) -> (AdjList, Vec<NodeId>, HashMap<NodeId, NodeId>) {
         if edges.is_empty() {
-            return Self::new();
+            return (Self::new(), Vec::new(), HashMap::new());
         }
 
         // Step 1: assign compact IDs
-        let mut node_map: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut compressed_index: HashMap<NodeId, NodeId> = HashMap::new();
         let mut curr_number = 0;
 
         for (u, v) in edges.iter() {
-            if let std::collections::hash_map::Entry::Vacant(e) = node_map.entry(*u) {
+            if let std::collections::hash_map::Entry::Vacant(e) = compressed_index.entry(*u) {
                 e.insert(curr_number);
                 curr_number += 1;
             }
-            if let std::collections::hash_map::Entry::Vacant(e) = node_map.entry(*v) {
+            if let std::collections::hash_map::Entry::Vacant(e) = compressed_index.entry(*v) {
                 e.insert(curr_number);
                 curr_number += 1;
             }
@@ -115,7 +119,7 @@ impl AdjList {
         let mut sizes = vec![0; n];
 
         for (u, _) in edges.iter() {
-            let u_idx = node_map[&u];
+            let u_idx = compressed_index[u];
             sizes[u_idx as usize] += 1;
         }
 
@@ -129,8 +133,8 @@ impl AdjList {
         // Step 4: fill adjacency
         // (assuming add_edge handles internal cursor correctly)
         for (u, v) in edges.iter() {
-            let u_idx = node_map[u];
-            let v_idx = node_map[v];
+            let u_idx = compressed_index[u];
+            let v_idx = compressed_index[v];
 
             rv.add_edge(u_idx, v_idx);
 
@@ -141,7 +145,13 @@ impl AdjList {
         // println!("Constructed adjacency list. n: {}, m: {}", rv.n(), rv.m());
 
         rv.m = edges.len();
-        rv
+        let mut original_index = Vec::with_capacity(n);
+        original_index.resize(n, 0);
+        for (node, &compressed) in compressed_index.iter() {
+            original_index[compressed as usize] = *node;
+        }
+
+        (rv, original_index, compressed_index)
     }
 
     #[staticmethod]
@@ -220,7 +230,6 @@ impl AdjList {
             }
         }
 
-        // println!("TESET");
         self.extend(new_edges);
         self.remove_multiedges();
     }

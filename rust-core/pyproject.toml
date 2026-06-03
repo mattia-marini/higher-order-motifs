@@ -14,7 +14,14 @@ build-backend = "maturin"
 
 
 [tool.uv]
-cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }, { file = "rust_core.pyi" }]
+cache-keys = [
+  { file = "pyproject.toml" },
+  # { file = "uv.lock" },
+  # { file = "rust_core.pyi" },
+  { file = "Cargo.lock" },
+  { file = "**/Cargo.toml" },     # Automatically tracks root, rust-core, and rust-core-macros Cargo files
+  { file = "**/src/**/*.rs" }     # Perfectly tracks all nested Rust source files
+]
 
 [tool.maturin]
 python-source = "stubs"

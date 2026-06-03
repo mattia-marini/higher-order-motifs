@@ -1,12 +1,6 @@
-use std::{
-    error::Error,
-    fs::File,
-    io::{BufRead, BufReader},
-    path::Path,
-};
+use std::{error::Error, fs::File, io::{BufRead,BufReader}, path::Path};
 
 use hashbrown::HashMap;
-use rust_core_macros::loader;
 use seq_macro::seq;
 
 use crate::{
@@ -18,14 +12,11 @@ pub struct Unweighted;
 pub struct Weighted;
 
 impl Loader for Unweighted {
-    const NAME: &'static str = "UW_conference";
-
+    const NAME: &'static str = "UW_hospital";
     type Output = Hypergraph<NodeId, ()>;
 
     fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    where P: AsRef<Path> + ?Sized {
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -34,50 +25,26 @@ impl Loader for Unweighted {
         for line in reader.lines() {
             let l = line?;
             let parts: Vec<&str> = l.split_whitespace().collect();
-
-            if parts.len() == 3 {
-                // Parse values (t, a, b)
+            if parts.len() >= 3 {
                 let t_raw: i32 = parts[0].parse().unwrap_or(0);
                 let a = parts[1].parse().unwrap_or(0);
                 let b = parts[2].parse().unwrap_or(0);
-
-                let t = t_raw - 32520;
-
-                edges
-                    .entry(t as usize)
-                    .or_insert_with(Vec::new)
-                    .push((a, b));
+                let t = t_raw - 140;
+                edges.entry(t as usize).or_insert_with(Vec::new).push((a,b));
             }
         }
 
         let mut hg = Hypergraph::new();
 
-        for (t, edge_list) in edges.into_iter() {
-            let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list,
-                // .iter()
-                // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                // .collect(),
-            );
-
+        for (_t, edge_list) in edges.into_iter() {
+            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(edge_list);
             adj_list.make_undirected();
-
             let mut cliques = adj_list.find_cliques();
-            cliques = cliques
-                .into_iter()
-                .filter(|c| c.len() >= 2)
-                .map(|clique| {
-                    clique
-                        .into_iter()
-                        .map(|node| original_index[node as usize])
-                        .collect()
-                })
-                .collect();
+            cliques = cliques.into_iter().filter(|c| c.len()>=2).map(|clique| {
+                clique.into_iter().map(|node| original_index[node as usize]).collect()
+            }).collect();
 
-            seq!(N in 2..11 {
-                let mut bucket_~N: Vec<Hx<N, NodeId, ()>> = Vec::new();
-            });
+            seq!(N in 2..11 { let mut bucket_~N: Vec<Hx<N, NodeId, ()>> = Vec::new(); });
 
             for clique in cliques.into_iter() {
                 seq!(N in 2..11 {
@@ -87,9 +54,8 @@ impl Loader for Unweighted {
                     }
                 })
             }
-            seq!(N in 2..11 {
-                hg.extend_with_edges(bucket_~N);
-            });
+
+            seq!(N in 2..11 { hg.extend_with_edges(bucket_~N); });
         }
 
         Ok(hg)
@@ -97,14 +63,11 @@ impl Loader for Unweighted {
 }
 
 impl Loader for Weighted {
-    const NAME: &'static str = "W_conference";
-
+    const NAME: &'static str = "W_hospital";
     type Output = Hypergraph<NodeId, NodeWeight>;
 
     fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    where P: AsRef<Path> + ?Sized {
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -113,49 +76,26 @@ impl Loader for Weighted {
         for line in reader.lines() {
             let l = line?;
             let parts: Vec<&str> = l.split_whitespace().collect();
-
-            if parts.len() == 3 {
-                // Parse values (t, a, b)
+            if parts.len() >= 3 {
                 let t_raw: i32 = parts[0].parse().unwrap_or(0);
                 let a = parts[1].parse().unwrap_or(0);
                 let b = parts[2].parse().unwrap_or(0);
-
-                let t = t_raw - 32520;
-
-                edges
-                    .entry(t as usize)
-                    .or_insert_with(Vec::new)
-                    .push((a, b));
+                let t = t_raw - 140;
+                edges.entry(t as usize).or_insert_with(Vec::new).push((a,b));
             }
         }
 
         let mut hg = Hypergraph::new();
 
-        for (t, edge_list) in edges.into_iter() {
-            let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list, // .iter()
-                          // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                          // .collect(),
-            );
-
+        for (_t, edge_list) in edges.into_iter() {
+            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(edge_list);
             adj_list.make_undirected();
-
             let mut cliques = adj_list.find_cliques();
-            cliques = cliques
-                .into_iter()
-                .filter(|c| c.len() >= 2)
-                .map(|clique| {
-                    clique
-                        .into_iter()
-                        .map(|node| original_index[node as usize])
-                        .collect()
-                })
-                .collect();
+            cliques = cliques.into_iter().filter(|c| c.len()>=2).map(|clique| {
+                clique.into_iter().map(|node| original_index[node as usize]).collect()
+            }).collect();
 
-            seq!(N in 2..11 {
-                let mut bucket_~N: Vec<Hx<N, NodeId, ()>> = Vec::new();
-            });
+            seq!(N in 2..11 { let mut bucket_~N: Vec<Hx<N, NodeId, ()>> = Vec::new(); });
 
             for clique in cliques.into_iter() {
                 seq!(N in 2..11 {

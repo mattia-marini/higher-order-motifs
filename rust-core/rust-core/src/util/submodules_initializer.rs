@@ -1,9 +1,8 @@
 /// This allows to import like this: from module.submodule import something
 use pyo3::{
-    types::{PyAnyMethods, PyModule, PyModuleMethods}, Bound,
-    PyResult,
+    Bound, PyResult,
+    types::{PyAnyMethods, PyModule, PyModuleMethods},
 };
-
 
 fn _inner_init(module: &Bound<'_, PyModule>, path: &str) -> PyResult<()> {
     let py = module.py();
