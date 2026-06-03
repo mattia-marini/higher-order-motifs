@@ -1,3 +1,9 @@
+use std::{fs, path::Path};
+
+use hashbrown::HashMap;
+
+use crate::motifs::{compressed_motif::CompactMotif, fingerprint::Fingerprint5};
+
 struct FlatBinData<const N: usize> {
     data: [u8; N],
 }

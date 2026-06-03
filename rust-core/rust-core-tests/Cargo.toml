@@ -1,0 +1,12 @@
+[package]
+name = "rust-core-tests"
+version = "0.1.0"
+edition = "2024"
+# default-run = "all"
+
+[dependencies]
+rust-core = { workspace = true }
+hashbrown = { workspace=true }
+foldhash = { workspace=true }
+paste = { workspace=true }
+indicatif = { workspace=true }

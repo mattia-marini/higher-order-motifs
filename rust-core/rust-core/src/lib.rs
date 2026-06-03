@@ -3,10 +3,6 @@ pub mod graph;
 pub mod loader;
 pub mod misc;
 pub mod motifs;
-// pub mod triangle;
-
-#[cfg(test)]
-mod test;
 
 use pyo3::prelude::*;
 
@@ -24,7 +20,6 @@ pub mod core {
     //
     // #[pymodule_export]
     // use super::triangle::triangle;
-    //
     #[pymodule_export]
     use super::motifs::motifs;
 

@@ -14,13 +14,13 @@ pub mod motifs {
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
     pub fn count_motifs_3_unweighted(hg: &UnweightedHypergraph) {
-        super::motifs3::count_motifs_3_unweighted(hg)
+        super::algorithms::motifs3::count_motifs_3_unweighted(hg)
     }
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
     pub fn count_motifs_3_weighted(hg: &WeightedHypergraph) {
-        super::motifs3::count_motifs_3_weighted(hg)
+        super::algorithms::motifs3::count_motifs_3_weighted(hg)
     }
 
     #[pyfunction]
@@ -28,16 +28,16 @@ pub mod motifs {
     pub fn count_motifs_4(hg: PyHypergraph) {
         match hg {
             PyHypergraph::Unweighted(unweighted) => {
-                super::motifs3::count_motifs_3_unweighted(&unweighted);
+                super::algorithms::motifs3::count_motifs_3_unweighted(&unweighted);
             }
             PyHypergraph::Weighted(weighted) => {
-                super::motifs3::count_motifs_3_weighted(&weighted);
+                super::algorithms::motifs3::count_motifs_3_weighted(&weighted);
             }
         }
     }
 
     #[pymodule_export]
-    use super::orca::orca;
+    use super::algorithms::orca::orca;
 }
 
 reexport_module_members!("rust_core.motifs" from "rust_core.core.motifs");

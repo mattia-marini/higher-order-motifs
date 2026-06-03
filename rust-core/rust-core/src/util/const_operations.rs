@@ -1,3 +1,5 @@
+use crate::util::permutations::Permutator;
+
 #[macro_export]
 macro_rules! iter_hyperedges {
     ($node_count: expr, $range: expr , |$edge:ident, $edge_size:ident, $edge_idx:ident| $body:block ) => {{

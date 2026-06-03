@@ -8,7 +8,7 @@ use std::hash::Hash;
 use std::{collections::VecDeque, ops::Shl};
 
 use crate::graph::HypergraphAccessor;
-use crate::graph::{Hypergraph, NodeId, hyper_adj_list::HyperAdjList};
+use crate::graph::{hyper_adj_list::HyperAdjList, Hypergraph, NodeId};
 
 use hashbrown::{HashMap, HashSet};
 

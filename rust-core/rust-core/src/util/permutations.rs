@@ -1,3 +1,5 @@
+use crate::util::const_operations::factorial;
+
 pub struct BinPerm {
     pub container: usize,
 }

@@ -1,7 +1,7 @@
-use crate::compressed_motif::{CMAssociated, CompactMotif, CompactMotifConfigurator};
-use crate::sorting_network::TryNetSort;
 use std::fmt::Debug;
 use std::hash::Hash;
+use crate::motifs::compressed_motif::{CMAssociated, CompactMotif, CompactMotifConfigurator};
+use crate::util::sorting_network::TryNetSort;
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub struct Fingerprint3 {

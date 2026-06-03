@@ -1,48 +1,13 @@
-use std::time::Duration;
-
 use foldhash::fast::FixedState;
 use hashbrown::{HashMap, HashSet};
 use indicatif::ProgressIterator;
-
-use crate::compressed_motif::{CompactMotif, CompactMotifConfigurator};
-
-#[test]
-fn test_order3() -> Result<(), Box<dyn std::error::Error>> {
-    let rv = compute_all_fingerprints::<3>()?;
-    assert_eq!(rv.clashing_count, 0);
-    Ok(())
-}
-
-#[test]
-fn test_order3() -> Result<(), Box<dyn std::error::Error>> {
-    let rv = compute_all_fingerprints::<4>()?;
-    assert_eq!(rv.clashing_count, 0);
-    Ok(())
-}
-#[test]
-fn test_order3() -> Result<(), Box<dyn std::error::Error>> {
-    let rv = compute_all_fingerprints::<5>()?;
-    assert_eq!(rv.clashing_count, 0);
-    Ok(())
-}
-
-impl std::fmt::Display for EnumerationStats {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Total motifs:          {}\n\
-             Connected motifs:      {}\n\
-             Distinct fingerprints: {}\n\
-             Elapsed time:          {:?}\n\
-             Clashing buckets:      {}",
-            self.total_count,
-            self.connected_count,
-            self.distinct_fingerprints,
-            self.elapsed_time,
-            self.clashing_buckets_count
-        )
-    }
-}
+use rust_core::{
+    iter_hyperedges,
+    motifs::{
+        algorithms::EnumerationStats,
+        compressed_motif::{CompactMotif, CompactMotifConfigurator},
+    },
+};
 
 pub fn print_static_const<const N: usize>()
 where
@@ -87,8 +52,9 @@ pub fn print_hyperedges<const N: usize>() {
     });
 }
 
-pub fn compute_all_fingerprints<const N: usize>()
--> Result<EnumerationStats, Box<dyn std::error::Error>>
+pub fn compute_all_fingerprints<const N: usize>(
+    show_progress: bool,
+) -> Result<EnumerationStats, Box<dyn std::error::Error>>
 where
     CompactMotif<N>: CompactMotifConfigurator,
 {
@@ -99,7 +65,12 @@ where
     let mut connected_count = 0;
     println!("Enumerating motifs and computing fingerprints...");
 
-    for m in CompactMotif::<N>::enum_motifs(2..=N).progress() {
+    let iter: Box<dyn Iterator<Item = CompactMotif<N>>> = if show_progress {
+        Box::new(CompactMotif::<N>::enum_motifs(2..=N).progress())
+    } else {
+        Box::new(CompactMotif::<N>::enum_motifs(2..=N).into_iter())
+    };
+    for m in iter {
         if m.is_connected() {
             let fingerprint = m.fingerprint();
             if !map.contains_key(&fingerprint) {
@@ -110,11 +81,24 @@ where
         }
         total_count += 1;
     }
-    let mut elapsed_time = time.elapsed();
+    let elapsed_time = time.elapsed();
 
     println!("Aggregating results and checking for clashing buckets...");
     let mut clashing_buckets = Vec::new();
-    for (fingerprint, motifs) in map.iter().progress() {
+
+    let iter: Box<
+        dyn Iterator<
+            Item = (
+                &<CompactMotif<N> as CompactMotifConfigurator>::FingerprintType,
+                &Vec<CompactMotif<N>>,
+            ),
+        >,
+    > = if show_progress {
+        Box::new(map.iter().progress())
+    } else {
+        Box::new(map.iter())
+    };
+    for (fingerprint, motifs) in iter {
         let mut unique_motifs = HashSet::new();
         for motif in motifs {
             unique_motifs.insert(*motif);

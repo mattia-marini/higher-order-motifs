@@ -1,3 +1,7 @@
+pub mod const_operations;
+pub mod misc;
+pub mod permutations;
+pub mod sorting_network;
 pub mod submodules_initializer;
 
 #[allow(dead_code)]

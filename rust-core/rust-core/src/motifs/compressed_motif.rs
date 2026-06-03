@@ -1,3 +1,4 @@
+use crate::iter_hyperedges;
 use foldhash::fast::FixedState;
 use hashbrown::HashSet;
 use std::fmt::{Binary, Debug};
@@ -8,18 +9,11 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Index, IndexMut, Shl},
 };
 
-use crate::fingerprint::Fingerprint3;
-use crate::util::max_hyperedge_count;
-
-use crate::iter_hyperedges;
-
 use num_traits::{AsPrimitive, One, PrimInt, Unsigned, Zero};
-
-use crate::{
-    compressed_node_set::CompressedNodeSet,
-    fingerprint::{Fingerprint4, Fingerprint5},
-    util::{BinPerm, binomial_coefficient, factorial},
-};
+use crate::motifs::compressed_node_set::CompressedNodeSet;
+use crate::motifs::fingerprint::{Fingerprint3, Fingerprint4, Fingerprint5};
+use crate::util::const_operations::{max_hyperedge_count, binomial_coefficient, factorial};
+use crate::util::permutations::BinPerm;
 
 macro_rules! impl_motif_configurator {
     ($ct:ty, $order:literal, $fingerprint: ty) => {

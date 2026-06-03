@@ -23,8 +23,12 @@ thiserror = "2.0.18"
 ouroboros = "0.18.5"
 rust-core-macros = { workspace = true }
 seq-macro = "0.3.6"
-hashbrown = "0.17.1"
-foldhash = "0.2.0"
 log = "0.4.29"
 csv = "1.2"
 polars = {version="0.46.0", features=["lazy", "default"]}
+
+hashbrown = {workspace=true}
+foldhash = {workspace=true}
+paste = {workspace=true}
+indicatif = {workspace=true}
+
