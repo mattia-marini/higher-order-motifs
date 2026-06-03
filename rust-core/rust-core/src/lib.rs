@@ -2,7 +2,7 @@
 pub mod graph;
 pub mod loader;
 pub mod misc;
-// pub mod motifs;
+pub mod motifs;
 // pub mod triangle;
 
 #[cfg(test)]
@@ -25,8 +25,8 @@ pub mod core {
     // #[pymodule_export]
     // use super::triangle::triangle;
     //
-    // #[pymodule_export]
-    // use super::motifs::motifs;
+    #[pymodule_export]
+    use super::motifs::motifs;
 
     #[pymodule_export]
     use super::graph::graph;

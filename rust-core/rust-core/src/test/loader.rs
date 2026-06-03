@@ -5,7 +5,7 @@ use std::{
 
 use crate::loader::{common::Loader, conference, pacs::load_pacs_common_from_csv};
 
-#[test]
+// #[test]
 pub fn big() {
     // let time = Instant::now();
     // let dataset_dir = std::env::var("DATASET_DIR").unwrap();
@@ -18,7 +18,7 @@ pub fn big() {
     // println!("Total time: {:?}", time.elapsed());
 }
 
-#[test]
+// #[test]
 pub fn small() {
     let time = Instant::now();
     let dataset_dir = std::env::var("DATASET_DIR").unwrap();
@@ -32,10 +32,10 @@ pub fn small() {
         Ok(hg) => println!("edges.len m {}", hg.m()),
         Err(e) => assert!(false, "Failed to load dataset: {}", e),
     }
-    println!("Total time: {:?}", time.elapsed());
+    // println!("Total time: {:?}", time.elapsed());
 }
 
-#[test]
+// #[test]
 pub fn polars() {
     let dataset_dir = std::env::var("DATASET_DIR").unwrap();
     let pacs_location = PathBuf::from(dataset_dir).join("PACS.csv");

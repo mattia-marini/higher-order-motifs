@@ -9,12 +9,15 @@
 
 
 from test_core.rust import test_loader
-
-# from test_core.rust import test_clique
+from test_core.rust import test_clique
+from test_core.rust import test_motifs3
+from python_core.motifs.motifs_count_base import generate_motifs
 
 
 def main() -> None:
-    test_loader.run()
+    print(len(generate_motifs(4)[1]))
+    # test_motifs3.run()
+    # test_loader.run()
     # test_clique.run()
 
     # rc.loader.load_wiki_talk(os.environ["dataset"])

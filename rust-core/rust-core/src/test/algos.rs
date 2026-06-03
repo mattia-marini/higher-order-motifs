@@ -19,5 +19,5 @@ pub fn test_clique() {
     // println!("{:?}", adj.adj);
 
     // enum_clique_4(&adj, false)
-    println!("{:?}", adj.enum_cliques());
+    // println!("{:?}", adj.enum_cliques());
 }

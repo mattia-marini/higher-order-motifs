@@ -19,7 +19,7 @@ pub type HashSet<T> = hashbrown::HashSet<T, FixedState>;
 #[hoist_mod(attr(repeat(rg(2..11), abs = "N", rel = "I", bucket_name = "__bucket_$N")))]
 mod __ {
 
-    #[derive(Archive, Serialize, Deserialize)]
+    #[derive(Archive, Serialize, Deserialize, Clone)]
     pub struct StaticEdgeSet<T, W> {
         #[repeat_item]
         #[doc(hidden)]

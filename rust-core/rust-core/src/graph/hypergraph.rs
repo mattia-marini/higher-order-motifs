@@ -1,6 +1,8 @@
+use num_traits::AsPrimitive;
 use ouroboros::self_referencing;
 use pyo3::PyErr;
 use pyo3::exceptions::PyValueError;
+use pyo3_stub_gen::TypeInfo;
 use seq_macro::seq;
 use std::error::Error;
 use std::hash::Hash;
@@ -30,7 +32,7 @@ use crate::graph::error::GraphError;
 use crate::graph::types::{NodeId, NodeWeight};
 use crate::graph::{edge_collection::StaticEdgeSet, types::Hx};
 
-#[derive(Archive, Serialize, Deserialize, Debug)]
+#[derive(Archive, Serialize, Deserialize, Debug, Clone)]
 pub struct Hypergraph<T, W> {
     pub edge_set: StaticEdgeSet<T, W>,
     pub nodes: HashMap<T, usize>,
@@ -134,6 +136,48 @@ impl<T, W> Hypergraph<T, W> {
         } else {
             false
         }
+    }
+
+    pub fn add_edge_vec(&mut self, edge: (Vec<T>, W)) -> Result<bool, GraphError<T>>
+    where
+        T: Hash + Eq + Clone + Ord + Copy + 'static,
+        usize: AsPrimitive<T>,
+    {
+        let mut edge = edge;
+        edge.0.sort_unstable();
+
+        if let Some(dup) = edge
+            .0
+            .windows(2)
+            .find_map(|w| (w[0] == w[1]).then_some(&w[0]))
+        {
+            return Err(GraphError::DuplicateNodes(*dup));
+        }
+        self.add_edge_vec_unchecked(edge)
+    }
+
+    pub fn add_edge_vec_unchecked(&mut self, edge: (Vec<T>, W)) -> Result<bool, GraphError<T>>
+    where
+        T: Hash + Eq + Clone + Ord + Copy + 'static,
+        usize: AsPrimitive<T>, // Fixed: Changed from Into<T> to AsPrimitive<T>
+    {
+        let len = edge.0.len();
+
+        seq!(N in 2..11 {
+            match len {
+                #(N => {
+                    let array: [T; N] = edge
+                        .0
+                        .try_into()
+                        // This shouldn't ever fail because len == N, but if it does:
+                        .map_err(|_| GraphError::UnsupportedHyperedgeSize(len.as_()))?;
+
+                    let edge = Hx::new_unchecked(array, edge.1);
+                    Ok(self.add_edge(edge))
+                })*
+                _ => Err(GraphError::UnsupportedHyperedgeSize(len.as_())), // Fixed: .into() -> .as_()
+            }
+        })
     }
 
     pub fn remove_edge<const N: usize>(&mut self, edge: &[T; N]) -> bool
@@ -258,7 +302,69 @@ impl<T, W> Hypergraph<T, W> {
         self.n = self.nodes.len();
         len - self.nodes.len()
     }
+
+    pub fn to_unweighted(&self) -> Hypergraph<T, ()>
+    where
+        T: Hash + Eq + Clone,
+    {
+        let mut unweighted = Hypergraph::<T, ()>::new();
+
+        seq!(N in 2..11 {
+            #(
+                // Map each weighted edge to an unweighted one
+                let edges: Vec<Hx<N, T, ()>> = self.edges::<N>()
+                    .iter()
+                    .map(|hx| Hx {
+                        nodes: hx.nodes.clone(),
+                        weight: (),
+                    })
+                    .collect();
+                unweighted.extend_with_edges::<N>(edges);
+            )*
+        });
+
+        unweighted.nodes = self.nodes.clone();
+        unweighted.n = self.n;
+
+        unweighted
+    }
+
+    /// Consumes the hypergraph and returns a new unweighted hypergraph.
+    /// This avoids unnecessary heap allocations (cloning node arrays).
+    pub fn into_unweighted(mut self) -> Hypergraph<T, ()>
+    where
+        T: Hash + Eq + Clone,
+    {
+        let mut unweighted = Hypergraph::<T, ()>::new();
+
+        seq!(N in 2..11 {
+            #(
+                // Use take_edges to consume the edges and avoid cloning the node arrays
+                let edges: Vec<Hx<N, T, ()>> = self.take_edges::<N>()
+                    .into_iter()
+                    .map(|hx| Hx {
+                        nodes: hx.nodes,
+                        weight: (),
+                    })
+                    .collect();
+                unweighted.extend_with_edges::<N>(edges);
+            )*
+        });
+
+        // Transfer over exact node map to preserve any isolated nodes
+        unweighted.nodes = self.nodes;
+        unweighted.n = self.n;
+
+        unweighted
+    }
 }
+
+#[derive(FromPyObject)]
+pub enum PyHypergraph<'py> {
+    Weighted(PyRef<'py, WeightedHypergraph>),
+    Unweighted(PyRef<'py, UnweightedHypergraph>),
+}
+impl_stub_type!(PyHypergraph<'_> = UnweightedHypergraph | WeightedHypergraph);
 
 #[pyclass]
 #[gen_stub_pyclass(module = "rust_core.core.graph")]

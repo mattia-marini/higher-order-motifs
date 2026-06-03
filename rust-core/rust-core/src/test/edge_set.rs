@@ -13,5 +13,5 @@ pub fn test() {
     x.insert(Hx::new_unchecked([1, 2, 3, 4], 3));
     x.insert(Hx::new_unchecked([1, 2, 3, 4], 2));
     x.insert(Hx::new_unchecked([1, 2, 3, 4, 5], 2));
-    println!("{:?}", x);
+    // println!("{:?}", x);
 }

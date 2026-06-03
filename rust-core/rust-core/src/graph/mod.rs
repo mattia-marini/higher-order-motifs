@@ -5,6 +5,7 @@ pub mod flat_adj_list;
 pub mod hypergraph;
 pub mod serialize;
 pub mod types;
+pub mod hyper_adj_list;
 
 pub use adj_list::*;
 pub use edge_collection::*;

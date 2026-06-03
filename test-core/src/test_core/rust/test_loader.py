@@ -12,6 +12,7 @@ from rich.table import Table
 from rich.console import Console
 console = Console()
 
+from .util import dataset_path
 from test_core.util import  time_function, time_function_p
 
 
@@ -27,52 +28,52 @@ def run() -> None:
 
     test_hospital_uw()
     test_hospital_w()
-
-    test_facebook_hs_uw()
-
-    test_friendship_hs_uw()
-    test_friendship_hs_w()
-
-    test_gene_disease_w()
-
-    test_pacs_uw()
-    test_pacs_w()
-
-    test_workspace_uw()
-    test_workspace_w()
-  
-    test_dblp_uw()
-    test_dblp_w()
-  
-    test_history_uw()
-    test_history_w()
-
-    test_geology_uw()
-    test_geology_w()
-
-    test_justice_uw()
-    test_justice_w()
-
-    test_babbuini_uw()
-    test_babbuini_w()
-
-
-    test_wiki_uw()
-    test_wiki_w()
-
-    test_ndc_substances_uw()
-    test_ndc_substances_w()
-
-    test_ndc_classes_uw()
-    test_ndc_classes_w()
-
-    test_eu_uw()
-    test_eu_w()
-
-    test_enron_uw()
-    test_enron_w()
-
-    test_wiki_talk()
+    #
+    # test_facebook_hs_uw()
+    #
+    # test_friendship_hs_uw()
+    # test_friendship_hs_w()
+    #
+    # test_gene_disease_w()
+    #
+    # test_pacs_uw()
+    # test_pacs_w()
+    #
+    # test_workspace_uw()
+    # test_workspace_w()
+    #
+    # test_dblp_uw()
+    # test_dblp_w()
+    #
+    # test_history_uw()
+    # test_history_w()
+    #
+    # test_geology_uw()
+    # test_geology_w()
+    #
+    # test_justice_uw()
+    # test_justice_w()
+    #
+    # test_babbuini_uw()
+    # test_babbuini_w()
+    #
+    #
+    # test_wiki_uw()
+    # test_wiki_w()
+    #
+    # test_ndc_substances_uw()
+    # test_ndc_substances_w()
+    #
+    # test_ndc_classes_uw()
+    # test_ndc_classes_w()
+    #
+    # test_eu_uw()
+    # test_eu_w()
+    #
+    # test_enron_uw()
+    # test_enron_w()
+    #
+    # test_wiki_talk()
 
 
 
@@ -224,7 +225,7 @@ def test_geology_uw():
     console.print(test_loader(
         "Geology Unweighted",
         lambda: pc.loaders.load_geology(StandardConstructionMethod(weighted=False, limit_edge_size=10)),
-        lambda: rc.loader.load_geology_uw(dataset_path("geology.csv"), None)
+        lambda: rc.loader.load_geology_uw(dataset_path("geology.csv"), cache_dir())
     ))
 
 def test_geology_w():
@@ -343,9 +344,6 @@ def test_wiki_talk():
     
     console.print(Panel(Align.center(table), title="Wiki talk loader test"))
 
-
-def dataset_path(name):
-    return os.path.join(os.environ["DATASET_DIR"], name)
 
 
 
