@@ -1,8 +1,9 @@
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
-pub mod base;
-pub mod motifs3;
-pub mod orca;
+pub mod algorithms;
+pub mod compressed_motif;
+pub mod compressed_node_set;
+pub mod fingerprint;
 
 #[pymodule(submodule)]
 pub mod motifs {

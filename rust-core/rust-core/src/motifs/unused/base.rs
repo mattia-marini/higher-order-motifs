@@ -264,5 +264,3 @@ pub fn generate_motifs(
 
     (reps, rep_map)
 }
-
-
