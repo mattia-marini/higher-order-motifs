@@ -1,8 +1,8 @@
 mod ct_map;
 mod hoist_mod;
 mod inherent;
-mod repeat;
 mod loader;
+mod repeat;
 
 use proc_macro::TokenStream;
 
@@ -32,6 +32,6 @@ pub fn ct_map_accessor(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn loader(attr: TokenStream, item: TokenStream) -> TokenStream {
-    loader::loader(attr, item)
+pub fn loaders(attr: TokenStream, item: TokenStream) -> TokenStream {
+    loader::loaders(attr, item)
 }

@@ -15,17 +15,15 @@ use crate::{
 pub mod workspace {
     use super::*;
 
-    pub struct Unweighted;
-    pub struct Weighted;
+    use super::descriptors::{
+        WorkspaceStdUnweightedLoader as Unweighted, WorkspaceStdWeightedLoader as Weighted,
+    };
 
     impl Loader for Unweighted {
-        const NAME: &'static str = "UW_workspace";
-        type Output = Hypergraph<NodeId, ()>;
+        type Output = crate::graph::UnweightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             let file = File::open(dataset_location)?;
             let reader = BufReader::new(file);
 
@@ -89,13 +87,10 @@ pub mod workspace {
     }
 
     impl Loader for Weighted {
-        const NAME: &'static str = "W_workspace";
-        type Output = Hypergraph<NodeId, NodeWeight>;
+        type Output = crate::graph::WeightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             let file = File::open(dataset_location)?;
             let reader = BufReader::new(file);
 
@@ -174,13 +169,10 @@ macro_rules! paper_author_loader {
             pub struct Weighted;
 
             impl Loader for Unweighted {
-                const NAME: &'static str = $uw_name;
-                type Output = Hypergraph<NodeId, ()>;
+                type Output = crate::graph::UnweightedHypergraph;
 
-                fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-                where
-                    P: AsRef<Path> + ?Sized,
-                {
+                fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
                     let file = File::open(dataset_location)?;
                     let reader = BufReader::new(file);
 
@@ -219,13 +211,10 @@ macro_rules! paper_author_loader {
             }
 
             impl Loader for Weighted {
-                const NAME: &'static str = $w_name;
-                type Output = Hypergraph<NodeId, NodeWeight>;
+                type Output = crate::graph::WeightedHypergraph;
 
-                fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-                where
-                    P: AsRef<Path> + ?Sized,
-                {
+                fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
                     let file = File::open(dataset_location)?;
                     let reader = BufReader::new(file);
 
@@ -268,9 +257,305 @@ macro_rules! paper_author_loader {
     };
 }
 
-paper_author_loader!(dblp, "UW_DBLP", "W_DBLP");
-paper_author_loader!(history, "UW_history", "W_history");
-paper_author_loader!(geology, "UW_geology", "W_geology");
+pub mod dblp {
+    use super::descriptors::{
+        DblpStdUnweightedLoader as Unweighted, DblpStdWeightedLoader as Weighted,
+    };
+    use super::*;
+
+    pub struct Unweighted;
+    pub struct Weighted;
+
+    impl Loader for Unweighted {
+        type Output = crate::graph::UnweightedHypergraph;
+
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
+            let file = File::open(dataset_location)?;
+            let reader = BufReader::new(file);
+
+            let mut graph: HashMap<String, Vec<NodeId>> = HashMap::new();
+            for line in reader.lines().skip(1) {
+                let l = line?;
+                if l.trim().is_empty() {
+                    continue;
+                }
+                let parts: Vec<&str> = l.split(',').collect();
+                if parts.len() >= 2 {
+                    let paper = parts[0].to_string();
+                    if let Ok(author) = parts[1].trim().parse::<NodeId>() {
+                        graph.entry(paper).or_insert_with(Vec::new).push(author);
+                    }
+                }
+            }
+
+            let mut hg = Hypergraph::new();
+
+            for (_paper, authors) in graph.into_iter() {
+                let mut a = authors;
+                a.sort_unstable();
+                a.dedup();
+                if a.len() > 1 && a.len() <= 10 {
+                    seq!(N in 2..11 {
+                        if a.len() == N {
+                            let mut arr = [0 as NodeId; N];
+                            for i in 0..N { arr[i] = a[i]; }
+                            hg.add_edge(Hx::new_unchecked(arr, ()));
+                        }
+                    });
+                }
+            }
+
+            Ok(hg)
+        }
+    }
+
+    impl Loader for Weighted {
+        type Output = crate::graph::WeightedHypergraph;
+
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
+            let file = File::open(dataset_location)?;
+            let reader = BufReader::new(file);
+
+            let mut graph: HashMap<String, Vec<NodeId>> = HashMap::new();
+
+            for line in reader.lines() {
+                let l = line?;
+                if l.trim().is_empty() {
+                    continue;
+                }
+                let parts: Vec<&str> = l.split(',').collect();
+                if parts.len() >= 2 {
+                    let paper = parts[0].to_string();
+                    if let Ok(author) = parts[1].trim().parse::<NodeId>() {
+                        graph.entry(paper).or_insert_with(Vec::new).push(author);
+                    }
+                }
+            }
+
+            let mut hg = Hypergraph::new();
+
+            for (_paper, authors) in graph.into_iter() {
+                let mut a = authors;
+                a.sort_unstable();
+                a.dedup();
+
+                if a.len() > 1 && a.len() <= 10 {
+                    seq!(N in 2..11 {
+                        if a.len() == N {
+                            let mut arr = [0 as NodeId; N];
+                            for i in 0..N { arr[i] = a[i]; }
+                            if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new_unchecked(arr, 0.0)); }
+                            hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
+                        }
+                    });
+                }
+            }
+
+            Ok(hg)
+        }
+    }
+}
+
+pub mod history {
+    use super::descriptors::{
+        HistoryStdUnweightedLoader as Unweighted, HistoryStdWeightedLoader as Weighted,
+    };
+    use super::*;
+
+    pub struct Unweighted;
+    pub struct Weighted;
+
+    impl Loader for Unweighted {
+        type Output = crate::graph::UnweightedHypergraph;
+
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
+            let file = File::open(dataset_location)?;
+            let reader = BufReader::new(file);
+
+            let mut graph: HashMap<String, Vec<NodeId>> = HashMap::new();
+
+            for line in reader.lines() {
+                let l = line?;
+                if l.trim().is_empty() {
+                    continue;
+                }
+                // naive CSV split, assume no commas in fields of interest
+                let parts: Vec<&str> = l.split(',').collect();
+                if parts.len() >= 2 {
+                    let paper = parts[0].to_string();
+                    if let Ok(author) = parts[1].trim().parse::<NodeId>() {
+                        graph.entry(paper).or_insert_with(Vec::new).push(author);
+                    }
+                }
+            }
+
+            let mut hg = Hypergraph::new();
+
+            for (_paper, authors) in graph.into_iter() {
+                let mut a = authors;
+                if a.len() > 1 && a.len() <= 10 {
+                    seq!(N in 2..11 {
+                        if a.len() == N {
+                            let mut arr = [0 as NodeId; N];
+                            for i in 0..N { arr[i] = a[i]; }
+                            hg.add_edge(Hx::new_unchecked(arr, ()));
+                        }
+                    });
+                }
+            }
+
+            Ok(hg)
+        }
+    }
+
+    impl Loader for Weighted {
+        type Output = crate::graph::WeightedHypergraph;
+
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
+            let file = File::open(dataset_location)?;
+            let reader = BufReader::new(file);
+
+            let mut graph: HashMap<String, Vec<NodeId>> = HashMap::new();
+
+            for line in reader.lines() {
+                let l = line?;
+                if l.trim().is_empty() {
+                    continue;
+                }
+                let parts: Vec<&str> = l.split(',').collect();
+                if parts.len() >= 2 {
+                    let paper = parts[0].to_string();
+                    if let Ok(author) = parts[1].trim().parse::<NodeId>() {
+                        graph.entry(paper).or_insert_with(Vec::new).push(author);
+                    }
+                }
+            }
+
+            let mut hg = Hypergraph::new();
+
+            for (_paper, authors) in graph.into_iter() {
+                let mut a = authors;
+                if a.len() > 1 && a.len() <= 10 {
+                    seq!(N in 2..11 {
+                        if a.len() == N {
+                            let mut arr = [0 as NodeId; N];
+                            for i in 0..N { arr[i] = a[i]; }
+                            if !hg.has_hyperedge(&arr) {
+                                hg.add_edge(Hx::new_unchecked(arr, 0.0));
+                            }
+                            hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
+                        }
+                    });
+                }
+            }
+
+            Ok(hg)
+        }
+    }
+}
+
+pub mod geology {
+    use super::descriptors::{
+        GeologyStdUnweightedLoader as Unweighted, GeologyStdWeightedLoader as Weighted,
+    };
+    use super::*;
+
+    pub struct Unweighted;
+    pub struct Weighted;
+
+    impl Loader for Unweighted {
+        type Output = crate::graph::UnweightedHypergraph;
+
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
+            let file = File::open(dataset_location)?;
+            let reader = BufReader::new(file);
+
+            let mut graph: HashMap<String, Vec<NodeId>> = HashMap::new();
+
+            for line in reader.lines() {
+                let l = line?;
+                if l.trim().is_empty() {
+                    continue;
+                }
+                let parts: Vec<&str> = l.split(',').collect();
+                if parts.len() >= 2 {
+                    let paper = parts[0].to_string();
+                    if let Ok(author) = parts[1].trim().parse::<NodeId>() {
+                        graph.entry(paper).or_insert_with(Vec::new).push(author);
+                    }
+                }
+            }
+
+            let mut hg = Hypergraph::new();
+
+            for (_paper, authors) in graph.into_iter() {
+                let mut a = authors;
+                if a.len() > 1 && a.len() <= 10 {
+                    seq!(N in 2..11 {
+                        if a.len() == N {
+                            let mut arr = [0 as NodeId; N];
+                            for i in 0..N { arr[i] = a[i]; }
+                            hg.add_edge(Hx::new_unchecked(arr, ()));
+                        }
+                    });
+                }
+            }
+
+            Ok(hg)
+        }
+    }
+
+    impl Loader for Weighted {
+        type Output = crate::graph::WeightedHypergraph;
+
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
+            let file = File::open(dataset_location)?;
+            let reader = BufReader::new(file);
+
+            let mut graph: HashMap<String, Vec<NodeId>> = HashMap::new();
+
+            for line in reader.lines() {
+                let l = line?;
+                if l.trim().is_empty() {
+                    continue;
+                }
+                let parts: Vec<&str> = l.split(',').collect();
+                if parts.len() >= 2 {
+                    let paper = parts[0].to_string();
+                    if let Ok(author) = parts[1].trim().parse::<NodeId>() {
+                        graph.entry(paper).or_insert_with(Vec::new).push(author);
+                    }
+                }
+            }
+
+            let mut hg = Hypergraph::new();
+
+            for (_paper, authors) in graph.into_iter() {
+                let mut a = authors;
+                if a.len() > 1 && a.len() <= 10 {
+                    seq!(N in 2..11 {
+                        if a.len() == N {
+                            let mut arr = [0 as NodeId; N];
+                            for i in 0..N { arr[i] = a[i]; }
+                            if !hg.has_hyperedge(&arr) {
+                                hg.add_edge(Hx::new_unchecked(arr, 0.0));
+                            }
+                            hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
+                        }
+                    });
+                }
+            }
+
+            Ok(hg)
+        }
+    }
+}
 
 // Justice loader (ignores ideology extra map)
 pub mod justice {
@@ -281,13 +566,10 @@ pub mod justice {
     pub struct Weighted;
 
     impl Loader for Unweighted {
-        const NAME: &'static str = "UW_justice";
-        type Output = Hypergraph<NodeId, ()>;
+        type Output = crate::graph::UnweightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             // We attempt a best-effort CSV parse. The original Python used specific columns.
             let file = File::open(dataset_location)?;
             let reader = BufReader::new(file);
@@ -347,13 +629,10 @@ pub mod justice {
     }
 
     impl Loader for Weighted {
-        const NAME: &'static str = "W_justice";
-        type Output = Hypergraph<NodeId, NodeWeight>;
+        type Output = crate::graph::WeightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             // Reuse the Unweighted parse but accumulate weights
             let file = File::open(dataset_location)?;
             let reader = BufReader::new(file);
@@ -422,13 +701,10 @@ pub mod babbuini {
     pub struct Weighted;
 
     impl Loader for Unweighted {
-        const NAME: &'static str = "UW_babbuini";
-        type Output = Hypergraph<NodeId, ()>;
+        type Output = crate::graph::UnweightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             let contents = read_to_string(dataset_location)?;
             let lines: Vec<&str> = contents.lines().collect();
 
@@ -505,13 +781,10 @@ pub mod babbuini {
     }
 
     impl Loader for Weighted {
-        const NAME: &'static str = "W_babbuini";
-        type Output = Hypergraph<NodeId, NodeWeight>;
+        type Output = crate::graph::WeightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             // Reuse Unweighted parse and add weights
             let contents = read_to_string(dataset_location)?;
             let lines: Vec<&str> = contents.lines().collect();
@@ -602,13 +875,10 @@ pub mod wiki {
     pub struct Weighted;
 
     impl Loader for Unweighted {
-        const NAME: &'static str = "UW_wiki";
-        type Output = Hypergraph<NodeId, ()>;
+        type Output = crate::graph::UnweightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             let contents = read_to_string(dataset_location)?;
             let mut votes: HashMap<String, Vec<String>> = HashMap::new();
             let mut hg = Hypergraph::new();
@@ -651,13 +921,10 @@ pub mod wiki {
     }
 
     impl Loader for Weighted {
-        const NAME: &'static str = "W_wiki";
-        type Output = Hypergraph<NodeId, NodeWeight>;
+        type Output = crate::graph::WeightedHypergraph;
 
-        fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-        where
-            P: AsRef<Path> + ?Sized,
-        {
+        fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+            let dataset_location = self.dataset_location.clone();
             // Reuse Unweighted parse and increment weights
             let contents = read_to_string(dataset_location)?;
             let mut votes: HashMap<String, Vec<String>> = HashMap::new();
@@ -721,14 +988,11 @@ macro_rules! simplices_loader {
             }
 
             impl Loader for Unweighted {
-                const NAME: &'static str = $uw_name;
-                type Output = Hypergraph<NodeId, ()>;
+                type Output = crate::graph::UnweightedHypergraph;
 
-                fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-                where
-                    P: AsRef<Path> + ?Sized,
-                {
-                    let base = dataset_location.as_ref();
+                fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+                    let base = dataset_location;
                     let nverts_path = if base.is_dir() { base.join(format!("{}-nverts.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-nverts.txt") };
                     let simplices_path = if base.is_dir() { base.join(format!("{}-simplices.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-simplices.txt") };
 
@@ -759,14 +1023,11 @@ macro_rules! simplices_loader {
             }
 
             impl Loader for Weighted {
-                const NAME: &'static str = $w_name;
-                type Output = Hypergraph<NodeId, NodeWeight>;
+                type Output = crate::graph::WeightedHypergraph;
 
-                fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-                where
-                    P: AsRef<Path> + ?Sized,
-                {
-                    let base = dataset_location.as_ref();
+                fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+                    let base = dataset_location;
                     let nverts_path = if base.is_dir() { base.join(format!("{}-nverts.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-nverts.txt") };
                     let simplices_path = if base.is_dir() { base.join(format!("{}-simplices.txt", base.file_name().and_then(|n| n.to_str()).unwrap_or(""))) } else { base.with_extension("-simplices.txt") };
 

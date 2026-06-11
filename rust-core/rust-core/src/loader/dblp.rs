@@ -11,17 +11,13 @@ use crate::{
     loader::common::Loader,
 };
 
-pub struct Unweighted;
-pub struct Weighted;
+use super::{DblpStdUnweightedLoader, DblpStdWeightedLoader};
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_DBLP";
-    type Output = Hypergraph<NodeId, ()>;
+impl Loader for DblpStdUnweightedLoader {
+    type Output = crate::graph::UnweightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -57,18 +53,15 @@ impl Loader for Unweighted {
             }
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_DBLP";
-    type Output = Hypergraph<NodeId, NodeWeight>;
+impl Loader for DblpStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -107,6 +100,6 @@ impl Loader for Weighted {
             }
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

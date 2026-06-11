@@ -26,6 +26,7 @@ seq-macro = "0.3.6"
 log = "0.4.29"
 csv = "1.2"
 polars = {version="0.46.0", features=["lazy", "default"]}
+better_default = "1.0.5"
 
 hashbrown = {workspace=true}
 foldhash = {workspace=true}

@@ -32,8 +32,6 @@ where
 }
 
 fn hash_file_metadata<P: AsRef<Path>>(path: P) -> io::Result<u64> {
-    let path = path.as_ref();
-
     let metadata = fs::metadata(path)?;
     let size = metadata.len();
     let mtime = metadata
@@ -66,42 +64,49 @@ where
         .with_extension(extension))
 }
 
+pub trait DatasetInfo {
+    /// The folder or file path where the raw dataset is located.
+    /// loader will always read from the raw dataset file.
+    fn dataset_location(&self) -> PathBuf;
+    /// The directory where the cache file should be stored. If `None`, caching is disabled and the
+    /// loader will always read from the raw dataset file.
+    ///This parameter is set from the dataset.toml file
+    fn cache_dir(&self) -> Option<PathBuf>;
+    /// Returns a string that should uniquely identify the dataset. Implementation is generated
+    /// through the `#[loader]` macro, and is used to determine the cache file name.
+    fn cache_hash(&self, length: usize) -> String;
+}
+
 pub trait Loader
 where
+    Self: DatasetInfo,
     Self::Output: DumpCacheToFile + LoadFromCacheDeserialized,
 {
     // const DATASET_PATH: &'static str;
     // const CACHE_DIR: &'static str;
-    const NAME: &'static str;
+    // const NAME: &'static str;
     type Output;
 
-    fn load<P1, P2>(dataset_location: &P1, cache_dir: &P2) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P1: AsRef<Path> + ?Sized,
-        P2: AsRef<Path> + ?Sized,
-    {
-        if !dataset_location.as_ref().exists() {
-            log::error!(
-                "Invalid dataset location '{}'",
-                cache_dir.as_ref().display()
-            );
+    fn load(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location();
+        let cache_dir = self.cache_dir();
+
+        if !dataset_location.exists() {
+            log::error!("Invalid dataset location '{}'", dataset_location.display());
             return Err(Box::new(io::Error::new(
                 io::ErrorKind::NotFound,
                 format!(
                     "Dataset file '{}' does not exist",
-                    dataset_location.as_ref().display()
+                    dataset_location.display()
                 ),
             )));
         }
-        if !cache_dir.as_ref().exists() {
-            log::warn!(
-                "Cache dir '{}' does not exist. Falling back to uncached loading.",
-                cache_dir.as_ref().display()
-            );
-            return Self::from_file(dataset_location);
+        if cache_dir.is_none() {
+            return self.from_file();
         }
+        let cache_dir = cache_dir.unwrap();
 
-        match get_cache_file(dataset_location, cache_dir, Self::NAME, "bin") {
+        match get_cache_file(&dataset_location, &cache_dir, &self.cache_hash(16), "bin") {
             Ok(cache_file) => {
                 if cache_file.exists() {
                     match <Self::Output as LoadFromCacheDeserialized>::load_deserialized(
@@ -113,7 +118,7 @@ where
                                 "Cache file {} is corrupted. Falling back to uncached loading.",
                                 cache_file.display()
                             );
-                            let rv = Self::from_file(dataset_location)?;
+                            let rv = self.from_file()?;
                             rv.save_to_file(&cache_file)?;
                             Ok(rv)
                         }
@@ -123,7 +128,7 @@ where
                         "Loading hypergraph from source and caching to {}...",
                         cache_file.display()
                     );
-                    let rv = Self::from_file(dataset_location)?;
+                    let rv = self.from_file()?;
                     rv.save_to_file(&cache_file)?;
                     Ok(rv)
                 }
@@ -131,21 +136,21 @@ where
             Err(err) => {
                 log::warn!(
                     "Cannot hash input file '{}': {}. Falling back to uncached loading.",
-                    dataset_location.as_ref().display(),
+                    dataset_location.display(),
                     err
                 );
-                Ok(Self::from_file(dataset_location)?)
+                Ok(self.from_file()?)
             }
         }
     }
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized;
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>>;
 
-    fn cache_file_name() -> &'static str {
-        Self::NAME
-    }
+    // fn cache_file_name() -> &'static str {
+    //     // Name constants were removed; use DatasetInfo::cache_hash instead to obtain
+    //     // a stable identifier for cache files.
+    //     "<dataset-name>"
+    // }
 }
 
 #[inline(always)]

@@ -236,3 +236,33 @@ impl LoadFromCacheArchived for AdjList {
         Ok(container)
     }
 }
+
+// Delegate cache (de)serialization for the public wrapper hypergraph types so they can be
+// used directly as Loader::Output in loader implementations.
+use crate::graph::{UnweightedHypergraph, WeightedHypergraph};
+
+impl DumpCacheToFile for UnweightedHypergraph {
+    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), Box<dyn Error>> {
+        self.0.save_to_file(path)
+    }
+}
+
+impl LoadFromCacheDeserialized for UnweightedHypergraph {
+    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let hg: Hypergraph<_, _> = Hypergraph::load_deserialized(path)?;
+        Ok(hg.into())
+    }
+}
+
+impl DumpCacheToFile for WeightedHypergraph {
+    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), Box<dyn Error>> {
+        self.0.save_to_file(path)
+    }
+}
+
+impl LoadFromCacheDeserialized for WeightedHypergraph {
+    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let hg: Hypergraph<_, _> = Hypergraph::load_deserialized(path)?;
+        Ok(hg.into())
+    }
+}

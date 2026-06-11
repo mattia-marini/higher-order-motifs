@@ -11,17 +11,16 @@ use crate::{
     loader::common::Loader,
 };
 
+use super::{WorkspaceStdUnweightedLoader, WorkspaceStdWeightedLoader};
+
 pub struct Unweighted;
 pub struct Weighted;
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_workspace";
-    type Output = Hypergraph<NodeId, ()>;
+impl Loader for WorkspaceStdUnweightedLoader {
+    type Output = crate::graph::UnweightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -36,7 +35,10 @@ impl Loader for Unweighted {
                 let b = parts[2].parse().unwrap_or(0);
 
                 let t = t_raw - 28820;
-                edges.entry(t as usize).or_insert_with(Vec::new).push((a, b));
+                edges
+                    .entry(t as usize)
+                    .or_insert_with(Vec::new)
+                    .push((a, b));
             }
         }
 
@@ -51,7 +53,12 @@ impl Loader for Unweighted {
             cliques = cliques
                 .into_iter()
                 .filter(|c| c.len() >= 2)
-                .map(|clique| clique.into_iter().map(|node| original_index[node as usize]).collect())
+                .map(|clique| {
+                    clique
+                        .into_iter()
+                        .map(|node| original_index[node as usize])
+                        .collect()
+                })
                 .collect();
 
             seq!(N in 2..11 {
@@ -72,18 +79,15 @@ impl Loader for Unweighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_workspace";
-    type Output = Hypergraph<NodeId, NodeWeight>;
+impl Loader for WorkspaceStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -98,7 +102,10 @@ impl Loader for Weighted {
                 let b = parts[2].parse().unwrap_or(0);
 
                 let t = t_raw - 28820;
-                edges.entry(t as usize).or_insert_with(Vec::new).push((a, b));
+                edges
+                    .entry(t as usize)
+                    .or_insert_with(Vec::new)
+                    .push((a, b));
             }
         }
 
@@ -113,7 +120,12 @@ impl Loader for Weighted {
             cliques = cliques
                 .into_iter()
                 .filter(|c| c.len() >= 2)
-                .map(|clique| clique.into_iter().map(|node| original_index[node as usize]).collect())
+                .map(|clique| {
+                    clique
+                        .into_iter()
+                        .map(|node| original_index[node as usize])
+                        .collect()
+                })
                 .collect();
 
             seq!(N in 2..11 {
@@ -139,6 +151,6 @@ impl Loader for Weighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

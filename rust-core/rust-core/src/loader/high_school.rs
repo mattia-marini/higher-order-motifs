@@ -1,4 +1,9 @@
-use std::{error::Error, fs::File, io::{BufRead,BufReader}, path::Path};
+use std::{
+    error::Error,
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
+};
 
 use hashbrown::HashMap;
 use seq_macro::seq;
@@ -11,12 +16,13 @@ use crate::{
 pub struct Unweighted;
 pub struct Weighted;
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_high_school";
-    type Output = Hypergraph<NodeId, ()>;
+use super::{HighSchoolStdUnweightedLoader, HighSchoolStdWeightedLoader};
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where P: AsRef<Path> + ?Sized {
+impl Loader for HighSchoolStdUnweightedLoader {
+    type Output = crate::graph::UnweightedHypergraph;
+
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -30,19 +36,30 @@ impl Loader for Unweighted {
                 let a = parts[1].parse().unwrap_or(0);
                 let b = parts[2].parse().unwrap_or(0);
                 let t = t_raw - 1385982020;
-                edges.entry(t as usize).or_insert_with(Vec::new).push((a,b));
+                edges
+                    .entry(t as usize)
+                    .or_insert_with(Vec::new)
+                    .push((a, b));
             }
         }
 
         let mut hg = Hypergraph::new();
 
         for (_t, edge_list) in edges.into_iter() {
-            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(edge_list);
+            let (mut adj_list, original_index, _compressed_index) =
+                AdjList::from_edges_mapped(edge_list);
             adj_list.make_undirected();
             let mut cliques = adj_list.find_cliques();
-            cliques = cliques.into_iter().filter(|c| c.len()>=2).map(|clique| {
-                clique.into_iter().map(|node| original_index[node as usize]).collect()
-            }).collect();
+            cliques = cliques
+                .into_iter()
+                .filter(|c| c.len() >= 2)
+                .map(|clique| {
+                    clique
+                        .into_iter()
+                        .map(|node| original_index[node as usize])
+                        .collect()
+                })
+                .collect();
 
             seq!(N in 2..11 { let mut bucket_~N: Vec<Hx<N, NodeId, ()>> = Vec::new(); });
 
@@ -58,16 +75,15 @@ impl Loader for Unweighted {
             seq!(N in 2..11 { hg.extend_with_edges(bucket_~N); });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_high_school";
-    type Output = Hypergraph<NodeId, NodeWeight>;
+impl Loader for HighSchoolStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where P: AsRef<Path> + ?Sized {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -81,19 +97,30 @@ impl Loader for Weighted {
                 let a = parts[1].parse().unwrap_or(0);
                 let b = parts[2].parse().unwrap_or(0);
                 let t = t_raw - 1385982020;
-                edges.entry(t as usize).or_insert_with(Vec::new).push((a,b));
+                edges
+                    .entry(t as usize)
+                    .or_insert_with(Vec::new)
+                    .push((a, b));
             }
         }
 
         let mut hg = Hypergraph::new();
 
         for (_t, edge_list) in edges.into_iter() {
-            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(edge_list);
+            let (mut adj_list, original_index, _compressed_index) =
+                AdjList::from_edges_mapped(edge_list);
             adj_list.make_undirected();
             let mut cliques = adj_list.find_cliques();
-            cliques = cliques.into_iter().filter(|c| c.len()>=2).map(|clique| {
-                clique.into_iter().map(|node| original_index[node as usize]).collect()
-            }).collect();
+            cliques = cliques
+                .into_iter()
+                .filter(|c| c.len() >= 2)
+                .map(|clique| {
+                    clique
+                        .into_iter()
+                        .map(|node| original_index[node as usize])
+                        .collect()
+                })
+                .collect();
 
             seq!(N in 2..11 { let mut bucket_~N: Vec<Hx<N, NodeId, ()>> = Vec::new(); });
 
@@ -116,6 +143,6 @@ impl Loader for Weighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

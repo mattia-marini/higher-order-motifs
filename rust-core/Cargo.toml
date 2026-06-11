@@ -11,6 +11,3 @@ hashbrown = "0.17.1"
 foldhash = "0.2.0"
 paste = "1.0.15"
 indicatif = "0.18.4"
-
-[tools.rust-analyzer]
-targetDir = true

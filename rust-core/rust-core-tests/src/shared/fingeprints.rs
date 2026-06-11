@@ -4,8 +4,8 @@ use indicatif::ProgressIterator;
 use rust_core::{
     iter_hyperedges,
     motifs::{
-        algorithms::EnumerationStats,
         compressed_motif::{CompactMotif, CompactMotifConfigurator},
+        types::EnumerationStats,
     },
 };
 

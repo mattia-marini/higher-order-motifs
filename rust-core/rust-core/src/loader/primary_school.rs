@@ -6,7 +6,6 @@ use std::{
 };
 
 use hashbrown::HashMap;
-use rust_core_macros::loader;
 use seq_macro::seq;
 
 use crate::{
@@ -14,18 +13,13 @@ use crate::{
     loader::common::Loader,
 };
 
-pub struct Unweighted;
-pub struct Weighted;
+use super::{PrimarySchoolStdUnweightedLoader, PrimarySchoolStdWeightedLoader};
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_primary_school";
+impl Loader for PrimarySchoolStdUnweightedLoader {
+    type Output = crate::graph::UnweightedHypergraph;
 
-    type Output = Hypergraph<NodeId, ()>;
-
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -88,19 +82,15 @@ impl Loader for Unweighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_primary_school";
+impl Loader for PrimarySchoolStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    type Output = Hypergraph<NodeId, NodeWeight>;
-
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
 
@@ -168,6 +158,6 @@ impl Loader for Weighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

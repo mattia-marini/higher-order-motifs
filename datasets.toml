@@ -1,0 +1,8 @@
+dataset_dir = "./dataset"
+cache_dir = "./dataset/.cache"
+
+[hospital]
+alias = "hospital"
+description = ""
+cached = false
+

@@ -411,10 +411,9 @@ def load_gene_disease(construction_method: StandardConstructionMethod = Standard
                 diseases[dis] = []
             diseases[dis].append(gene)
 
-    
     for d in diseases.keys():
         if len(diseases[d]) > 1:
-            if construction_method.limit_edge_size is None or  len(diseases[d]) <= construction_method.limit_edge_size:
+            if construction_method.limit_edge_size is None or len(diseases[d]) <= construction_method.limit_edge_size:
                 if not hg.has_edge_with_nodes(diseases[d]):
                     hg.add_edge(Hyperedge(diseases[d], 0.0))
                 hg.get_edges_by_nodes(diseases[d])[0].weight += 1.0
@@ -661,7 +660,7 @@ def load_DBLP(construction_method: ConstructionMethodBase = StandardConstruction
 
         for paper, authors in track(graph.items(), description="Constructing hypergraph"):
             authors = sorted(set(authors))
-            if len(authors)> 1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
+            if len(authors) > 1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
                 if cm.weighted:
                     if hg.has_edge_with_nodes(authors):
                         handle = hg.get_first_edges_by_nodes(authors)
@@ -711,7 +710,7 @@ def load_history(construction_method: ConstructionMethodBase = StandardConstruct
         hg = Hypergraph()
 
         for paper, authors in track(graph.items(), description="Constructing hypergraph"):
-            if len(authors)>1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
+            if len(authors) > 1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
                 if cm.weighted:
                     if hg.has_edge_with_nodes(authors):
                         handle = hg.get_first_edges_by_nodes(authors)
@@ -761,7 +760,7 @@ def load_geology(construction_method: ConstructionMethodBase = StandardConstruct
         hg = Hypergraph()
 
         for paper, authors in track(graph.items(), description="Constructing hypergraph"):
-            if len(authors)>1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
+            if len(authors) > 1 and not (cm.limit_edge_size and len(authors) > cm.limit_edge_size):
                 if cm.weighted:
                     if hg.has_edge_with_nodes(authors):
                         handle = hg.get_first_edges_by_nodes(authors)
@@ -1047,7 +1046,7 @@ def load_wiki(construction_method: ConstructionMethodBase = StandardConstruction
                 e = tuple(sorted(votes[k]))
                 tot.add(e)
 
-                if len(e)> 1 and not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
+                if len(e) > 1 and not (cm.limit_edge_size and len(e) > cm.limit_edge_size):
                     if cm.weighted:
                         if hg.has_edge_with_nodes(e):
                             handle = hg.get_first_edges_by_nodes(e)

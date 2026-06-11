@@ -17,15 +17,15 @@ pub struct Weighted;
 use polars::prelude::*;
 use std::sync::Arc;
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_justice";
-    type Output = Hypergraph<NodeId, ()>;
+use super::{JusticeStdUnweightedLoader, JusticeStdWeightedLoader};
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
-        let path = dataset_location.as_ref();
+impl Loader for JusticeStdUnweightedLoader {
+    type Output = crate::graph::UnweightedHypergraph;
+
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+        let dataset_location = self.dataset_location.clone();
+        let path = dataset_location;
 
         // 1. Read the CSV lazily without headers to access columns by their index.
         // Polars automatically names them "column_1", "column_2", etc.
@@ -103,19 +103,17 @@ impl Loader for Unweighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_justice";
-    type Output = Hypergraph<NodeId, NodeWeight>;
+impl Loader for JusticeStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
-        let path = dataset_location.as_ref();
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+        let dataset_location = self.dataset_location.clone();
+        let path = dataset_location;
 
         // 1. Read the CSV lazily without headers to access columns by their index.
         // Polars automatically names them "column_1", "column_2", etc.
@@ -194,6 +192,6 @@ impl Loader for Weighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

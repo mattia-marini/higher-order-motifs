@@ -9,8 +9,7 @@ use crate::{
     loader::common::Loader,
 };
 
-pub struct Unweighted;
-pub struct Weighted;
+use super::{EuStdUnweightedLoader, EuStdWeightedLoader};
 
 fn read_ints_from_file<P: AsRef<Path>>(path: &P) -> Result<Vec<NodeId>, Box<dyn Error>> {
     let s = read_to_string(path)?;
@@ -27,15 +26,12 @@ fn read_ints_from_file<P: AsRef<Path>>(path: &P) -> Result<Vec<NodeId>, Box<dyn 
     Ok(v)
 }
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_eu";
-    type Output = Hypergraph<NodeId, ()>;
+impl Loader for EuStdUnweightedLoader {
+    type Output = crate::graph::UnweightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
-        let base = dataset_location.as_ref();
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+        let base = dataset_location;
         let nverts_path = if base.is_dir() {
             base.join(format!(
                 "{}-nverts.txt",
@@ -73,25 +69,22 @@ impl Loader for Unweighted {
                     if e.len() == N {
                         let mut arr = [0 as NodeId; N];
                         for j in 0..N { arr[j] = e[j]; }
-                        hg.add_edge(Hx::new(arr, ()).expect(format!("[{}] Malformed edge", Self::NAME).as_str()));
+                        hg.add_edge(Hx::new(arr, ()).expect("Malformed edge"));
                     }
                 });
             }
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_eu";
-    type Output = Hypergraph<NodeId, NodeWeight>;
+impl Loader for EuStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
-        let base = dataset_location.as_ref();
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+        let base = dataset_location;
         let nverts_path = if base.is_dir() {
             base.join(format!(
                 "{}-nverts.txt",
@@ -129,13 +122,13 @@ impl Loader for Weighted {
                     if e.len() == N {
                         let mut arr = [0 as NodeId; N];
                         for j in 0..N { arr[j] = e[j]; }
-                        if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new(arr, 0.0).expect(format!("[{}] Malformed edge", Self::NAME).as_str())); }
+                        if !hg.has_hyperedge(&arr) { hg.add_edge(Hx::new(arr, 0.0).expect("Malformed edge")); }
                         hg.modify_hx_weigth_with(&arr, |w| w + 1.0);
                     }
                 });
             }
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

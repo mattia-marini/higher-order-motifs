@@ -15,7 +15,7 @@ pub fn load_pacs_common_from_csv<P>(
 where
     P: AsRef<Path> + ?Sized,
 {
-    let path = dataset_location.as_ref();
+    let path = dataset_location;
 
     let mut schema = Schema::with_capacity(4);
     schema.insert("ArticleID".into(), DataType::String);
@@ -80,18 +80,17 @@ where
         .collect())
 }
 
+use super::{PacsStdUnweightedLoader, PacsStdWeightedLoader};
+
 pub struct Unweighted;
 pub struct Weighted;
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_PACS";
-    type Output = Hypergraph<NodeId, ()>;
+impl Loader for PacsStdUnweightedLoader {
+    type Output = crate::graph::UnweightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
-        let valid_author_groups = load_pacs_common_from_csv(dataset_location)?;
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+        let valid_author_groups = load_pacs_common_from_csv(&dataset_location)?;
         let mut hg = Hypergraph::new();
 
         for ids in valid_author_groups {
@@ -105,19 +104,16 @@ impl Loader for Unweighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_PACS";
-    type Output = Hypergraph<NodeId, NodeWeight>;
+impl Loader for PacsStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
-        let valid_author_groups = load_pacs_common_from_csv(dataset_location)?;
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
+        let valid_author_groups = load_pacs_common_from_csv(&dataset_location)?;
         let mut hg = Hypergraph::new();
 
         for ids in valid_author_groups {
@@ -136,6 +132,6 @@ impl Loader for Weighted {
             });
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

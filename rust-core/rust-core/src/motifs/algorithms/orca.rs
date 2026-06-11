@@ -1,8 +1,9 @@
+use crate::graph::{UnweightedHypergraph, WeightedHypergraph};
 use pyo3::pyfunction;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-#[pyfunction]
-#[gen_stub_pyfunction(module = "rust_core.core.motifs")]
-pub fn orca() {
-    println!("Orca motifs");
-}
+
+
+pub fn orca_unweighted(hg: &UnweightedHypergraph) {}
+
+pub fn orca_weighted(hg: &WeightedHypergraph) {}

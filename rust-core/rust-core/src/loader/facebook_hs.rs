@@ -1,19 +1,16 @@
 use crate::{
-    graph::{Hypergraph, NodeId},
+    graph::{Hypergraph, NodeId, UnweightedHypergraph},
     loader::common::Loader,
 };
 use std::{error::Error, path::Path};
 
-pub struct Unweighted;
+use super::FacebookHsStdUnweightedLoader;
 
-impl Loader for Unweighted {
-    const NAME: &'static str = "UW_facebook_hs";
-    type Output = Hypergraph<NodeId, ()>;
+impl Loader for FacebookHsStdUnweightedLoader {
+    type Output = UnweightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         // The python loader uses pandas and only reads triples (a,b,c) and if only_confirmed then c==1.
         // Here we'll load the file naively, assuming whitespace-separated columns a b c per line.
         use std::fs::File;
@@ -42,6 +39,6 @@ impl Loader for Unweighted {
             }
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }

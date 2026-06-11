@@ -4,6 +4,7 @@ pub mod algorithms;
 pub mod compressed_motif;
 pub mod compressed_node_set;
 pub mod fingerprint;
+pub mod types;
 
 #[pymodule(submodule)]
 pub mod motifs {
@@ -36,8 +37,18 @@ pub mod motifs {
         }
     }
 
-    #[pymodule_export]
-    use super::algorithms::orca::orca;
+    #[pyfunction]
+    #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
+    pub fn orca(hg: PyHypergraph) {
+        match hg {
+            PyHypergraph::Unweighted(unweighted) => {
+                super::algorithms::orca::orca_unweighted(&unweighted);
+            }
+            PyHypergraph::Weighted(weighted) => {
+                super::algorithms::orca::orca_weighted(&weighted);
+            }
+        }
+    }
 }
 
 reexport_module_members!("rust_core.motifs" from "rust_core.core.motifs");

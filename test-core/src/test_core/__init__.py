@@ -8,14 +8,13 @@
 # from .rust import test_loader
 
 
-from test_core.rust import test_loader
-from test_core.rust import test_clique
-from test_core.rust import test_motifs3
-from python_core.motifs.motifs_count_base import generate_motifs
+# from test_core.rust import test_clique, test_loader, test_motifs3
+from test_core.triangle import test_triangle_counting2
 
 
 def main() -> None:
-    print(len(generate_motifs(4)[1]))
+    test_triangle_counting2.run()
+    # print(len(generate_motifs(4)[1]))
     # test_motifs3.run()
     # test_loader.run()
     # test_clique.run()
@@ -27,8 +26,6 @@ def main() -> None:
 
     # time_function_p(lambda: rc.motifs.count_motifs_3((edges2, edges3)))
     # time_function_p(lambda: rc.motifs.count_motifs_4((edges2, edges3, edges4)))
-
-
 
     # x = rc.graph.WeightedHypergraph()
     # x = rc.graph.WeightedHypergraph()
@@ -43,7 +40,6 @@ def main() -> None:
 
     # print(x.n())
     # print(x.edges())
-
 
     # hg = rc.graph.WeightedHypergraph()
     # print(hg.n)

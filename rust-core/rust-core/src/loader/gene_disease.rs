@@ -12,16 +12,15 @@ use crate::{
     loader::common::Loader,
 };
 
+use super::GeneDiseaseStdWeightedLoader;
+
 pub struct Weighted;
 
-impl Loader for Weighted {
-    const NAME: &'static str = "W_gene_disease";
-    type Output = Hypergraph<NodeId, NodeWeight>;
+impl Loader for GeneDiseaseStdWeightedLoader {
+    type Output = crate::graph::WeightedHypergraph;
 
-    fn from_file<P>(dataset_location: &P) -> Result<Self::Output, Box<dyn Error>>
-    where
-        P: AsRef<Path> + ?Sized,
-    {
+    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        let dataset_location = self.dataset_location.clone();
         // Parse TSV and aggregate diseases -> list of genes
         let file = File::open(dataset_location)?;
         let mut reader = BufReader::new(file);
@@ -65,6 +64,6 @@ impl Loader for Weighted {
             }
         }
 
-        Ok(hg)
+        Ok(hg.into())
     }
 }
