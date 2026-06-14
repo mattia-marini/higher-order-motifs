@@ -9,11 +9,13 @@
 
 
 # from test_core.rust import test_clique, test_loader, test_motifs3
-from test_core.triangle import test_triangle_counting2
+
+
+from .rust import test_loader
 
 
 def main() -> None:
-    test_triangle_counting2.run()
+    test_loader.run()
     # print(len(generate_motifs(4)[1]))
     # test_motifs3.run()
     # test_loader.run()

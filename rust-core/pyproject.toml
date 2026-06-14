@@ -25,7 +25,7 @@ cache-keys = [
 
 [tool.maturin]
 python-source = "stubs"
-module-name = "rust_core.core"
+module-name = "rust_core._core"
 manifest-path = "rust-core/Cargo.toml"
 
 [tool.pyo3-stub-gen]

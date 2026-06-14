@@ -14,19 +14,19 @@ pub mod forward {
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.forward")]
+    #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
     pub fn forward(adj: &AdjList, sort_degrees: bool) -> usize {
         super::forward(adj, sort_degrees)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.forward")]
+    #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
     pub fn forward_hashed(adj: &AdjList, sort_degrees: bool) -> usize {
         super::forward_hashed(adj, sort_degrees)
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.forward")]
+    #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
     pub fn forward_hbs(adj: &AdjList, sort_degrees: bool) -> usize {
         super::forward_hbs(adj, sort_degrees)
     }
@@ -239,4 +239,4 @@ where
     }
 }
 
-reexport_module_members!("rust_core.triangle.forward" from "rust_core.core.triangle.forward");
+reexport_module_members!("rust_core.triangle.forward" from "rust_core._core.triangle.forward");

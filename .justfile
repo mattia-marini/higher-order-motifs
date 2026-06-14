@@ -1,9 +1,8 @@
 set dotenv-required := true
 set dotenv-load := true 
 
-export DATASET_DIR := absolute_path(env("DATASET_DIR"))
+export DATASETS_TOML := absolute_path(env("DATASETS_TOML"))
 export PLOT_OUT_DIR := absolute_path(env("PLOT_OUT_DIR"))
-export CACHE_DIR := absolute_path(env("CACHE_DIR", join(env("DATASET_DIR"), ".cache")))
 
 export PYO3_PYTHON := absolute_path(".venv/bin/python")
 

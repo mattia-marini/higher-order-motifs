@@ -13,42 +13,57 @@ pub mod motifs {
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
-    pub fn count_motifs_3_unweighted(hg: &UnweightedHypergraph) {
-        super::algorithms::motifs3::count_motifs_3_unweighted(hg)
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
-    pub fn count_motifs_3_weighted(hg: &WeightedHypergraph) {
-        super::algorithms::motifs3::count_motifs_3_weighted(hg)
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
-    pub fn count_motifs_4(hg: PyHypergraph) {
+    #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
+    /// Computed
+    pub fn analyze_esu_based_3(hg: PyHypergraph) {
         match hg {
             PyHypergraph::Unweighted(unweighted) => {
-                super::algorithms::motifs3::count_motifs_3_unweighted(&unweighted);
+                super::algorithms::esu_based::unweighted_3(&unweighted);
             }
             PyHypergraph::Weighted(weighted) => {
-                super::algorithms::motifs3::count_motifs_3_weighted(&weighted);
+                super::algorithms::esu_based::weighted_3(&weighted);
             }
         }
     }
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.motifs")]
-    pub fn orca(hg: PyHypergraph) {
+    #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
+    pub fn analyze_esu_based_4(hg: PyHypergraph) {
         match hg {
             PyHypergraph::Unweighted(unweighted) => {
-                super::algorithms::orca::orca_unweighted(&unweighted);
+                super::algorithms::esu_based::unweighted_4(&unweighted);
             }
             PyHypergraph::Weighted(weighted) => {
-                super::algorithms::orca::orca_weighted(&weighted);
+                super::algorithms::esu_based::weighted_4(&weighted);
+            }
+        }
+    }
+
+    #[pyfunction]
+    #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
+    pub fn orca_3(hg: PyHypergraph) {
+        match hg {
+            PyHypergraph::Unweighted(unweighted) => {
+                super::algorithms::orca::unweighted_3(&unweighted);
+            }
+            PyHypergraph::Weighted(weighted) => {
+                super::algorithms::orca::weighted_3(&weighted);
+            }
+        }
+    }
+
+    #[pyfunction]
+    #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
+    pub fn orca_4(hg: PyHypergraph) {
+        match hg {
+            PyHypergraph::Unweighted(unweighted) => {
+                super::algorithms::orca::unweighted_4(&unweighted);
+            }
+            PyHypergraph::Weighted(weighted) => {
+                super::algorithms::orca::weighted_4(&weighted);
             }
         }
     }
 }
 
-reexport_module_members!("rust_core.motifs" from "rust_core.core.motifs");
+reexport_module_members!("rust_core.motifs" from "rust_core._core.motifs");

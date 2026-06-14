@@ -33,5 +33,5 @@ pub fn ct_map_accessor(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn loaders(attr: TokenStream, item: TokenStream) -> TokenStream {
-    loader::loaders(attr, item)
+    loader::loaders_suite(attr, item)
 }

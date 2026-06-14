@@ -5,8 +5,35 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
+use std::collections::HashMap;
+
+use super::DatasetLoaderDispatcherAttr;
 use crate::graph::Hypergraph;
 use crate::graph::serialize::{DumpCacheToFile, LoadFromCacheDeserialized};
+use serde::Deserialize;
+
+/// Struct to hold the dataset information specified in dataset.toml
+#[derive(Deserialize, Debug)]
+pub struct DatasetConfig {
+    pub cache_dir: Option<PathBuf>,
+    #[serde(flatten)]
+    pub datasets: HashMap<String, DatasetDescriptor>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct DatasetDescriptor {
+    pub path: PathBuf,
+    pub alias: Option<String>,
+    pub cache_dir: Option<PathBuf>,
+    pub description: Option<String>,
+}
+
+pub fn parse_datasets_descriptor() -> Result<DatasetConfig, Box<dyn std::error::Error>> {
+    let path_str = std::env::var("DATASETS_TOML")?;
+    let toml_str = fs::read_to_string(path_str)?;
+    let config: DatasetConfig = toml::from_str(&toml_str)?;
+    Ok(config)
+}
 
 /// Returns the paths for the dataset and cache files based on the provided relative path. Creates
 /// the cache directory if it does not exist.
@@ -65,6 +92,8 @@ where
 }
 
 pub trait DatasetInfo {
+    /// The name of the dataset, used for logging and cache file naming.
+    const NAME: &'static str;
     /// The folder or file path where the raw dataset is located.
     /// loader will always read from the raw dataset file.
     fn dataset_location(&self) -> PathBuf;
@@ -77,9 +106,23 @@ pub trait DatasetInfo {
     fn cache_hash(&self, length: usize) -> String;
 }
 
+pub fn hash_to_len<T: Hash>(x: T, length: usize) -> String {
+    let mut hasher = DefaultHasher::new();
+    x.hash(&mut hasher);
+    let hash_val = hasher.finish();
+
+    let hash_string = format!("{:016x}", hash_val);
+
+    if length >= hash_string.len() {
+        format!("{:0>width$}", hash_string, width = length)
+    } else {
+        hash_string[..length].to_string()
+    }
+}
+
 pub trait Loader
 where
-    Self: DatasetInfo,
+    Self: DatasetLoaderDispatcherAttr + Hash,
     Self::Output: DumpCacheToFile + LoadFromCacheDeserialized,
 {
     // const DATASET_PATH: &'static str;
@@ -88,8 +131,8 @@ where
     type Output;
 
     fn load(&self) -> Result<Self::Output, Box<dyn Error>> {
-        let dataset_location = self.dataset_location();
-        let cache_dir = self.cache_dir();
+        let dataset_location = self.get_dataset_location();
+        let cache_dir = self.get_cache_dir().clone();
 
         if !dataset_location.exists() {
             log::error!("Invalid dataset location '{}'", dataset_location.display());
@@ -106,26 +149,16 @@ where
         }
         let cache_dir = cache_dir.unwrap();
 
-        match get_cache_file(&dataset_location, &cache_dir, &self.cache_hash(16), "bin") {
-            Ok(cache_file) => {
-                if cache_file.exists() {
-                    match <Self::Output as LoadFromCacheDeserialized>::load_deserialized(
-                        &cache_file,
-                    ) {
-                        Ok(hg) => Ok(hg),
-                        Err(_err) => {
-                            log::warn!(
-                                "Cache file {} is corrupted. Falling back to uncached loading.",
-                                cache_file.display()
-                            );
-                            let rv = self.from_file()?;
-                            rv.save_to_file(&cache_file)?;
-                            Ok(rv)
-                        }
-                    }
-                } else {
-                    log::info!(
-                        "Loading hypergraph from source and caching to {}...",
+        let cache_file = PathBuf::from(&cache_dir)
+            .join(format!("{}_{}", self.get_name(), hash_to_len(self, 16)))
+            .with_extension("bin");
+
+        if cache_file.exists() {
+            match <Self::Output as LoadFromCacheDeserialized>::load_deserialized(&cache_file) {
+                Ok(hg) => Ok(hg),
+                Err(_err) => {
+                    log::warn!(
+                        "Cache file {} is corrupted. Falling back to uncached loading.",
                         cache_file.display()
                     );
                     let rv = self.from_file()?;
@@ -133,24 +166,18 @@ where
                     Ok(rv)
                 }
             }
-            Err(err) => {
-                log::warn!(
-                    "Cannot hash input file '{}': {}. Falling back to uncached loading.",
-                    dataset_location.display(),
-                    err
-                );
-                Ok(self.from_file()?)
-            }
+        } else {
+            log::info!(
+                "Loading hypergraph from source and caching to {}...",
+                cache_file.display()
+            );
+            let rv = self.from_file()?;
+            rv.save_to_file(&cache_file)?;
+            Ok(rv)
         }
     }
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>>;
-
-    // fn cache_file_name() -> &'static str {
-    //     // Name constants were removed; use DatasetInfo::cache_hash instead to obtain
-    //     // a stable identifier for cache files.
-    //     "<dataset-name>"
-    // }
 }
 
 #[inline(always)]

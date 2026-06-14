@@ -1,5 +1,5 @@
 use std::time::Duration;
 
-pub mod motifs3;
+pub mod esu_based;
 pub mod orca;
 

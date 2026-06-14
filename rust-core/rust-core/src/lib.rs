@@ -6,12 +6,14 @@ pub mod motifs;
 
 use pyo3::prelude::*;
 
-use pyo3_stub_gen::{StubInfo, define_stub_info_gatherer, reexport_module_members};
+use pyo3_stub_gen::{
+    StubInfo, define_stub_info_gatherer, exclude_from_all, reexport_module_members,
+};
 
 pub mod util;
 
 #[pymodule]
-pub mod core {
+pub mod _core {
     use crate::util::submodules_initializer::PyModuleSubmoduleExt;
     use pyo3::{Bound, PyResult, types::PyModule};
 
@@ -20,6 +22,7 @@ pub mod core {
     //
     // #[pymodule_export]
     // use super::triangle::triangle;
+    //
     #[pymodule_export]
     use super::motifs::motifs;
 
@@ -36,7 +39,9 @@ pub mod core {
     }
 }
 
-reexport_module_members!("rust_core" from "rust_core.core");
+reexport_module_members!("rust_core" from "rust_core._core");
+exclude_from_all!("rust_core", "loader");
+exclude_from_all!("rust_core._core", "loader");
 
 pub fn stub_info() -> pyo3_stub_gen::Result<StubInfo> {
     let project_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));

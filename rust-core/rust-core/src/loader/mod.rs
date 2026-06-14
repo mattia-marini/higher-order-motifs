@@ -21,340 +21,290 @@ pub mod wiki_talk;
 pub mod workspace;
 // pub mod babbuini;
 
-//
-// use crate::loader::common::Loader;
-// use pyo3::{exceptions::PyIOError, prelude::*};
-// use std::path::PathBuf;
-//
-// fn map_rv<T, U>(
-//     res: Result<T, Box<dyn std::error::Error>>,
-//     dataset_location: PathBuf,
-// ) -> PyResult<U>
-// where
-//     T: Into<U>,
-// {
-//     res.map_err(|e| {
-//         PyIOError::new_err(format!(
-//             "Failed to read '{}': {}",
-//             dataset_location.display(),
-//             e
-//         ))
-//     })
-//     .map(|hg| hg.into())
-// }
-//
-// // This macro will generate the entire module at once
-// macro_rules! generate_loader_module {
-//     ($(($name:ident, $rv:ty, $loader_path:path)),* $(,)?) => {
-//         #[pymodule(submodule)]
-//         pub mod loader {
-//             use std::path::PathBuf;
-//             use pyo3::{exceptions::PyIOError, prelude::*};
-//             use pyo3_stub_gen::derive::gen_stub_pyfunction;
-//
-//             use crate::{
-//                 graph::{UnweightedHypergraph, WeightedHypergraph, AdjList},
-//                 loader::common::Loader,
-//             };
-//
-//             #[pyfunction]
-//             #[gen_stub_pyfunction(module = "rust_core.core.loader")]
-//             #[pyo3(signature = (dataset_location, cache_dir = None))]
-//             pub fn test(dataset_location: std::path::PathBuf, cache_dir: Option<std::path::PathBuf>) {
-//                 println!("Test");
-//             }
-//
-//             $(
-//                 #[doc = concat!("Loads a dataset into a `", stringify!($rv), "` wrapper.")]
-//                 #[doc = ""]
-//                 #[doc = "This function will attempt to read from the raw `dataset_location` file."]
-//                 #[doc = "If a `cache_dir` is provided, it will prioritize loading from or saving to the cache via `.load()`,"]
-//                 #[doc = "otherwise it falls back to parsing the raw file via `.from_file()`."]
-//                 #[doc = ""]
-//                 #[doc = concat!("Underlying loader type: `", stringify!($loader_path), "`")]
-//                 #[pyfunction]
-//                 #[gen_stub_pyfunction(module = "rust_core.core.loader")]
-//                 #[pyo3(signature = (dataset_location, cache_dir = None))]
-//                 pub fn $name(
-//                     dataset_location: std::path::PathBuf,
-//                     cache_dir: Option<std::path::PathBuf>,
-//                 ) -> pyo3::PyResult<$rv> {
-//                     super::map_rv(
-//                         match cache_dir {
-//                             Some(cache_dir) => <$loader_path>::load(&dataset_location, &cache_dir),
-//                             None => <$loader_path>::from_file(&dataset_location),
-//                         },
-//                         dataset_location,
-//                     )
-//                 }
-//             )*
-//         }
-//     };
-// }
-//
-// // Invoke the macro to build the entire loader module
-// #[rustfmt::skip]
-// generate_loader_module!(
-//     (load_conference_uw, UnweightedHypergraph, super::descriptors::ConferenceStdUnweightedLoader),
-//     (load_conference_w, WeightedHypergraph, super::descriptors::ConferenceStdWeightedLoader),
-//     (load_primary_school_uw, UnweightedHypergraph, super::descriptors::PrimarySchoolStdUnweightedLoader),
-//     (load_primary_school_w, WeightedHypergraph, super::descriptors::PrimarySchoolStdWeightedLoader),
-//     (load_high_school_uw, UnweightedHypergraph, super::descriptors::HighSchoolStdUnweightedLoader),
-//     (load_high_school_w, WeightedHypergraph, super::descriptors::HighSchoolStdWeightedLoader),
-//     (load_hospital_uw, UnweightedHypergraph, super::descriptors::HospitalStdUnweightedLoader),
-//     (load_hospital_w, WeightedHypergraph, super::descriptors::HospitalStdWeightedLoader),
-//     (load_facebook_hs, UnweightedHypergraph, super::descriptors::FacebookHsStdUnweightedLoader),
-//     (load_friendship_hs_uw, UnweightedHypergraph, super::descriptors::FriendshipHsStdUnweightedLoader),
-//     (load_friendship_hs_w, WeightedHypergraph, super::descriptors::FriendshipHsStdWeightedLoader),
-//     (load_gene_disease, WeightedHypergraph, super::descriptors::GeneDiseaseStdWeightedLoader),
-//     (load_pacs_uw, UnweightedHypergraph, super::descriptors::PacsStdUnweightedLoader),
-//     (load_pacs_w, WeightedHypergraph, super::descriptors::PacsStdWeightedLoader),
-//     (load_workspace_uw, UnweightedHypergraph, super::descriptors::WorkspaceStdUnweightedLoader),
-//     (load_workspace_w, WeightedHypergraph, super::descriptors::WorkspaceStdWeightedLoader),
-//     (load_dblp_uw, UnweightedHypergraph, super::descriptors::DblpStdUnweightedLoader),
-//     (load_dblp_w, WeightedHypergraph, super::descriptors::DblpStdWeightedLoader),
-//     (load_history_uw, UnweightedHypergraph, super::descriptors::HistoryStdUnweightedLoader),
-//     (load_history_w, WeightedHypergraph, super::descriptors::HistoryStdWeightedLoader),
-//     (load_geology_uw, UnweightedHypergraph, super::descriptors::GeologyStdUnweightedLoader),
-//     (load_geology_w, WeightedHypergraph, super::descriptors::GeologyStdWeightedLoader),
-//     (load_justice_uw, UnweightedHypergraph, super::descriptors::JusticeStdUnweightedLoader),
-//     (load_justice_w, WeightedHypergraph, super::descriptors::JusticeStdWeightedLoader),
-//     // (load_babbuini_uw, UnweightedHypergraph, super::babbuini::Unweighted),
-//     // (load_babbuini_w, WeightedHypergraph, super::babbuini::Weighted),
-//     (load_wiki_uw, UnweightedHypergraph, super::descriptors::WikiStdUnweightedLoader),
-//     (load_wiki_w, WeightedHypergraph, super::descriptors::WikiStdWeightedLoader),
-//     (load_ndc_substances_uw, UnweightedHypergraph, super::descriptors::NdcSubstancesStdUnweightedLoader),
-//     (load_ndc_substances_w, WeightedHypergraph, super::descriptors::NdcSubstancesStdWeightedLoader),
-//     (load_ndc_classes_uw, UnweightedHypergraph, super::descriptors::NdcClassesStdUnweightedLoader),
-//     (load_ndc_classes_w, WeightedHypergraph, super::descriptors::NdcClassesStdWeightedLoader),
-//     (load_eu_uw, UnweightedHypergraph, super::descriptors::EuStdUnweightedLoader),
-//     (load_eu_w, WeightedHypergraph, super::descriptors::EuStdWeightedLoader),
-//     (load_enron_uw, UnweightedHypergraph, super::descriptors::EnronStdUnweightedLoader),
-//     (load_enron_w, WeightedHypergraph, super::descriptors::EnronStdWeightedLoader),
-//     (load_wiki_talk_2_uniform, AdjList, super::wiki_talk::Unweighted2Uniform)
-// );
+pub use self::loader::*;
 
-use crate::loader::common::DatasetInfo;
-use crate::loader::common::Loader;
-use better_default::Default;
-use pyo3::PyResult;
-use pyo3::exceptions::PyIOError;
-use pyo3::{pyclass, pymethods};
-use pyo3_stub_gen::reexport_module_members;
-use rust_core_macros::hoist_mod;
-use rust_core_macros::loaders;
-use std::error::Error;
+use pyo3::pymodule;
 use std::path::PathBuf;
 
-// #[pyclass]
-// #[derive(Clone)]
-// struct X {}
-//
-// #[pymethods]
-// impl X {
-//     fn new(&self) -> Self {
-//         self.clone()
-//     }
-// }
+use pyo3::{pyclass, pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use rust_core_macros::loaders;
 
-#[loaders]
-#[hoist_mod]
-mod __ {
+use super::loader::common::parse_datasets_descriptor;
 
-    // Main dispatcher
-    #[loader]
-    pub struct CommonLoader {
-        #[default(true)]
-        cached: bool,
+pub fn to_absolute(path: PathBuf) -> PathBuf {
+    if path.is_relative() {
+        let base =
+            std::env::var("DATASETS_TOML").expect("Cannot find DATASETS_TOML environment variable");
 
-        #[builder::skip]
-        dataset_location: PathBuf,
-        #[builder::skip]
-        cache_dir: Option<PathBuf>,
+        PathBuf::from(base)
+            .parent()
+            .expect("Invalid DATASETS_TOML path")
+            .join(path)
+    } else {
+        path
+    }
+}
+
+pub fn get_dataset_loc(dataset_name: &'static str) -> PathBuf {
+    let rv = parse_datasets_descriptor().expect("Could not parse datasets.toml");
+
+    let dataset_path = rv
+        .datasets
+        .get(dataset_name)
+        .expect(&format!(
+            "Dataset {} not found in datasets.toml",
+            dataset_name
+        ))
+        .path
+        .clone();
+
+    let rv = to_absolute(dataset_path);
+    rv
+}
+
+pub fn get_cache_dir(dataset_name: &'static str) -> Option<PathBuf> {
+    let rv = parse_datasets_descriptor().expect("Could not parse datasets.toml");
+
+    if let Some(cache_dir) = rv
+        .datasets
+        .get(dataset_name)
+        .expect(&format!(
+            "Dataset {} not found in datasets.toml",
+            dataset_name
+        ))
+        .cache_dir
+        .clone()
+    {
+        return Some(to_absolute(cache_dir));
     }
 
-    // Hospital
-    #[subloader(CommonLoader)]
-    pub struct HospitalCommonLoader {}
+    return rv.cache_dir.clone().map(|cache_dir| to_absolute(cache_dir));
+}
 
-    #[subloader(HospitalCommonLoader)]
+macro_rules! new_loader {
+    ($self: ident, $struct_ident: ident, $name: expr) => {{
+        let mut rv = $struct_ident::default();
+        rv.name = $name;
+        rv.dataset_location = super::get_dataset_loc($name);
+        rv.cache_dir = super::get_cache_dir($name);
+        rv.cached = $self.cached;
+        rv
+    }};
+}
+
+/// Only class exposed to python bindings.
+#[gen_stub_pyclass(module = "rust_core._core.graph")]
+#[pyclass]
+pub struct DatasetLoader {}
+
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
+#[pymethods]
+impl DatasetLoader {
+    #[staticmethod]
+    pub fn builder() -> self::loader::DatasetLoaderDispatcher {
+        self::loader::DatasetLoaderDispatcher::default()
+    }
+}
+
+// Mod is removed by hoist_mod; it just provides context for the loaders macro
+#[loaders]
+#[loaders::struct_attr(derive(Default, Clone, Debug, Hash, PartialEq, Eq))]
+#[loaders::struct_attr(gen_stub_pyclass(module = "rust_core._core.loader"))]
+#[loaders::struct_attr(pyclass)]
+#[loaders::impl_attr(gen_stub_pymethods(module = "rust_core._core.loader"))]
+#[loaders::impl_attr(pymethods)]
+#[pymodule(submodule)]
+pub mod loader {
+    use crate::loader::common::DatasetInfo;
+    use crate::loader::common::Loader;
+    use crate::loader::common::parse_datasets_descriptor;
+    use better_default::Default;
+    use pyo3::PyResult;
+    use pyo3::exceptions::PyIOError;
+    use pyo3::pymodule;
+    use pyo3::{pyclass, pymethods};
+    use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+    use pyo3_stub_gen::exclude_from_all;
+    use pyo3_stub_gen::reexport_module_members;
+    use rust_core_macros::hoist_mod;
+    use std::error::Error;
+    use std::path::Path;
+    use std::path::PathBuf;
+
+    #[loaders::leaf_function]
+    pub fn load(&self) -> PyResult<<struct_ident as Loader>::Output> {
+        let dataset_location = self.dataset_location.clone();
+        <struct_ident as Loader>::load(self).map_err(|e| {
+            PyIOError::new_err(format!("Could not load {}", dataset_location.display()))
+        })
+    }
+
+    // #[loaders::for_each]
+    // exclude_from_all!("rust_core.loader", stringify!(struct_ident));
+    //
+    // #[loaders::for_each]
+    // exclude_from_all!("rust_core._core.loader", stringify!(struct_ident));
+
+    #[loaders::primary]
+    pub struct DatasetLoaderDispatcher {
+        pub cached: bool,
+
+        #[loaders::builder(skip)]
+        pub name: &'static str,
+        #[loaders::builder(skip)]
+        pub dataset_location: PathBuf,
+        #[loaders::builder(skip)]
+        pub cache_dir: Option<PathBuf>,
+    }
+
+    #[rustfmt::skip]
+    impl DatasetLoaderDispatcher {
+        pub fn hospital(&self) -> HospitalCommonLoader { new_loader!(self, HospitalCommonLoader, "hospital") }
+        pub fn conference(&self) -> ConferenceCommonLoader { new_loader!(self, ConferenceCommonLoader, "conference") }
+        pub fn primary_school(&self) -> PrimarySchoolCommonLoader { new_loader!(self, PrimarySchoolCommonLoader, "primary_school") }
+        pub fn high_school(&self) -> HighSchoolCommonLoader { new_loader!(self, HighSchoolCommonLoader, "high_school") }
+        pub fn facebook_hs(&self) -> FacebookHsCommonLoader { new_loader!(self, FacebookHsCommonLoader, "facebook_hs") }
+        pub fn friendship_hs(&self) -> FriendshipHsCommonLoader { new_loader!(self, FriendshipHsCommonLoader, "friendship_hs") }
+        pub fn gene_disease(&self) -> GeneDiseaseCommonLoader { new_loader!(self, GeneDiseaseCommonLoader, "gene_disease") }
+        pub fn pacs(&self) -> PacsCommonLoader { new_loader!(self, PacsCommonLoader, "pacs") }
+        pub fn workspace(&self) -> WorkspaceCommonLoader { new_loader!(self, WorkspaceCommonLoader, "workspace") }
+        pub fn dblp(&self) -> DblpCommonLoader { new_loader!(self, DblpCommonLoader, "dblp") }
+        pub fn history(&self) -> HistoryCommonLoader { new_loader!(self, HistoryCommonLoader, "history") }
+        pub fn geology(&self) -> GeologyCommonLoader { new_loader!(self, GeologyCommonLoader, "geology") }
+        pub fn justice(&self) -> JusticeCommonLoader { new_loader!(self, JusticeCommonLoader, "justice") }
+        pub fn ndc_substances(&self) -> NdcSubstancesCommonLoader { new_loader!(self, NdcSubstancesCommonLoader, "ndc_substances") }
+        pub fn ndc_classes(&self) -> NdcClassesCommonLoader { new_loader!(self, NdcClassesCommonLoader, "ndc_classes") }
+        pub fn eu(&self) -> EuCommonLoader { new_loader!(self, EuCommonLoader, "eu") }
+        pub fn enron(&self) -> EnronCommonLoader { new_loader!(self, EnronCommonLoader, "enron") }
+        pub fn wiki(&self) -> WikiCommonLoader { new_loader!(self, WikiCommonLoader, "wiki") }
+    }
+
+    // --- Data Loaders ---
+
+    #[loaders::sub(DatasetLoaderDispatcher, hospital)]
+    pub struct HospitalCommonLoader {
+        hospital_name: String,
+    }
+    #[loaders::sub(HospitalCommonLoader, unweighted)]
+    pub struct HospitalStdUnweightedLoader {}
+    #[loaders::sub(HospitalCommonLoader, weighted)]
     pub struct HospitalStdWeightedLoader {}
 
-    #[subloader(HospitalCommonLoader)]
-    pub struct HospitalStdUnweightedLoader {}
-
-    // Conference
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, conference)]
     pub struct ConferenceCommonLoader {}
-
-    #[subloader(ConferenceCommonLoader)]
+    #[loaders::sub(ConferenceCommonLoader, unweighted)]
     pub struct ConferenceStdUnweightedLoader {}
-
-    #[subloader(ConferenceCommonLoader)]
+    #[loaders::sub(ConferenceCommonLoader, weighted)]
     pub struct ConferenceStdWeightedLoader {}
 
-    // Primary school
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, primary_school)]
     pub struct PrimarySchoolCommonLoader {}
-
-    #[subloader(PrimarySchoolCommonLoader)]
+    #[loaders::sub(PrimarySchoolCommonLoader, unweighted)]
     pub struct PrimarySchoolStdUnweightedLoader {}
-
-    #[subloader(PrimarySchoolCommonLoader)]
+    #[loaders::sub(PrimarySchoolCommonLoader, weighted)]
     pub struct PrimarySchoolStdWeightedLoader {}
 
-    // High school
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, high_school)]
     pub struct HighSchoolCommonLoader {}
-
-    #[subloader(HighSchoolCommonLoader)]
+    #[loaders::sub(HighSchoolCommonLoader, unweighted)]
     pub struct HighSchoolStdUnweightedLoader {}
-
-    #[subloader(HighSchoolCommonLoader)]
+    #[loaders::sub(HighSchoolCommonLoader, weighted)]
     pub struct HighSchoolStdWeightedLoader {}
 
-    // Facebook HS
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, facebook_hs)]
     pub struct FacebookHsCommonLoader {}
-
-    #[subloader(FacebookHsCommonLoader)]
+    #[loaders::sub(FacebookHsCommonLoader, unweighted)]
     pub struct FacebookHsStdUnweightedLoader {}
 
-    // #[subloader(FacebookHsCommonLoader)]
-    // pub struct FacebookHsStdWeightedLoader {}
-
-    // Friendship HS
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, friendship_hs)]
     pub struct FriendshipHsCommonLoader {}
-
-    #[subloader(FriendshipHsCommonLoader)]
+    #[loaders::sub(FriendshipHsCommonLoader, unweighted)]
     pub struct FriendshipHsStdUnweightedLoader {}
-
-    #[subloader(FriendshipHsCommonLoader)]
+    #[loaders::sub(FriendshipHsCommonLoader, weighted)]
     pub struct FriendshipHsStdWeightedLoader {}
 
-    // Gene disease
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, gene_disease)]
     pub struct GeneDiseaseCommonLoader {}
-
-    #[subloader(GeneDiseaseCommonLoader)]
+    #[loaders::sub(GeneDiseaseCommonLoader, weighted)]
     pub struct GeneDiseaseStdWeightedLoader {}
 
-    // PACS
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, pacs)]
     pub struct PacsCommonLoader {}
-
-    #[subloader(PacsCommonLoader)]
+    #[loaders::sub(PacsCommonLoader, unweighted)]
     pub struct PacsStdUnweightedLoader {}
-
-    #[subloader(PacsCommonLoader)]
+    #[loaders::sub(PacsCommonLoader, weighted)]
     pub struct PacsStdWeightedLoader {}
 
-    // Workspace
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, workspace)]
     pub struct WorkspaceCommonLoader {}
-
-    #[subloader(WorkspaceCommonLoader)]
+    #[loaders::sub(WorkspaceCommonLoader, unweighted)]
     pub struct WorkspaceStdUnweightedLoader {}
-
-    #[subloader(WorkspaceCommonLoader)]
+    #[loaders::sub(WorkspaceCommonLoader, weighted)]
     pub struct WorkspaceStdWeightedLoader {}
 
-    // DBLP
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, dblp)]
     pub struct DblpCommonLoader {}
-
-    #[subloader(DblpCommonLoader)]
+    #[loaders::sub(DblpCommonLoader, unweighted)]
     pub struct DblpStdUnweightedLoader {}
-
-    #[subloader(DblpCommonLoader)]
+    #[loaders::sub(DblpCommonLoader, weighted)]
     pub struct DblpStdWeightedLoader {}
 
-    // History
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, history)]
     pub struct HistoryCommonLoader {}
-
-    #[subloader(HistoryCommonLoader)]
+    #[loaders::sub(HistoryCommonLoader, unweighted)]
     pub struct HistoryStdUnweightedLoader {}
-
-    #[subloader(HistoryCommonLoader)]
+    #[loaders::sub(HistoryCommonLoader, weighted)]
     pub struct HistoryStdWeightedLoader {}
 
-    // Geology
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, geology)]
     pub struct GeologyCommonLoader {}
-
-    #[subloader(GeologyCommonLoader)]
+    #[loaders::sub(GeologyCommonLoader, unweighted)]
     pub struct GeologyStdUnweightedLoader {}
-
-    #[subloader(GeologyCommonLoader)]
+    #[loaders::sub(GeologyCommonLoader, weighted)]
     pub struct GeologyStdWeightedLoader {}
 
-    // Justice
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, justice)]
     pub struct JusticeCommonLoader {}
-
-    #[subloader(JusticeCommonLoader)]
+    #[loaders::sub(JusticeCommonLoader, unweighted)]
     pub struct JusticeStdUnweightedLoader {}
-
-    #[subloader(JusticeCommonLoader)]
+    #[loaders::sub(JusticeCommonLoader, weighted)]
     pub struct JusticeStdWeightedLoader {}
 
-    // NDC substances
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, ndc_substances)]
     pub struct NdcSubstancesCommonLoader {}
-
-    #[subloader(NdcSubstancesCommonLoader)]
+    #[loaders::sub(NdcSubstancesCommonLoader, unweighted)]
     pub struct NdcSubstancesStdUnweightedLoader {}
-
-    #[subloader(NdcSubstancesCommonLoader)]
+    #[loaders::sub(NdcSubstancesCommonLoader, weighted)]
     pub struct NdcSubstancesStdWeightedLoader {}
 
-    // NDC classes
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, ndc_classes)]
     pub struct NdcClassesCommonLoader {}
-
-    #[subloader(NdcClassesCommonLoader)]
+    #[loaders::sub(NdcClassesCommonLoader, unweighted)]
     pub struct NdcClassesStdUnweightedLoader {}
-
-    #[subloader(NdcClassesCommonLoader)]
+    #[loaders::sub(NdcClassesCommonLoader, weighted)]
     pub struct NdcClassesStdWeightedLoader {}
 
-    // EU
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, eu)]
     pub struct EuCommonLoader {}
-
-    #[subloader(EuCommonLoader)]
+    #[loaders::sub(EuCommonLoader, unweighted)]
     pub struct EuStdUnweightedLoader {}
-
-    #[subloader(EuCommonLoader)]
+    #[loaders::sub(EuCommonLoader, weighted)]
     pub struct EuStdWeightedLoader {}
 
-    // Enron
-    #[subloader(CommonLoader)]
+    #[loaders::sub(EnronCommonLoader, unweighted)]
+    pub struct EnronStdUnweightedLoader {}
+    #[loaders::sub(EnronCommonLoader, weighted)]
+    pub struct EnronStdWeightedLoader {}
+    #[loaders::sub(DatasetLoaderDispatcher, enron)]
     pub struct EnronCommonLoader {}
 
-    #[subloader(EnronCommonLoader)]
-    pub struct EnronStdUnweightedLoader {}
-
-    #[subloader(EnronCommonLoader)]
-    pub struct EnronStdWeightedLoader {}
-
-    // Wiki
-    #[subloader(CommonLoader)]
+    #[loaders::sub(DatasetLoaderDispatcher, wiki)]
     pub struct WikiCommonLoader {}
-
-    #[subloader(WikiCommonLoader)]
+    #[loaders::sub(WikiCommonLoader, unweighted)]
     pub struct WikiStdUnweightedLoader {}
-
-    #[subloader(WikiCommonLoader)]
+    #[loaders::sub(WikiCommonLoader, weighted)]
     pub struct WikiStdWeightedLoader {}
 }
-pub fn test() {
-    let x = CommonLoader::builder()
-        .high_school_common_loader()
-        .high_school_std_weighted_loader()
-        .load();
-}
 
-// reexport_module_members!("rust_core.loader" from "rust_core.core.loader");
+// reexport_module_members!("rust_core.loader" from "rust_core._core.loader");

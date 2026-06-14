@@ -12,12 +12,12 @@ pub mod cetc {
     use crate::graph::AdjList;
 
     #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.cetc")]
+    #[gen_stub_pyfunction(module = "rust_core._core.triangle.cetc")]
     pub fn cetc(adj: &mut AdjList) -> usize {
         super::cetc(adj)
     }
 
-    #[gen_stub_pyfunction(module = "rust_core.core.triangle.cetc")]
+    #[gen_stub_pyfunction(module = "rust_core._core.triangle.cetc")]
     #[pyfunction]
     pub fn cetc_s(adj: AdjList) -> usize {
         super::cetc_s(&adj)
@@ -110,4 +110,4 @@ pub fn cetc_s(adj: &AdjList) -> usize {
     count
 }
 
-reexport_module_members!("rust_core.triangle.cetc" from "rust_core.core.triangle.cetc");
+reexport_module_members!("rust_core.triangle.cetc" from "rust_core._core.triangle.cetc");

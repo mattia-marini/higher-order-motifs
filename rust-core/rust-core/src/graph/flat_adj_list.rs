@@ -6,7 +6,7 @@ use std::{fs::File, io::Write, ops::Index, path::Path, time::Instant};
 use crate::graph::{AdjList, types::NodeId};
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
-#[gen_stub_pyclass(module = "rust_core.core.graph")]
+#[gen_stub_pyclass(module = "rust_core._core.graph")]
 #[pyclass]
 pub struct FlatAdjList {
     offsets: Vec<usize>,
@@ -29,7 +29,7 @@ impl Default for FlatAdjList {
     }
 }
 
-#[gen_stub_pymethods(module = "rust_core.core.graph")]
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
 #[pymethods]
 impl FlatAdjList {
     #[new]

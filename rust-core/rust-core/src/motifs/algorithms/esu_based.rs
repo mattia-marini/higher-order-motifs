@@ -1,6 +1,4 @@
 use crate::graph::{UnweightedHypergraph, WeightedHypergraph};
-use pyo3::pyfunction;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
 pub fn unweighted_3(hg: &UnweightedHypergraph) {}
 

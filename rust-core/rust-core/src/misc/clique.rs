@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[pymethods]
-#[gen_stub_pymethods(module = "rust_core.core.graph")]
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
 impl AdjList {
     /// Returns all maximal cliques in the undirected graph.
     ///

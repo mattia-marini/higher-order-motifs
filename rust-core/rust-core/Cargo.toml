@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
-pyo3 = {version = "0.27.0", features = ["multiple-pymethods"]}
+pyo3 = {workspace = true }
 timed = "0.2.1"
 pyo3-stub-gen = "0.21.0"
 bit-set = "0.10"
@@ -27,6 +27,9 @@ log = "0.4.29"
 csv = "1.2"
 polars = {version="0.46.0", features=["lazy", "default"]}
 better_default = "1.0.5"
+
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
 
 hashbrown = {workspace=true}
 foldhash = {workspace=true}

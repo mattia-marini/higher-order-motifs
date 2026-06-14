@@ -13,7 +13,8 @@ use crate::{
     loader::common::DatasetInfo,
 };
 
-use super::Loader;
+use super::common::Loader;
+
 use super::{HospitalStdUnweightedLoader, HospitalStdWeightedLoader};
 
 impl Loader for HospitalStdUnweightedLoader {
@@ -82,7 +83,7 @@ impl Loader for HospitalStdWeightedLoader {
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();
-        let file = File::open(self.dataset_location())?;
+        let file = File::open(&self.dataset_location)?;
         let reader = BufReader::new(file);
 
         let mut edges: HashMap<usize, Vec<(NodeId, NodeId)>> = HashMap::new();

@@ -6,7 +6,7 @@ use pyo3::{pyclass, pymethods};
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use rkyv::{Archive, Deserialize, Serialize};
 
-#[gen_stub_pyclass(module = "rust_core.core.graph")]
+#[gen_stub_pyclass(module = "rust_core._core.graph")]
 #[pyclass]
 pub struct AdjMat {
     pub mat: Vec<BitSet>,
@@ -18,7 +18,7 @@ impl Default for AdjMat {
     }
 }
 
-#[gen_stub_pymethods(module = "rust_core.core.graph")]
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
 #[pymethods]
 impl AdjMat {
     #[new]

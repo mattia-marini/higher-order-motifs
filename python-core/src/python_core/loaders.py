@@ -1,8 +1,10 @@
 import csv
 import os
 import random
+import tomllib  # Requires Python 3.11+
 from collections import defaultdict
-from typing import cast
+from pathlib import Path
+from typing import Any, Dict, Optional, cast
 
 import pandas as pd
 from rich.console import Console
@@ -13,13 +15,62 @@ from python_core.graph import *
 console = Console()
 
 
+# Helper methods to read datasets.toml
+def parse_datasets_descriptor() -> dict:
+    toml_path_str = os.environ.get("DATASETS_TOML")
+    if not toml_path_str:
+        raise KeyError("Cannot find DATASETS_TOML environment variable")
+
+    with open(toml_path_str, "rb") as f:
+        return tomllib.load(f)
+
+
+def to_absolute(path: Path) -> Path:
+    if not path.is_absolute():
+        toml_path_str = os.environ.get("DATASETS_TOML")
+        if not toml_path_str:
+            raise KeyError("Cannot find DATASETS_TOML environment variable")
+        return Path(toml_path_str).parent / path
+    return path
+
+
+def _get_dataset_descriptor(config: dict, dataset_name: str) -> dict:
+    """Helper to extract a dataset while avoiding the 'cache_dir' top-level key."""
+    if dataset_name == "cache_dir" or dataset_name not in config:
+        raise KeyError(f"Dataset '{dataset_name}' not found in datasets.toml")
+    return config[dataset_name]
+
+
+def get_dataset_loc(dataset_name: str) -> Path:
+    config = parse_datasets_descriptor()
+    dataset = _get_dataset_descriptor(config, dataset_name)
+
+    # Explicitly convert the string path from TOML to a Path object
+    return to_absolute(Path(dataset["path"]))
+
+
+def get_cache_dir(dataset_name: str) -> Optional[Path]:
+    config = parse_datasets_descriptor()
+    dataset = _get_dataset_descriptor(config, dataset_name)
+
+    # 1. Dataset-specific cache_dir
+    if "cache_dir" in dataset:
+        return to_absolute(Path(dataset["cache_dir"]))
+
+    # 2. Global fallback cache_dir
+    if "cache_dir" in config:
+        return to_absolute(Path(config["cache_dir"]))
+
+    return None
+
+
 # Small datasets
 def load_primary_school(
     construction_method: ConstructionMethodBase = StandardConstructionMethod(),
 ) -> Hypergraph:
     import networkx as nx
 
-    dataset = f"{os.environ['DATASET_DIR']}/primaryschool.csv"
+    dataset = get_dataset_loc("primary_school")
 
     fopen = open(dataset, "r")
     lines = fopen.readlines()
@@ -85,7 +136,7 @@ def load_conference(
 ) -> Hypergraph:
     import networkx as nx
 
-    dataset = f"{os.environ['DATASET_DIR']}/conference.dat"
+    dataset = get_dataset_loc("conference")
 
     fopen = open(dataset, "r")
     lines = fopen.readlines()
@@ -155,7 +206,7 @@ def load_high_school(
 ) -> Hypergraph:
     import networkx as nx
 
-    dataset = f"{os.environ['DATASET_DIR']}/High-School_data_2013.csv"
+    dataset = get_dataset_loc("high_school")
 
     fopen = open(dataset, "r")
     lines = fopen.readlines()
@@ -221,7 +272,7 @@ def load_hospital(
 ) -> Hypergraph:
     import networkx as nx
 
-    dataset = f"{os.environ['DATASET_DIR']}/hospital.dat"
+    dataset = get_dataset_loc("hospital")
 
     fopen = open(dataset, "r")
     lines = fopen.readlines()
@@ -295,7 +346,7 @@ def load_facebook_hs(construction_method: ConstructionMethodBase = StandardConst
     hg = Hypergraph()
 
     d = pd.read_csv(
-        "{}/Facebook-known-pairs_data_2013.csv".format(os.environ["DATASET_DIR"]),
+        get_dataset_loc("facebook_hs"),
         header=None,
         names=["a", "b", "c"],
         sep="\\s+",
@@ -317,7 +368,7 @@ def load_friendship_hs(construction_method: ConstructionMethodBase = StandardCon
     hg = Hypergraph()
 
     d = pd.read_csv(
-        "{}/Friendship-network_data_2013.csv".format(os.environ["DATASET_DIR"]),
+        get_dataset_loc("friendship_hs"),
         header=None,
         names=["a", "b"],
         sep="\\s+",
@@ -338,7 +389,7 @@ def load_friendship_hs(construction_method: ConstructionMethodBase = StandardCon
 
 
 def load_meta_hs(T="sex"):
-    tsv_file = open("{}/meta_hs.txt".format(os.environ["DATASET_DIR"]))
+    tsv_file = open(get_dataset_loc("high_school").parent / "meta_hs.txt")
     data = csv.reader(tsv_file, delimiter="\t")
     res = {}
     for i in data:
@@ -353,7 +404,7 @@ def load_meta_hs(T="sex"):
 
 
 def load_meta_ps(T="sex"):
-    tsv_file = open("{}/metadata_ps.txt".format(os.environ["DATASET_DIR"]))
+    tsv_file = open(get_dataset_loc("primary_school").parent / "metadata_ps.txt")
     data = csv.reader(tsv_file, delimiter="\t")
     res = {}
     for i in data:
@@ -396,7 +447,7 @@ def load_gene_disease(construction_method: StandardConstructionMethod = Standard
     diseases = {}
     idxG = 0
 
-    tsv_file = open("{}/curated_gene_disease_associations.tsv".format(os.environ["DATASET_DIR"]))
+    tsv_file = open(get_dataset_loc("gene_disease"))
     data = pd.read_csv(tsv_file, delimiter="\t", chunksize=1000)
     hg = Hypergraph()
 
@@ -425,7 +476,7 @@ def load_pacs_common():
     import polars as pl
 
     dtypes = {"ArticleID": pl.Utf8, "PACS": pl.UInt32, "AuthorDAIS": pl.UInt32, "FullName": pl.Utf8}
-    dataset = f"{os.environ['DATASET_DIR']}/PACS.csv"
+    dataset = get_dataset_loc("pacs")
 
     # Scan lazily and read only the columns we need
     lf = pl.scan_csv(dataset, schema=dtypes, null_values=[""])
@@ -480,7 +531,7 @@ def load_pacs(construction_method: ConstructionMethodBase = StandardConstruction
 def pickle_pacs():
     import pandas as pd
 
-    tb = pd.read_csv("{}/PACS.csv".format(os.environ["DATASET_DIR"]))
+    tb = pd.read_csv(get_dataset_loc("pacs"))
 
     tb = tb[["ArticleID", "PACS", "FullName"]]
 
@@ -568,7 +619,7 @@ def load_pacs_single_pickled(N, S):
 def load_workspace(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
     import networkx as nx
 
-    dataset = "{}/workspace.dat".format(os.environ["DATASET_DIR"])
+    dataset = get_dataset_loc("workspace")
 
     fopen = open(dataset, "r")
     lines = fopen.readlines()
@@ -633,7 +684,7 @@ def load_DBLP(construction_method: ConstructionMethodBase = StandardConstruction
     # fopen = open(dataset, "r")
     # lines = fopen.readlines()
 
-    dataset = "{}/dblp.csv".format(os.environ["DATASET_DIR"])
+    dataset = get_dataset_loc("dblp")
     chunksize = 100_000
     lines_count = 10_304_423
     data = pd.read_csv(dataset, delimiter=",", chunksize=chunksize, skiprows=0)
@@ -643,7 +694,7 @@ def load_DBLP(construction_method: ConstructionMethodBase = StandardConstruction
         for row in chunk.itertuples(index=False):
             paper, author, y = row
             graph[paper].append(author)
-    # with open("{}/dblp.csv".format(os.environ["DATASET_DIR"]), newline="", encoding="utf-8") as f:
+    # with open(get_dataset_loc("dblp"), newline="", encoding="utf-8") as f:
     #     reader = csv.reader(f, delimiter=",")
     #     header = next(reader, None)
     #     count = 0
@@ -693,7 +744,7 @@ def load_DBLP(construction_method: ConstructionMethodBase = StandardConstruction
 
 
 def load_history(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
-    dataset = f"{os.environ['DATASET_DIR']}/history.csv"
+    dataset = get_dataset_loc("history")
     chunksize = 100_000
     lines_count = 2_367_290
     data = pd.read_csv(dataset, delimiter=",", chunksize=chunksize)
@@ -743,7 +794,7 @@ def load_history(construction_method: ConstructionMethodBase = StandardConstruct
 
 
 def load_geology(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
-    dataset = f"{os.environ['DATASET_DIR']}/geology.csv"
+    dataset = get_dataset_loc("geology")
     chunksize = 100_000
     lines_count = 4_418_885
     data = pd.read_csv(dataset, delimiter=",", chunksize=chunksize)
@@ -798,7 +849,7 @@ def load_justice_ideo(
     cm = cast(StandardConstructionMethod, construction_method)
 
     # cases dataset
-    dataset = "{}/justice.csv".format(os.environ["DATASET_DIR"])
+    dataset = get_dataset_loc("justice")
     chunksize = 100
     lines_count = 80_846
     data = pd.read_csv(dataset, delimiter=",", chunksize=chunksize, encoding="latin-1")
@@ -838,7 +889,7 @@ def load_justice_ideo(
                 cases[c][v] = [n]
 
     # ideology dataset
-    ideo = "{}/justices_ideology.csv".format(os.environ["DATASET_DIR"])
+    ideo = get_dataset_loc("justice").parent / "justices_ideology.csv"
     chunksize = 100
     lines_count = 177
     ideo_data = pd.read_csv(ideo, delimiter=",", chunksize=chunksize, encoding="latin-1")
@@ -879,7 +930,7 @@ def load_justice_ideo(
 
 def load_justice(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
     cm = cast(StandardConstructionMethod, construction_method)
-    dataset = "{}/justice.csv".format(os.environ["DATASET_DIR"])
+    dataset = get_dataset_loc("justice")
     chunksize = 100
     lines_count = 80_846
 
@@ -945,7 +996,7 @@ def load_babbuini(construction_method: ConstructionMethodBase = StandardConstruc
 
     import networkx as nx
 
-    f = gzip.open("{}/babbuini.txt".format(os.environ["DATASET_DIR"]), "rb")
+    f = gzip.open(get_dataset_loc("babbuini"), "rb")
     lines = f.readlines()
 
     graph = {}
@@ -1029,7 +1080,7 @@ def load_wiki(construction_method: ConstructionMethodBase = StandardConstruction
     if not isinstance(construction_method, StandardConstructionMethod):
         raise ValueError("Unsupported construction method")
 
-    fopen = open("{}/wiki/wiki.txt".format(os.environ["DATASET_DIR"]), "r")
+    fopen = open(get_dataset_loc("wiki"), "r")
     lines = fopen.readlines()
 
     edges = set()
@@ -1081,9 +1132,9 @@ def load_NDC_substances(construction_method: ConstructionMethodBase = StandardCo
         raise ValueError("Unsupported construction method")
 
     cm = cast(StandardConstructionMethod, construction_method)
-    p = "{}/NDC-substances/".format(os.environ["DATASET_DIR"])
-    a = open(p + "NDC-substances-nverts.txt")
-    b = open(p + "NDC-substances-simplices.txt")
+    p = get_dataset_loc("ndc_substances").parent
+    a = open(p / "NDC-substances-nverts.txt")
+    b = open(p / "NDC-substances-simplices.txt")
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1116,9 +1167,9 @@ def load_NDC_classes(construction_method: ConstructionMethodBase = StandardConst
         raise ValueError("Unsupported construction method")
 
     cm = cast(StandardConstructionMethod, construction_method)
-    p = "{}/NDC-classes/".format(os.environ["DATASET_DIR"])
-    a = open(p + "NDC-classes-nverts.txt")
-    b = open(p + "NDC-classes-simplices.txt")
+    p = get_dataset_loc("ndc_classes").parent
+    a = open(p / "NDC-classes-nverts.txt")
+    b = open(p / "NDC-classes-simplices.txt")
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1151,9 +1202,9 @@ def load_eu(construction_method: ConstructionMethodBase = StandardConstructionMe
 
     cm = cast(StandardConstructionMethod, construction_method)
     name = "email-Eu"
-    p = f"{os.environ['DATASET_DIR']}/{name}/"
-    a = open(p + "{}-nverts.txt".format(name))
-    b = open(p + "{}-simplices.txt".format(name))
+    p = get_dataset_loc("eu").parent
+    a = open(p / f"{name}-nverts.txt")
+    b = open(p / f"{name}-simplices.txt")
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1188,9 +1239,9 @@ def load_enron(construction_method: ConstructionMethodBase = StandardConstructio
 
     cm = cast(StandardConstructionMethod, construction_method)
     name = "email-Enron"
-    p = f"{os.environ['DATASET_DIR']}/{name}/"
-    a = open(p + "{}-nverts.txt".format(name))
-    b = open(p + "{}-simplices.txt".format(name))
+    p = get_dataset_loc("enron").parent
+    a = open(p / f"{name}-nverts.txt")
+    b = open(p / f"{name}-simplices.txt")
     v = list(map(int, a.readlines()))
     s = list(map(int, b.readlines()))
     a.close()
@@ -1221,7 +1272,7 @@ def load_enron(construction_method: ConstructionMethodBase = StandardConstructio
 def load_wiki_talk(construction_method: ConstructionMethodBase = StandardConstructionMethod()):
     import polars as pl
 
-    dataset = f"{os.environ['DATASET_DIR']}/wiki/wiki-talk.txt"
+    dataset = get_dataset_loc("wiki").parent / "wiki-talk.txt"
 
     df = pl.read_csv(
         dataset,

@@ -10,3 +10,4 @@ hashbrown = { workspace=true }
 foldhash = { workspace=true }
 paste = { workspace=true }
 indicatif = { workspace=true }
+pyo3 = {workspace = true}

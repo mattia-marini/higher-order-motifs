@@ -367,12 +367,12 @@ pub enum PyHypergraph<'py> {
 impl_stub_type!(PyHypergraph<'_> = UnweightedHypergraph | WeightedHypergraph);
 
 #[pyclass]
-#[gen_stub_pyclass(module = "rust_core.core.graph")]
+#[gen_stub_pyclass(module = "rust_core._core.graph")]
 pub struct WeightedHypergraph(pub Hypergraph<NodeId, NodeWeight>);
 pub struct WeightedHx<const N: usize>(pub Hx<N, NodeId, NodeWeight>);
 
 #[pyclass]
-#[gen_stub_pyclass(module = "rust_core.core.graph")]
+#[gen_stub_pyclass(module = "rust_core._core.graph")]
 pub struct UnweightedHypergraph(pub Hypergraph<NodeId, ()>);
 pub struct UnweightedHx<const N: usize>(pub Hx<N, NodeId, ()>);
 
@@ -429,7 +429,7 @@ impl Into<WeightedHypergraph> for Hypergraph<NodeId, NodeWeight> {
     [WeightedHypergraph]    [WeightedHx];
 )]
 #[pymethods]
-#[gen_stub_pymethods(module = "rust_core.core.graph")]
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
 impl hg_type {
     #[new]
     pub fn new() -> Self {
@@ -559,7 +559,7 @@ impl hg_type {
 
 // Methods requiring specific implementation for weighted and unweighted hypergraphs
 #[pymethods]
-#[gen_stub_pymethods(module = "rust_core.core.graph")]
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
 impl UnweightedHypergraph {
     fn insert_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
         let order = edge.len()?;
@@ -595,7 +595,7 @@ impl UnweightedHypergraph {
 
 // Methods requiring specific implementation for weighted and unweighted hypergraphs
 #[pymethods]
-#[gen_stub_pymethods(module = "rust_core.core.graph")]
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
 impl WeightedHypergraph {
     fn insert_hx(&mut self, edge: Bound<'_, PyTuple>, weight: NodeWeight) -> PyResult<bool> {
         let order = edge.len()?;

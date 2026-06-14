@@ -12,7 +12,7 @@ use crate::graph::serialize::DumpCacheToFile;
 use super::types::NodeId;
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
-#[gen_stub_pyclass(module = "rust_core.core.graph")]
+#[gen_stub_pyclass(module = "rust_core._core.graph")]
 #[pyclass]
 pub struct AdjList {
     pub adj: Vec<Vec<NodeId>>,
@@ -60,7 +60,7 @@ impl Default for AdjList {
     }
 }
 
-#[gen_stub_pymethods(module = "rust_core.core.graph")]
+#[gen_stub_pymethods(module = "rust_core._core.graph")]
 #[pymethods]
 impl AdjList {
     #[new]
