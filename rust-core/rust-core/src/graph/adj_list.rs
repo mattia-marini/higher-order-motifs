@@ -13,7 +13,7 @@ use super::types::NodeId;
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[gen_stub_pyclass(module = "rust_core._core.graph")]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct AdjList {
     pub adj: Vec<Vec<NodeId>>,
     n: usize,

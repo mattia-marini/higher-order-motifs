@@ -145,7 +145,7 @@ def test_hospital_uw():
         test_loader(
             "Hospital Unweighted",
             lambda: pc.loaders.load_hospital(StandardConstructionMethod(weighted=False)),
-            lambda: DatasetLoader.builder().hospital().cached(False).unweighted().load(),
+            lambda: DatasetLoader.builder().hospital().cached(True).unweighted().load(),
         )
     )
 
@@ -155,7 +155,7 @@ def test_hospital_w():
         test_loader(
             "Hospital Weighted",
             lambda: pc.loaders.load_hospital(StandardConstructionMethod(weighted=True)),
-            lambda: DatasetLoader.builder().hospital().cached(False).weighted().load(),
+            lambda: DatasetLoader.builder().hospital().cached(True).weighted().load(),
         )
     )
 

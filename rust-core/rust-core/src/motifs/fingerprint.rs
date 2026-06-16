@@ -1,19 +1,54 @@
+use pyo3::{pyclass, pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+
+use crate::motifs::compressed_motif::{
+    CMAssociated, CompactMotif, CompactMotif3, CompactMotif4, CompactMotifConfigurator,
+};
+use crate::motifs::compressed_node_set::CompressedNodeSet;
+use crate::util::sorting_network::TryNetSort;
 use std::fmt::Debug;
 use std::hash::Hash;
-use crate::motifs::compressed_motif::{CMAssociated, CompactMotif, CompactMotifConfigurator};
-use crate::util::sorting_network::TryNetSort;
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
+#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
+#[pyclass(from_py_object)]
 pub struct Fingerprint3 {
     /// The number of edges of size 2 and 3. layed out as follows:
     /// [3-edge count (4 bits)][2-edge count (4 bits)]
     edge_counts: u8,
 }
 
-#[allow(dead_code)]
+#[gen_stub_pymethods(module = "rust_core._core.motifs.types")]
+#[pymethods]
 impl Fingerprint3 {
     const SIZE: usize = <Self as CMAssociated>::CMType::SIZE;
     const MAX_EDGE_COUNT: usize = <Self as CMAssociated>::CMType::MAX_EDGE_COUNT;
+
+    pub fn get_canonical_rep(&self) -> CompactMotif3 {
+        let count_2 = (self.edge_counts & ((1 << 4) - 1));
+        let count_3 = ((self.edge_counts >> 4) & ((1 << 4) - 1));
+        let mut rv = CompactMotif::<3>::zero();
+
+        for i in 0..count_2 {
+            let nodes = {
+                let mut rv = [i, (i + 1) % 3];
+                rv.sort_unstable();
+                rv
+            };
+
+            rv.add_edge_with_nodes(CompressedNodeSet::from_nodes(nodes));
+        }
+        if count_3 != 0 {
+            rv.add_edge_with_nodes(CompressedNodeSet::from_nodes([0, 1, 2]));
+        }
+        rv.into()
+    }
+
+    pub fn __str__(&self) -> String {
+        let order2 = (self.edge_counts >> 0) & ((1 << 4) - 1);
+        let order3 = (self.edge_counts >> 4) & ((1 << 4) - 1);
+        format!("edge_counts {:?}", [order2, order3])
+    }
 }
 
 impl From<CompactMotif<3>> for Fingerprint3 {
@@ -36,6 +71,8 @@ impl Debug for Fingerprint3 {
 }
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone)]
+#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
+#[pyclass(from_py_object)]
 pub struct Fingerprint4 {
     /// For each node, a histogram of the sizes of the edges it participates in. Sorted by node
     /// degree, then lexicographically by histogram
@@ -50,6 +87,10 @@ pub struct Fingerprint4 {
 
 impl Fingerprint4 {
     const SIZE: usize = <Self as CMAssociated>::CMType::SIZE;
+
+    pub fn get_canonical_rep(&self) -> CompactMotif4 {
+        todo!()
+    }
 }
 
 impl From<CompactMotif<4>> for Fingerprint4 {
@@ -91,6 +132,8 @@ impl Debug for Fingerprint4 {
 }
 
 #[derive(Copy, Clone)]
+#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
+#[pyclass(from_py_object)]
 pub struct Fingerprint5 {
     /// for each node, a histogram of the sizes of the edges it participates in. Sorted by node
     /// degree, then lexicographically by histogram

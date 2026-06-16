@@ -32,6 +32,8 @@ fn read_ints_from_file<P: AsRef<Path>>(path: &P) -> Result<Vec<NodeId>, Box<dyn 
 impl Loader for NdcSubstancesStdUnweightedLoader {
     type Output = crate::graph::UnweightedHypergraph;
 
+    const VARIANT: &'static str = "uw";
+
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();
         let base = dataset_location;
@@ -82,6 +84,8 @@ impl Loader for NdcSubstancesStdUnweightedLoader {
 
 impl Loader for NdcSubstancesStdWeightedLoader {
     type Output = crate::graph::WeightedHypergraph;
+
+    const VARIANT: &'static str = "w";
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();

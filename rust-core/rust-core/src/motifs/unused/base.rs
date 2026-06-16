@@ -8,7 +8,7 @@ use std::hash::Hash;
 use std::{collections::VecDeque, ops::Shl};
 
 use crate::graph::HypergraphAccessor;
-use crate::graph::{hyper_adj_list::HyperAdjList, Hypergraph, NodeId};
+use crate::graph::{Hypergraph, NodeId, hyper_adj_list::HyperAdjList};
 
 use hashbrown::{HashMap, HashSet};
 
@@ -199,7 +199,7 @@ pub fn generate_motifs(
     (reps, rep_map)
 }
 
-// #[pyclass]
+// #[pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct CanonicalRep<const N: usize, T>
 where
@@ -388,7 +388,7 @@ where
 //     // From here, proceed with your permutation mapping using vertex_scores...
 // }
 
-// #[pyclass]
+// #[pyclass(from_py_object)]
 // pub struct MotifStat {
 //     pub canonical_rep: CanonicalRep<NodeId>,
 //     pub count: usize,

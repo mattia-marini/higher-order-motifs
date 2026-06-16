@@ -10,6 +10,14 @@ impl CompressedNodeSet {
         Self { nodes }
     }
 
+    pub fn from_nodes(nodes: impl IntoIterator<Item = u8>) -> Self {
+        let mut rv = Self::new(0);
+        for node in nodes {
+            rv.nodes |= 1 << node;
+        }
+        rv
+    }
+
     pub const fn len(&self) -> u32 {
         self.nodes.count_ones()
     }

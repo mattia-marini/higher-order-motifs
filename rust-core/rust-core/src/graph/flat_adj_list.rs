@@ -7,7 +7,7 @@ use crate::graph::{AdjList, types::NodeId};
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 #[gen_stub_pyclass(module = "rust_core._core.graph")]
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 pub struct FlatAdjList {
     offsets: Vec<usize>,
     edges: Vec<NodeId>,

@@ -95,7 +95,8 @@ macro_rules! new_loader {
 
 /// Only class exposed to python bindings.
 #[gen_stub_pyclass(module = "rust_core._core.graph")]
-#[pyclass]
+#[pyclass(from_py_object)]
+#[derive(Clone)]
 pub struct DatasetLoader {}
 
 #[gen_stub_pymethods(module = "rust_core._core.graph")]
@@ -111,7 +112,7 @@ impl DatasetLoader {
 #[loaders]
 #[loaders::struct_attr(derive(Default, Clone, Debug, Hash, PartialEq, Eq))]
 #[loaders::struct_attr(gen_stub_pyclass(module = "rust_core._core.loader"))]
-#[loaders::struct_attr(pyclass)]
+#[loaders::struct_attr(pyclass(from_py_object))]
 #[loaders::impl_attr(gen_stub_pymethods(module = "rust_core._core.loader"))]
 #[loaders::impl_attr(pymethods)]
 #[pymodule(submodule)]
@@ -183,9 +184,7 @@ pub mod loader {
     // --- Data Loaders ---
 
     #[loaders::sub(DatasetLoaderDispatcher, hospital)]
-    pub struct HospitalCommonLoader {
-        hospital_name: String,
-    }
+    pub struct HospitalCommonLoader {}
     #[loaders::sub(HospitalCommonLoader, unweighted)]
     pub struct HospitalStdUnweightedLoader {}
     #[loaders::sub(HospitalCommonLoader, weighted)]

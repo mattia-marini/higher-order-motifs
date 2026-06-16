@@ -1,5 +1,7 @@
 """
-Efficient ad hoc motif counting algorithm for order 3 and 4 in undirected graphs. Unlike ESU, this algorithm logic is not based on enumeration but on combinatorial counting. Hopefully can be extended to weighted graphs
+Efficient ad hoc motif counting algorithm for order 3 and 4 in undirected
+graphs. Unlike ESU, this algorithm logic is not based on enumeration but on
+combinatorial counting. Hopefully can be extended to weighted graphs
 """
 
 from math import prod, sqrt

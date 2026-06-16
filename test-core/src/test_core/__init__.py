@@ -11,11 +11,13 @@
 # from test_core.rust import test_clique, test_loader, test_motifs3
 
 
+from . import test_orca
 from .rust import test_loader
 
 
 def main() -> None:
     test_loader.run()
+    # test_orca.run()
     # print(len(generate_motifs(4)[1]))
     # test_motifs3.run()
     # test_loader.run()

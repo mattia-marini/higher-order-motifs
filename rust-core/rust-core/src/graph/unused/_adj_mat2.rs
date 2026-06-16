@@ -7,7 +7,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use rkyv::{Archive, Deserialize, Serialize};
 
 #[gen_stub_pyclass(module = "rust_core._core.graph")]
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct AdjMat {
     pub mat: Vec<BitSet>,
 }

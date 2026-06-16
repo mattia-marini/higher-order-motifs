@@ -366,12 +366,12 @@ pub enum PyHypergraph<'py> {
 }
 impl_stub_type!(PyHypergraph<'_> = UnweightedHypergraph | WeightedHypergraph);
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[gen_stub_pyclass(module = "rust_core._core.graph")]
 pub struct WeightedHypergraph(pub Hypergraph<NodeId, NodeWeight>);
 pub struct WeightedHx<const N: usize>(pub Hx<N, NodeId, NodeWeight>);
 
-#[pyclass]
+#[pyclass(skip_from_py_object)]
 #[gen_stub_pyclass(module = "rust_core._core.graph")]
 pub struct UnweightedHypergraph(pub Hypergraph<NodeId, ()>);
 pub struct UnweightedHx<const N: usize>(pub Hx<N, NodeId, ()>);

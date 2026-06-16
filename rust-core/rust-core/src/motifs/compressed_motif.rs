@@ -1,19 +1,21 @@
 use crate::iter_hyperedges;
 use foldhash::fast::FixedState;
 use hashbrown::HashSet;
+use pyo3::pyclass;
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 use std::fmt::{Binary, Debug};
 use std::hash::Hash;
-use std::ops::{AddAssign, Not, RangeInclusive};
+use std::ops::{AddAssign, Deref, Not, RangeInclusive};
 use std::{
     fmt::Display,
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Index, IndexMut, Shl},
 };
 
-use num_traits::{AsPrimitive, One, PrimInt, Unsigned, Zero};
 use crate::motifs::compressed_node_set::CompressedNodeSet;
 use crate::motifs::fingerprint::{Fingerprint3, Fingerprint4, Fingerprint5};
-use crate::util::const_operations::{max_hyperedge_count, binomial_coefficient, factorial};
+use crate::util::const_operations::{binomial_coefficient, factorial, max_hyperedge_count};
 use crate::util::permutations::BinPerm;
+use num_traits::{AsPrimitive, One, PrimInt, Unsigned, Zero};
 
 macro_rules! impl_motif_configurator {
     ($ct:ty, $order:literal, $fingerprint: ty) => {
@@ -443,11 +445,11 @@ where
     }
 
     pub const fn one() -> Self {
-        <Self as CompactMotifConfigurator>::ZERO
+        <Self as CompactMotifConfigurator>::ONE
     }
 
     pub const fn zero() -> Self {
-        <Self as CompactMotifConfigurator>::ONE
+        <Self as CompactMotifConfigurator>::ZERO
     }
 
     pub const fn full() -> Self {
@@ -468,6 +470,12 @@ where
     pub fn add_edge(&mut self, edge_number: usize) {
         self.container |= Self::CONTAINER_ONE << edge_number;
     }
+
+    pub fn add_edge_with_nodes(&mut self, node_set: CompressedNodeSet) {
+        let edge_number = Self::EDGE_MAP[node_set.nodes as usize];
+        self.add_edge(edge_number as usize);
+    }
+
     pub fn remove_edge(&mut self, edge_number: usize) {
         self.container &= !(Self::CONTAINER_ONE << edge_number);
     }
@@ -886,3 +894,75 @@ where
 define_compact_motif!(u8, 3, Fingerprint3);
 define_compact_motif!(u16, 4, Fingerprint4);
 define_compact_motif!(u32, 5, Fingerprint5);
+
+#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
+#[pyclass(from_py_object, str)]
+#[derive(Clone)]
+pub struct CompactMotif3 {
+    inner: CompactMotif<3>,
+}
+impl Deref for CompactMotif3 {
+    type Target = CompactMotif<3>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+impl From<CompactMotif<3>> for CompactMotif3 {
+    fn from(value: CompactMotif<3>) -> Self {
+        Self { inner: value }
+    }
+}
+impl Display for CompactMotif3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <CompactMotif<3> as Display>::fmt(self, f)
+    }
+}
+
+#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
+#[pyclass(from_py_object, str)]
+#[derive(Clone)]
+pub struct CompactMotif4 {
+    inner: CompactMotif<4>,
+}
+impl Deref for CompactMotif4 {
+    type Target = CompactMotif<4>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+impl From<CompactMotif<4>> for CompactMotif4 {
+    fn from(value: CompactMotif<4>) -> Self {
+        Self { inner: value }
+    }
+}
+impl Display for CompactMotif4 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <CompactMotif<4> as Display>::fmt(self, f)
+    }
+}
+
+#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
+#[pyclass(from_py_object, str)]
+#[derive(Clone)]
+pub struct CompactMotif5 {
+    inner: CompactMotif<5>,
+}
+impl Deref for CompactMotif5 {
+    type Target = CompactMotif<5>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+impl From<CompactMotif<5>> for CompactMotif5 {
+    fn from(value: CompactMotif<5>) -> Self {
+        Self { inner: value }
+    }
+}
+impl Display for CompactMotif5 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <CompactMotif<5> as Display>::fmt(self, f)
+    }
+}

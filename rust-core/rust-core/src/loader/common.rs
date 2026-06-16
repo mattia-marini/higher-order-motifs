@@ -125,14 +125,14 @@ where
     Self: DatasetLoaderDispatcherAttr + Hash,
     Self::Output: DumpCacheToFile + LoadFromCacheDeserialized,
 {
-    // const DATASET_PATH: &'static str;
-    // const CACHE_DIR: &'static str;
-    // const NAME: &'static str;
+    /// A description of the method used to load the dataset, for caching purposes
+    const VARIANT: &'static str;
+
     type Output;
 
     fn load(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.get_dataset_location();
-        let cache_dir = self.get_cache_dir().clone();
+        let cache_dir = self.get_cache_dir();
 
         if !dataset_location.exists() {
             log::error!("Invalid dataset location '{}'", dataset_location.display());
@@ -147,10 +147,26 @@ where
         if cache_dir.is_none() {
             return self.from_file();
         }
-        let cache_dir = cache_dir.unwrap();
+
+        if !*self.get_cached() {
+            return self.from_file();
+        }
+
+        let cache_dir = cache_dir.as_ref().unwrap();
+
+        println!(
+            "Dataset '{}' hashes to {}",
+            self.get_name(),
+            hash_to_len(self, 16)
+        );
 
         let cache_file = PathBuf::from(&cache_dir)
-            .join(format!("{}_{}", self.get_name(), hash_to_len(self, 16)))
+            .join(format!(
+                "{}_{}_{}",
+                self.get_name(),
+                Self::VARIANT,
+                hash_to_len(self, 16)
+            ))
             .with_extension("bin");
 
         if cache_file.exists() {

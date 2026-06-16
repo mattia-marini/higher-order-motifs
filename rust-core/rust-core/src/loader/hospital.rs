@@ -20,7 +20,11 @@ use super::{HospitalStdUnweightedLoader, HospitalStdWeightedLoader};
 impl Loader for HospitalStdUnweightedLoader {
     type Output = crate::graph::UnweightedHypergraph;
 
+    const VARIANT: &'static str = "uw";
+
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        println!("HospitalStdUnweightedLoader");
+
         let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
@@ -81,7 +85,11 @@ impl Loader for HospitalStdUnweightedLoader {
 impl Loader for HospitalStdWeightedLoader {
     type Output = WeightedHypergraph;
 
+    const VARIANT: &'static str = "w";
+
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+        println!("HospitalStdWeightedLoader");
+
         let dataset_location = self.dataset_location.clone();
         let file = File::open(&self.dataset_location)?;
         let reader = BufReader::new(file);
