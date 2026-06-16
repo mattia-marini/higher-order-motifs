@@ -9,6 +9,8 @@ use super::FacebookHsStdUnweightedLoader;
 impl Loader for FacebookHsStdUnweightedLoader {
     type Output = UnweightedHypergraph;
 
+    const VARIANT: &'static str = "uw";
+
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();
         // The python loader uses pandas and only reads triples (a,b,c) and if only_confirmed then c==1.
