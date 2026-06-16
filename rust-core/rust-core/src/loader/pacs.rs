@@ -87,6 +87,7 @@ pub struct Weighted;
 
 impl Loader for PacsStdUnweightedLoader {
     type Output = crate::graph::UnweightedHypergraph;
+    const VARIANT: &'static str = "uw";
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();
@@ -110,6 +111,7 @@ impl Loader for PacsStdUnweightedLoader {
 
 impl Loader for PacsStdWeightedLoader {
     type Output = crate::graph::WeightedHypergraph;
+    const VARIANT: &'static str = "w";
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();

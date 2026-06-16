@@ -21,6 +21,7 @@ use super::{JusticeStdUnweightedLoader, JusticeStdWeightedLoader};
 
 impl Loader for JusticeStdUnweightedLoader {
     type Output = crate::graph::UnweightedHypergraph;
+    const VARIANT: &'static str = "uw";
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();
@@ -109,6 +110,7 @@ impl Loader for JusticeStdUnweightedLoader {
 
 impl Loader for JusticeStdWeightedLoader {
     type Output = crate::graph::WeightedHypergraph;
+    const VARIANT: &'static str = "w";
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();

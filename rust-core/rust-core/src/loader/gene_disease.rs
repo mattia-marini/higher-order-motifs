@@ -18,6 +18,7 @@ pub struct Weighted;
 
 impl Loader for GeneDiseaseStdWeightedLoader {
     type Output = crate::graph::WeightedHypergraph;
+    const VARIANT: &'static str = "w";
 
     fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
         let dataset_location = self.dataset_location.clone();

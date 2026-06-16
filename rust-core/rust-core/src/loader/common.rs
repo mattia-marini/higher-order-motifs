@@ -154,12 +154,6 @@ where
 
         let cache_dir = cache_dir.as_ref().unwrap();
 
-        println!(
-            "Dataset '{}' hashes to {}",
-            self.get_name(),
-            hash_to_len(self, 16)
-        );
-
         let cache_file = PathBuf::from(&cache_dir)
             .join(format!(
                 "{}_{}_{}",
