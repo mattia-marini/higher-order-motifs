@@ -36,10 +36,10 @@ impl Fingerprint3 {
                 rv
             };
 
-            rv.add_edge_with_nodes(CompressedNodeSet::from_nodes(nodes));
+            rv.add_edge_with_nodes(CompressedNodeSet::from_array(nodes));
         }
         if count_3 != 0 {
-            rv.add_edge_with_nodes(CompressedNodeSet::from_nodes([0, 1, 2]));
+            rv.add_edge_with_nodes(CompressedNodeSet::from_array([0, 1, 2]));
         }
         rv.into()
     }

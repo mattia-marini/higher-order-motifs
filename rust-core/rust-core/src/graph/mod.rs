@@ -21,7 +21,10 @@ use pyo3_stub_gen::reexport_module_members;
 pub mod graph {
 
     #[pymodule_export]
-    use super::adj_list::AdjList;
+    use super::adj_list::UnweightedAdjList;
+
+    #[pymodule_export]
+    use super::adj_list::WeightedAdjList;
 
     #[pymodule_export]
     use super::hypergraph::UnweightedHypergraph;

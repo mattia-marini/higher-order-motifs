@@ -10,7 +10,17 @@ impl CompressedNodeSet {
         Self { nodes }
     }
 
-    pub fn from_nodes(nodes: impl IntoIterator<Item = u8>) -> Self {
+    pub const fn from_array<const N: usize>(nodes: [u8; N]) -> Self {
+        let mut rv = Self::new(0);
+        let mut i = 0;
+        while i < N {
+            rv.nodes |= 1 << nodes[i];
+            i += 1;
+        }
+        rv
+    }
+
+    pub fn from_iter(nodes: impl IntoIterator<Item = u8>) -> Self {
         let mut rv = Self::new(0);
         for node in nodes {
             rv.nodes |= 1 << node;

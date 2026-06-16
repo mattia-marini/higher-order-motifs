@@ -112,11 +112,14 @@ where
 }
 
 #[self_referencing]
-pub struct ArchivedAdjListHandle {
+pub struct ArchivedAdjListHandle<W>
+where
+    W: Archive + 'static,
+{
     bytes: AlignedVec,
     #[borrows(bytes)]
     // #[not_covariant]
-    pub archived: &'this ArchivedAdjList,
+    pub archived: &'this ArchivedAdjList<W>,
 }
 
 impl<T, W> DumpCacheToFile for Hypergraph<T, W>
@@ -186,7 +189,10 @@ where
     }
 }
 
-impl DumpCacheToFile for AdjList {
+impl<W> DumpCacheToFile for AdjList<W>
+where
+    W: StdSerializable,
+{
     fn save_to_file<P: AsRef<std::path::Path>>(
         &self,
         path: P,
@@ -200,7 +206,11 @@ impl DumpCacheToFile for AdjList {
     }
 }
 
-impl LoadFromCacheDeserialized for AdjList {
+impl<W> LoadFromCacheDeserialized for AdjList<W>
+where
+    W: StdDeserializable<W> + Archive,
+    for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
+{
     fn load_deserialized<P: AsRef<std::path::Path>>(
         path: P,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -209,15 +219,19 @@ impl LoadFromCacheDeserialized for AdjList {
         let mut bytes: AlignedVec = AlignedVec::new();
         bytes.extend_from_reader(&mut file)?;
 
-        let archived = rkyv::access::<ArchivedAdjList, rkyv::rancor::Error>(&bytes[..])?;
-        let rv = rkyv::deserialize::<AdjList, rkyv::rancor::Error>(archived)?;
+        let archived = rkyv::access::<ArchivedAdjList<W>, rkyv::rancor::Error>(&bytes[..])?;
+        let rv = rkyv::deserialize::<AdjList<W>, rkyv::rancor::Error>(archived)?;
 
         Ok(rv)
     }
 }
 
-impl LoadFromCacheArchived for AdjList {
-    type Container = ArchivedAdjListHandle;
+impl<W> LoadFromCacheArchived for AdjList<W>
+where
+    W: Archive + 'static,
+    for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
+{
+    type Container = ArchivedAdjListHandle<W>;
 
     fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>> {
         let mut file = File::open(path)?;
@@ -227,7 +241,7 @@ impl LoadFromCacheArchived for AdjList {
         let container = ArchivedAdjListHandleTryBuilder {
             bytes,
             archived_builder: |bytes_ref| {
-                rkyv::access::<ArchivedAdjList, rkyv::rancor::Error>(&bytes_ref[..])
+                rkyv::access::<ArchivedAdjList<W>, rkyv::rancor::Error>(&bytes_ref[..])
                     .map_err(|e| Box::new(e) as Box<dyn Error>)
             },
         }

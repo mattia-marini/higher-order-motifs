@@ -16,7 +16,8 @@ from .rust import test_loader
 
 
 def main() -> None:
-    test_loader.run()
+    test_orca.run()
+
     # test_orca.run()
     # print(len(generate_motifs(4)[1]))
     # test_motifs3.run()

@@ -9,8 +9,9 @@ use hashbrown::HashMap;
 use seq_macro::seq;
 
 use crate::{
-    graph::{AdjList, Hx, Hypergraph, NodeId, NodeWeight},
+    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedAdjList, WeightedAdjList},
     loader::common::Loader,
+    misc::find_cliques,
 };
 
 use super::{ConferenceStdUnweightedLoader, ConferenceStdWeightedLoader};
@@ -50,16 +51,17 @@ impl Loader for ConferenceStdUnweightedLoader {
 
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list,
-                // .iter()
-                // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                // .collect(),
-            );
+            let (mut adj_list, original_index, compressed_index) =
+                UnweightedAdjList::from_edges_mapped(
+                    edge_list,
+                    // .iter()
+                    // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
+                    // .collect(),
+                );
 
             adj_list.make_undirected();
 
-            let mut cliques = adj_list.find_cliques();
+            let mut cliques = find_cliques(&adj_list);
             cliques = cliques
                 .into_iter()
                 .filter(|c| c.len() >= 2)
@@ -127,15 +129,16 @@ impl Loader for ConferenceStdWeightedLoader {
 
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list, // .iter()
-                          // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                          // .collect(),
-            );
+            let (mut adj_list, original_index, compressed_index) =
+                UnweightedAdjList::from_edges_mapped(
+                    edge_list, // .iter()
+                              // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
+                              // .collect(),
+                );
 
             adj_list.make_undirected();
 
-            let mut cliques = adj_list.find_cliques();
+            let mut cliques = find_cliques(&adj_list);
             cliques = cliques
                 .into_iter()
                 .filter(|c| c.len() >= 2)

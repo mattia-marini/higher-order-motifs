@@ -3,7 +3,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 use rkyv::{Archive, Deserialize, Serialize};
 use std::{fs::File, io::Write, ops::Index, path::Path, time::Instant};
 
-use crate::graph::{AdjList, types::NodeId};
+use crate::graph::{AdjList, UnweightedAdjList, types::NodeId};
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq)]
 #[gen_stub_pyclass(module = "rust_core._core.graph")]
@@ -42,7 +42,7 @@ impl FlatAdjList {
 
     #[staticmethod]
     pub fn from_edges(edges: Vec<(NodeId, NodeId)>, _directed: bool) -> Self {
-        let (mut adj_list, _, _) = AdjList::from_edges_mapped(edges);
+        let (mut adj_list, _, _) = UnweightedAdjList::from_edges_mapped(edges);
         adj_list.remove_self_loops();
         adj_list.make_undirected();
 
@@ -51,9 +51,10 @@ impl FlatAdjList {
             edges: vec![0; adj_list.m()],
         };
 
-        for (i, neighbors) in adj_list.adj.iter().enumerate() {
+        for (i, neighbors) in adj_list.iter_neighbors().enumerate() {
             rv.offsets[i + 1] = rv.offsets[i] + neighbors.len();
-            rv.edges[rv.offsets[i]..rv.offsets[i + 1]].copy_from_slice(neighbors);
+            let neighbors = neighbors.iter().map(|&(v, _)| v).collect::<Vec<_>>();
+            rv.edges[rv.offsets[i]..rv.offsets[i + 1]].copy_from_slice(&neighbors);
         }
 
         rv

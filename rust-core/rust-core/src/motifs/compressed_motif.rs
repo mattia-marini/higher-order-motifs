@@ -276,6 +276,11 @@ macro_rules! impl_motif {
                 self.container |= Self::CONTAINER_ONE << edge_number;
             }
 
+            pub const fn const_add_edge_with_nodes(&mut self, node_set: CompressedNodeSet) {
+                let edge_number = Self::EDGE_MAP[node_set.nodes as usize];
+                self.const_add_edge(edge_number as usize);
+            }
+
             pub const fn const_remove_edge(&mut self, edge_number: usize) {
                 self.container &= !(Self::CONTAINER_ONE << edge_number);
             }

@@ -7,8 +7,9 @@ use hashbrown::HashMap;
 use seq_macro::seq;
 
 use crate::{
-    graph::{AdjList, Hx, Hypergraph, NodeId, NodeWeight},
+    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedAdjList, WeightedAdjList},
     loader::common::Loader,
+    misc::find_cliques,
 };
 
 use super::{WorkspaceStdUnweightedLoader, WorkspaceStdWeightedLoader};
@@ -48,10 +49,10 @@ impl Loader for WorkspaceStdUnweightedLoader {
 
         for (_t, edge_list) in edges.into_iter() {
             let (mut adj_list, original_index, _compressed_index) =
-                AdjList::from_edges_mapped(edge_list);
+                UnweightedAdjList::from_edges_mapped(edge_list);
             adj_list.make_undirected();
 
-            let mut cliques = adj_list.find_cliques();
+            let mut cliques = find_cliques(&adj_list);
             cliques = cliques
                 .into_iter()
                 .filter(|c| c.len() >= 2)
@@ -117,10 +118,10 @@ impl Loader for WorkspaceStdWeightedLoader {
 
         for (_t, edge_list) in edges.into_iter() {
             let (mut adj_list, original_index, _compressed_index) =
-                AdjList::from_edges_mapped(edge_list);
+                UnweightedAdjList::from_edges_mapped(edge_list);
             adj_list.make_undirected();
 
-            let mut cliques = adj_list.find_cliques();
+            let mut cliques = find_cliques(&adj_list);
             cliques = cliques
                 .into_iter()
                 .filter(|c| c.len() >= 2)

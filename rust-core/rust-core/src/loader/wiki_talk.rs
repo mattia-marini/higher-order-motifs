@@ -3,7 +3,7 @@
 // use std::io::{BufRead, BufReader, Read};
 // use std::path::Path;
 //
-// use crate::graph::{AdjList, Hypergraph, NodeId, UnweightedHypergraph};
+// use crate::graph::{UnweightedAdjList, Hypergraph, NodeId, UnweightedHypergraph};
 // use crate::loader::common::{Loader, get_dataset_paths, parse_u32};
 //
 // const PATH: &str = "wiki/wiki-talk.txt";
@@ -29,6 +29,6 @@
 //             }
 //         }
 //
-//         Ok(AdjList::from_edges_mapped(edges).0)
+//         Ok(UnweightedAdjList::from_edges_mapped(edges).0)
 //     }
 // }

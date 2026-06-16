@@ -43,7 +43,7 @@ pub mod types {
         pub mean_intensity: f64,
         /// The mean coherence, i.e. the mean coherence between all intances of the motif. Useful
         /// in weighted hypergraphs
-        pub mean_coherence: Duration,
+        pub mean_coherence: f64,
 
         /// The mean actual_intensity, i.e. the mean actual_intensity between all intances of the motif. Useful
         /// in weighted hypergraphs

@@ -4,7 +4,7 @@ use pyo3::prelude::PyResult;
 /// Returns a degree ordering of the vertices, the position of each vertex in that ordering, and
 /// the maximum degree of the graph.
 /// Time Complexity: O(n)
-pub fn degree_ordering(adj: &AdjList, decreasing: bool) -> (Vec<NodeId>, Vec<NodeId>, usize) {
+pub fn degree_ordering<W>(adj: &AdjList<W>, decreasing: bool) -> (Vec<NodeId>, Vec<NodeId>, usize) {
     let n = adj.n();
     if n == 0 {
         return (Vec::new(), Vec::new(), 0);
@@ -53,7 +53,7 @@ pub fn degree_ordering(adj: &AdjList, decreasing: bool) -> (Vec<NodeId>, Vec<Nod
 /// Returns a degeneracy ordering of the graph, the position of each vertex,
 /// and the degeneracy (k) of the graph.
 /// Complexity: O(n + m)
-pub fn degeneracy_ordering(adj: &AdjList) -> (Vec<usize>, Vec<usize>, usize) {
+pub fn degeneracy_ordering<W>(adj: &AdjList<W>) -> (Vec<usize>, Vec<usize>, usize) {
     let n = adj.n();
     if n == 0 {
         return (vec![], vec![], 0);
@@ -93,7 +93,7 @@ pub fn degeneracy_ordering(adj: &AdjList) -> (Vec<usize>, Vec<usize>, usize) {
         let v = order[i];
         k = std::cmp::max(k, deg[v]);
 
-        for &u_node in &adj.adj[v] {
+        for &(u_node, ref _w) in &adj.adj[v] {
             let u = u_node as usize;
             if pos[u] > i {
                 // Only look at neighbors still "in the graph"
@@ -122,7 +122,7 @@ pub fn degeneracy_ordering(adj: &AdjList) -> (Vec<usize>, Vec<usize>, usize) {
 
 /// A version of degeneracy_ordering that accepts Python objects.
 /// It maps Python objects to internal indices to perform the O(n + m) sort.
-pub fn degeneracy_ordering_py(adj: &AdjList) -> PyResult<(Vec<usize>, Vec<usize>, usize)> {
+pub fn degeneracy_ordering_py<W>(adj: &AdjList<W>) -> PyResult<(Vec<usize>, Vec<usize>, usize)> {
     let n = adj.n();
     if n == 0 {
         return Ok((vec![], vec![], 0));
@@ -156,7 +156,7 @@ pub fn degeneracy_ordering_py(adj: &AdjList) -> PyResult<(Vec<usize>, Vec<usize>
     for i in 0..n {
         let v = order_idx[i];
         k = std::cmp::max(k, deg[v]);
-        for &u_node in &adj.adj[v] {
+        for &(u_node, ref _w) in &adj.adj[v] {
             let u = u_node as usize;
             if pos[u] > i {
                 let u_deg = deg[u];
