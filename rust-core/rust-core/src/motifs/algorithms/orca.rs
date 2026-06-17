@@ -383,11 +383,40 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
         .map(|neighbors| neighbors.into_iter().collect())
         .collect();
 
-    // Precompute degrees and neighbor lists for efficiency
-    let n = adj.n();
-    let degrees: Vec<usize> = adj.adj.iter().map(|n| n.len()).collect();
+    // Precompute triangles that span over edges
+    let m = adj.m();
+    let mut tri: Vec<usize> = vec![0; m];
+    
+    for (i, edge) in adj.adj.iter().enumerate() {
+        // For each node, count triangles through it
+        for &neighbor in edge {
+            // This is a simplified version - we need to count triangles per edge
+        }
+    }
 
-    // Initialize motif stats for all 4-node graphlets
+    // Actually compute triangles per edge
+    // We need to map edges to their triangle counts
+    let mut edge_to_idx: HashMap<(NodeId, NodeId), usize> = HashMap::new();
+    for (i, (a, b, _)) in edges_2.iter().enumerate() {
+        let key = if a < b { (*a, *b) } else { (*b, *a) };
+        edge_to_idx.insert(key, i);
+    }
+
+    // Count triangles for each edge
+    for (i, (a, b, _)) in edges_2.iter().enumerate() {
+        let neighbors_a = &adj_hash[*a as usize];
+        let neighbors_b = &adj_hash[*b as usize];
+        
+        let mut count = 0;
+        for (z, _) in neighbors_a {
+            if *z != *b && neighbors_b.contains_key(z) {
+                count += 1;
+            }
+        }
+        tri[i] = count;
+    }
+
+    // Initialize motif stats
     let mut four_clique = MotifStats::new();
     let mut diamond = MotifStats::new();
     let mut four_cycle = MotifStats::new();
@@ -400,7 +429,7 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
     let mut edge_plus_two_isolated = MotifStats::new();
     let mut four_isolated = MotifStats::new();
 
-    // Count triangles first (needed for several 4-node motifs)
+    // Count triangles first
     let mut triangles = Vec::new();
     forward_hashed_cloj(&adj, false, |a, b, c| {
         triangles.push((a, b, c));
@@ -429,7 +458,7 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
         let neighbors_c = &adj_hash[*c as usize];
 
         // Check all nodes (could optimize by iterating over union of neighbors)
-        for d in 0..n as NodeId {
+        for d in 0..adj.n() as NodeId {
             if d == *a || d == *b || d == *c {
                 continue;
             }
@@ -454,24 +483,24 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
 
     // Count 4-cycles: for each pair of non-adjacent nodes, count common neighbors
     // A 4-cycle is formed by two nodes with exactly 2 common neighbors
-    for u in 0..n as NodeId {
+    for u in 0..adj.n() as NodeId {
         let neighbors_u = &adj_hash[u as usize];
-        for v in (u + 1)..n as NodeId {
-            if neighbors_u.contains_key(&v) {
-                continue; // Skip adjacent nodes
+        for (v, _) in neighbors_u {
+            if *v <= u {
+                continue; // Process each edge once
             }
-            let neighbors_v = &adj_hash[v as usize];
+            let neighbors_v = &adj_hash[*v as usize];
             let mut common = 0;
             // Iterate over smaller neighbor set
             if neighbors_u.len() < neighbors_v.len() {
                 for (w, _) in neighbors_u {
-                    if neighbors_v.contains_key(w) {
+                    if *w != *v && neighbors_v.contains_key(w) {
                         common += 1;
                     }
                 }
             } else {
                 for (w, _) in neighbors_v {
-                    if neighbors_u.contains_key(w) {
+                    if *w != u && neighbors_u.contains_key(w) {
                         common += 1;
                     }
                 }
@@ -490,7 +519,7 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
         let neighbors_b = &adj_hash[*b as usize];
         let neighbors_c = &adj_hash[*c as usize];
 
-        for d in 0..n as NodeId {
+        for d in 0..adj.n() as NodeId {
             if d == *a || d == *b || d == *c {
                 continue;
             }
@@ -514,7 +543,7 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
     // Count paths of length 3 (P4)
     // For each edge (u,v), count pairs of neighbors (x,y) where x is neighbor of u (not v),
     // y is neighbor of v (not u), and x != y, and no edge between x and y
-    for u in 0..n as NodeId {
+    for u in 0..adj.n() as NodeId {
         let neighbors_u = &adj_hash[u as usize];
         for (v, _) in neighbors_u {
             if *v <= u {
@@ -556,6 +585,9 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
     path_4.count /= 2;
 
     // Count stars (K1,3): for each node, choose 3 neighbors
+    let n = adj.n();
+    let degrees: Vec<usize> = adj.adj.iter().map(|n| n.len()).collect();
+    
     for u in 0..n as NodeId {
         let deg = degrees[u as usize];
         if deg >= 3 {
