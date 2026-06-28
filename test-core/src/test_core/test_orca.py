@@ -11,15 +11,18 @@ console = Console()
 
 
 def run():
-    test_hospital()
+    test_hospital(4)
     # test_conference()
     # test_pacs()
 
 
-def test_hospital():
+def test_hospital(order: int):
     py_loader = load_hospital(StandardConstructionMethod(weighted=True))
     rust_loader = DatasetLoader.builder().hospital().weighted().cached(True).load()
-    test_dataset_order_3(py_loader, rust_loader)
+    if order == 3:
+        test_dataset_order_3(py_loader, rust_loader)
+    elif order == 4:
+        test_dataset_order_4(py_loader, rust_loader)
 
 
 def test_conference():
@@ -64,7 +67,7 @@ def test_dataset_order_3(py_hg, rust_hg):
 
 
 def test_dataset_order_4(py_hg, rust_hg):
-    py_rv_3, py_time_3 = time_function(lambda: count_3(py_hg))
+    py_rv_3, py_time_3 = time_function(lambda: count_4(py_hg))
     # py_rv_4, py_time_4 = time_function(lambda: count_4(py_hg))
 
     order_map = py_hg.get_order_map()
@@ -76,15 +79,14 @@ def test_dataset_order_4(py_hg, rust_hg):
     for motif, stats in py_rv_3.items():
         print(f"Motif {motif}: {stats}")
 
-    rust_rv_3, rust_time_3 = time_function(lambda: orca_3(rust_hg))
+    rust_rv_3, rust_time_3 = time_function(lambda: orca_4(rust_hg))
     # rust_rv_4, rust_time_4 = time_function(lambda: orca_4(rust_hg))
 
     print("Rust")
     print(f"2: {rust_hg.count(2)}")
     print(f"3: {rust_hg.count(3)}")
-    # x = Fingerprint4(0)
 
-    print(f"Rust: {rust_time_3}")
+    print(f"Rust: {rust_time_3}; {len(rust_rv_3)} different motifs")
     for fingerprint, stats in rust_rv_3.items():
         print(fingerprint.get_canonical_rep())
         print(stats)

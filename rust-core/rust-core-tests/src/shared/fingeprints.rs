@@ -13,6 +13,10 @@ pub fn print_static_const<const N: usize>()
 where
     CompactMotif<N>: CompactMotifConfigurator,
 {
+    iter_hyperedges!(4, 1..=4, |edge, edge_size, edge_idx| {
+        println!("{}: {:?}", edge_idx, &edge[0..edge_size]);
+    });
+
     println!("Adjacencies:");
     for cm in CompactMotif::<N>::ADJ {
         println!("{:016b}", cm.container);
@@ -39,6 +43,11 @@ where
     println!("Relabeling map");
     for cm in CompactMotif::<N>::RELABELING_MAP {
         println!("{:?}", cm);
+    }
+
+    println!("Inclusion map");
+    for cm in CompactMotif::<N>::INCLUSION_MAP {
+        println!("{:016b}", cm.container);
     }
 }
 
@@ -77,6 +86,13 @@ where
                 map.insert(m.fingerprint(), vec![]);
             }
             map.get_mut(&fingerprint).unwrap().push(m);
+
+            if N != 5 {
+                // TODO! remove this once we can compute canonical rep for order 5
+                let x = fingerprint.clone();
+                let y = fingerprint.clone().into().fingerprint();
+                assert!(x == y, "expected {}\ngot      {}", m, fingerprint.into());
+            }
             connected_count += 1;
         }
         total_count += 1;

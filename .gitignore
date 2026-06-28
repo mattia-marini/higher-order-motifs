@@ -25,3 +25,7 @@ rust-core/stubs/
 dataset/
 plots/
 motifs_cache/
+.aider*
+
+
+.ccls-cache/

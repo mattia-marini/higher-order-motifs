@@ -1,9 +1,11 @@
+use super::const_graphlets::*;
 use foldhash::fast::FixedState;
 
 use crate::{
     graph::{
         AdjList, HypergraphAccessor, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph,
     },
+    misc::common_neighbors_sorted_list_3_cloj,
     motifs::{
         compressed_motif::{CompactMotif, CompactMotif3},
         compressed_node_set::CompressedNodeSet,
@@ -17,108 +19,6 @@ use crate::triangle::forward::forward_hashed_cloj;
 use hashbrown::HashMap;
 use pyo3::pyfunction;
 use pyo3_stub_gen::derive::gen_stub_pyfunction;
-
-const TRIANGLE: CompactMotif<3> = {
-    let mut rv = CompactMotif::<3>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv
-};
-
-const STRAIGHT_PATH: CompactMotif<3> = {
-    let mut rv = CompactMotif::<3>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv
-};
-
-// 4-node connected graphlets (6 types)
-const FOUR_CLIQUE: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 3]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 3]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 3]));
-    rv
-};
-
-const DIAMOND: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 3]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 3]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 3]));
-    rv
-};
-
-const FOUR_CYCLE: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 3]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([3, 0]));
-    rv
-};
-
-const PAW: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 0])); // Triangle
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 3])); // Tail
-    rv
-};
-
-const PATH_4: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 3]));
-    rv
-};
-
-const STAR_4: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 3]));
-    rv
-};
-
-// Disconnected 4-node motifs
-const TWO_EDGES_DISCONNECTED: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 3]));
-    rv
-};
-
-const TRIANGLE_PLUS_ISOLATED: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 2]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv
-};
-
-const PATH_3_PLUS_ISOLATED: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
-    rv
-};
-
-const EDGE_PLUS_TWO_ISOLATED: CompactMotif<4> = {
-    let mut rv = CompactMotif::<4>::zero();
-    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
-    rv
-};
-
-const FOUR_ISOLATED: CompactMotif<4> = { CompactMotif::<4>::zero() };
 
 pub fn unweighted_3(hg: &UnweightedHypergraph) -> HashMap<Fingerprint3, MotifStats> {
     let hg = &hg.0;
@@ -238,8 +138,8 @@ pub fn weighted_3(hg: &WeightedHypergraph) -> HashMap<Fingerprint3, MotifStats> 
         .map(|neighboors| neighboors.into_iter().collect())
         .collect();
 
-    // Computing the sum of products of all possible 3 pairs of incident pairs for each vertex using Newtoon sum
-    // O(n + e)
+    // Computing the sum of products of all possible 3 pairs of incident pairs for each vertex using
+    // Newtoon sum O(n + e)
     let mut s1: Vec<f64> = vec![0.0; adj.adj.len()];
     let mut s2: Vec<f64> = vec![0.0; adj.adj.len()];
     // let mut s3: Vec<f64> = vec![0.0; adj.adj.len()];
@@ -360,6 +260,42 @@ pub fn weighted_3(hg: &WeightedHypergraph) -> HashMap<Fingerprint3, MotifStats> 
     motif_stats
 }
 
+#[derive(Clone, Default, Debug)]
+struct Equation4<T> {
+    f_12_14: T,
+    f_10_13: T,
+    f_13_14: T,
+    f_11_13: T,
+    f_7_11: T,
+    f_5_8: T,
+    f_6_9: T,
+    f_9_12: T,
+    f_4_8: T,
+    f_8_12: T,
+    f_14: T,
+}
+
+impl<T> Equation4<T>
+where
+    T: num_traits::Zero,
+{
+    pub fn new() -> Self {
+        Self {
+            f_12_14: T::zero(),
+            f_10_13: T::zero(),
+            f_13_14: T::zero(),
+            f_11_13: T::zero(),
+            f_7_11: T::zero(),
+            f_5_8: T::zero(),
+            f_6_9: T::zero(),
+            f_9_12: T::zero(),
+            f_4_8: T::zero(),
+            f_8_12: T::zero(),
+            f_14: T::zero(),
+        }
+    }
+}
+
 pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifStats> {
     let hg = &hg.0;
     let mut motif_stats = HashMap::new();
@@ -372,49 +308,23 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
         .map(|e| (e.nodes[0], e.nodes[1], ()))
         .collect();
 
-    let (mut adj, _direct_map, inverse_map) = AdjList::from_edges_mapped(edges_2);
+    let (mut adj, _direct_map, inverse_map) = AdjList::incidence_from_edges_mapped(edges_2);
     adj.make_undirected();
+    adj.sort_neighbors();
+
+    // let mut inc_list = adj.clone();
+    // for u in 0..adj.n() {
+    //     for v in inc_list[u] {}
+    // }
 
     // Create hash-based adjacency for O(1) edge lookups
-    let mut adj_hash: Vec<HashMap<NodeId, (), FixedState>> = adj
+    // adj_hash[i] = HashMap<(neighbor_node_id, edge_id)>
+    let mut adj_hash: Vec<HashMap<NodeId, NodeId, FixedState>> = adj
         .adj
         .iter()
         .cloned()
-        .map(|neighbors| neighbors.into_iter().collect())
+        .map(|neighbors| neighbors.into_iter().map(|e| (e.0, e.1.0)).collect())
         .collect();
-
-    // Precompute triangles that span over edges
-    let m = adj.m();
-    let mut tri: Vec<usize> = vec![0; m];
-    
-    for (i, edge) in adj.adj.iter().enumerate() {
-        // For each node, count triangles through it
-        for &neighbor in edge {
-            // This is a simplified version - we need to count triangles per edge
-        }
-    }
-
-    // Actually compute triangles per edge
-    // We need to map edges to their triangle counts
-    let mut edge_to_idx: HashMap<(NodeId, NodeId), usize> = HashMap::new();
-    for (i, (a, b, _)) in edges_2.iter().enumerate() {
-        let key = if a < b { (*a, *b) } else { (*b, *a) };
-        edge_to_idx.insert(key, i);
-    }
-
-    // Count triangles for each edge
-    for (i, (a, b, _)) in edges_2.iter().enumerate() {
-        let neighbors_a = &adj_hash[*a as usize];
-        let neighbors_b = &adj_hash[*b as usize];
-        
-        let mut count = 0;
-        for (z, _) in neighbors_a {
-            if *z != *b && neighbors_b.contains_key(z) {
-                count += 1;
-            }
-        }
-        tri[i] = count;
-    }
 
     // Initialize motif stats
     let mut four_clique = MotifStats::new();
@@ -429,236 +339,322 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
     let mut edge_plus_two_isolated = MotifStats::new();
     let mut four_isolated = MotifStats::new();
 
-    // Count triangles first
+    let mut orbit = vec![[0.0; 15]; hg.n()];
+    let mut equations: Vec<Equation4<usize>> = vec![Equation4::new(); hg.n()];
+    let mut tri = vec![0; hg.m()];
+
+    // Count triangles with forward hashed in O(m^1.5)
     let mut triangles = Vec::new();
     forward_hashed_cloj(&adj, false, |a, b, c| {
         triangles.push((a, b, c));
+        let upper_bound = a.min(b).min(c);
+        let edge_ab = adj_hash[a as usize][&b] as usize;
+        let edge_ac = adj_hash[a as usize][&c] as usize;
+        let edge_bc = adj_hash[b as usize][&c] as usize;
+
+        tri[edge_ab] += 1;
+        tri[edge_ac] += 1;
+        tri[edge_bc] += 1;
+
+        // 4-clique counting
+        common_neighbors_sorted_list_3_cloj(&adj[a], &adj[b], &adj[c], upper_bound, |i, j, k| {
+            let common = adj[a][i].0;
+
+            orbit[a as usize][14] += 1.0;
+            orbit[b as usize][14] += 1.0;
+            orbit[c as usize][14] += 1.0;
+            orbit[common as usize][14] += 1.0;
+        });
     });
 
-    // Count 4-cliques: for each triangle, count common neighbors
-    for (a, b, c) in &triangles {
-        let neighbors_a = &adj_hash[*a as usize];
-        let neighbors_b = &adj_hash[*b as usize];
-        let neighbors_c = &adj_hash[*c as usize];
+    // Wedge base
+    for a in 0..hg.n() {
+        let deg_a = adj[a].len();
+        // These variables contain the sum over all possible 3 nodes motifs incident on x (wedges
+        // and triangles).
+        // let (mut sum_p_ab, mut sum_p_ba) = (0, 0);
 
-        // Find common neighbors of a, b, c
-        for (d, _) in neighbors_a {
-            if neighbors_b.contains_key(d) && neighbors_c.contains_key(d) {
-                four_clique.count += 1;
-            }
+        for &(b, (edge_ab, _)) in &adj.adj[a] {
+            let (b, edge_ab) = (b as usize, edge_ab as usize);
+            let deg_b = adj[b].len();
+            let (p_ab, p_ba) = (deg_b - 1 - tri[edge_ab], deg_a - 1 - tri[edge_ab]);
+
+            // sum_p_ab += p_ab;
+            // sum_p_ba += p_ba;
+
+            equations[a].f_5_8 += p_ab;
+            equations[a].f_7_11 += p_ba;
+            equations[a].f_6_9 += p_ab * (p_ab - 1);
+
+            equations[a].f_4_8 += p_ab * (p_ab - 1);
         }
+
+        equations[a].f_5_8 = equations[a].f_5_8 * (deg_a - 1);
+        equations[a].f_7_11 = equations[a].f_7_11 * (deg_a - 1) - (deg_a * (deg_a - 1));
+        // equations[a].f_6_9 += (deg_a - 1) * sum_p_ba;
     }
+
+    // Triangle base
+    for (a, b, c) in triangles {
+        let edge_ab = adj_hash[a as usize][&b] as usize;
+        let edge_ac = adj_hash[a as usize][&c] as usize;
+        let edge_bc = adj_hash[b as usize][&c] as usize;
+
+        let deg_a = adj[a].len();
+        let deg_b = adj[b].len();
+        let deg_c = adj[c].len();
+
+        let (p_ab, p_ba) = (deg_b - 1 - tri[edge_ab], deg_a - 1 - tri[edge_ab]);
+        let (p_ac, p_ca) = (deg_c - 1 - tri[edge_ac], deg_a - 1 - tri[edge_ac]);
+        let (p_bc, p_cb) = (deg_c - 1 - tri[edge_bc], deg_b - 1 - tri[edge_bc]);
+
+        let (a, b, c) = (a as usize, b as usize, c as usize);
+        // f12_14
+        equations[a].f_12_14 += tri[edge_bc] - 1;
+        equations[b].f_12_14 += tri[edge_ac] - 1;
+        equations[c].f_12_14 += tri[edge_ab] - 1;
+
+        // f13_14
+        equations[a].f_13_14 += (tri[edge_ab] - 1) + (tri[edge_ac] - 1);
+        equations[b].f_13_14 += (tri[edge_ab] - 1) + (tri[edge_bc] - 1);
+        equations[c].f_13_14 += (tri[edge_ac] - 1) + (tri[edge_bc] - 1);
+
+        // f10_13
+        equations[a].f_10_13 += p_bc + p_cb;
+        equations[b].f_10_13 += p_ac + p_ca;
+        equations[c].f_10_13 += p_ab + p_ba;
+
+        // f11_13
+        equations[a].f_11_13 += p_ca + p_ba;
+        equations[b].f_11_13 += p_ab + p_cb;
+        equations[c].f_11_13 += p_ac + p_bc;
+
+        // Compensating overcounted motifs in the wedge-base step
+    }
+
+    // Count 4-cliques: for each triangle, count common neighbors
+    // for (a, b, c) in &triangles {
+    //     let neighbors_a = &adj_hash[*a as usize];
+    //     let neighbors_b = &adj_hash[*b as usize];
+    //     let neighbors_c = &adj_hash[*c as usize];
+    //
+    //     // Find common neighbors of a, b, c
+    //     for (d, _) in neighbors_a {
+    //         if neighbors_b.contains_key(d) && neighbors_c.contains_key(d) {
+    //             four_clique.count += 1;
+    //         }
+    //     }
+    // }
     // Each 4-clique is counted 4 times (once per triangle), so divide by 4
-    four_clique.count /= 4;
+    // four_clique.count /= 4;
 
     // Count diamonds: for each triangle, count nodes connected to exactly 2 vertices of the triangle
-    for (a, b, c) in &triangles {
-        let neighbors_a = &adj_hash[*a as usize];
-        let neighbors_b = &adj_hash[*b as usize];
-        let neighbors_c = &adj_hash[*c as usize];
-
-        // Check all nodes (could optimize by iterating over union of neighbors)
-        for d in 0..adj.n() as NodeId {
-            if d == *a || d == *b || d == *c {
-                continue;
-            }
-            let mut connections = 0;
-            if neighbors_a.contains_key(&d) {
-                connections += 1;
-            }
-            if neighbors_b.contains_key(&d) {
-                connections += 1;
-            }
-            if neighbors_c.contains_key(&d) {
-                connections += 1;
-            }
-
-            if connections == 2 {
-                diamond.count += 1;
-            }
-        }
-    }
-    // Each diamond is counted 2 times (once per triangle in the diamond), so divide by 2
-    diamond.count /= 2;
-
+    // for (a, b, c) in &triangles {
+    //     let neighbors_a = &adj_hash[*a as usize];
+    //     let neighbors_b = &adj_hash[*b as usize];
+    //     let neighbors_c = &adj_hash[*c as usize];
+    //
+    //     // Check all nodes (could optimize by iterating over union of neighbors)
+    //     for d in 0..adj.n() as NodeId {
+    //         if d == *a || d == *b || d == *c {
+    //             continue;
+    //         }
+    //         let mut connections = 0;
+    //         if neighbors_a.contains_key(&d) {
+    //             connections += 1;
+    //         }
+    //         if neighbors_b.contains_key(&d) {
+    //             connections += 1;
+    //         }
+    //         if neighbors_c.contains_key(&d) {
+    //             connections += 1;
+    //         }
+    //
+    //         if connections == 2 {
+    //             diamond.count += 1;
+    //         }
+    //     }
+    // }
+    // // Each diamond is counted 2 times (once per triangle in the diamond), so divide by 2
+    // diamond.count /= 2;
     // Count 4-cycles: for each pair of non-adjacent nodes, count common neighbors
     // A 4-cycle is formed by two nodes with exactly 2 common neighbors
-    for u in 0..adj.n() as NodeId {
-        let neighbors_u = &adj_hash[u as usize];
-        for (v, _) in neighbors_u {
-            if *v <= u {
-                continue; // Process each edge once
-            }
-            let neighbors_v = &adj_hash[*v as usize];
-            let mut common = 0;
-            // Iterate over smaller neighbor set
-            if neighbors_u.len() < neighbors_v.len() {
-                for (w, _) in neighbors_u {
-                    if *w != *v && neighbors_v.contains_key(w) {
-                        common += 1;
-                    }
-                }
-            } else {
-                for (w, _) in neighbors_v {
-                    if *w != u && neighbors_u.contains_key(w) {
-                        common += 1;
-                    }
-                }
-            }
-            if common >= 2 {
-                // Number of 4-cycles with u,v as opposite vertices = C(common, 2)
-                four_cycle.count += common * (common - 1) / 2;
-            }
-        }
-    }
-
-    // Count paws: triangle + pendant edge
-    // For each triangle, count nodes connected to exactly 1 vertex of the triangle
-    for (a, b, c) in &triangles {
-        let neighbors_a = &adj_hash[*a as usize];
-        let neighbors_b = &adj_hash[*b as usize];
-        let neighbors_c = &adj_hash[*c as usize];
-
-        for d in 0..adj.n() as NodeId {
-            if d == *a || d == *b || d == *c {
-                continue;
-            }
-            let mut connections = 0;
-            if neighbors_a.contains_key(&d) {
-                connections += 1;
-            }
-            if neighbors_b.contains_key(&d) {
-                connections += 1;
-            }
-            if neighbors_c.contains_key(&d) {
-                connections += 1;
-            }
-
-            if connections == 1 {
-                paw.count += 1;
-            }
-        }
-    }
-
-    // Count paths of length 3 (P4)
-    // For each edge (u,v), count pairs of neighbors (x,y) where x is neighbor of u (not v),
-    // y is neighbor of v (not u), and x != y, and no edge between x and y
-    for u in 0..adj.n() as NodeId {
-        let neighbors_u = &adj_hash[u as usize];
-        for (v, _) in neighbors_u {
-            if *v <= u {
-                continue; // Process each edge once
-            }
-            let neighbors_v = &adj_hash[*v as usize];
-
-            // Count neighbors of u excluding v
-            let mut neighbors_u_excl_v = Vec::new();
-            for (x, _) in neighbors_u {
-                if *x != *v {
-                    neighbors_u_excl_v.push(*x);
-                }
-            }
-
-            // Count neighbors of v excluding u
-            let mut neighbors_v_excl_u = Vec::new();
-            for (y, _) in neighbors_v {
-                if *y != u {
-                    neighbors_v_excl_u.push(*y);
-                }
-            }
-
-            // Count pairs (x,y) with no edge between them
-            for x in &neighbors_u_excl_v {
-                for y in &neighbors_v_excl_u {
-                    if x == y {
-                        continue;
-                    }
-                    // Check if x and y are adjacent
-                    if !adj_hash[*x as usize].contains_key(y) {
-                        path_4.count += 1;
-                    }
-                }
-            }
-        }
-    }
-    // Each P4 is counted twice (once from each end), so divide by 2
-    path_4.count /= 2;
-
-    // Count stars (K1,3): for each node, choose 3 neighbors
-    let n = adj.n();
-    let degrees: Vec<usize> = adj.adj.iter().map(|n| n.len()).collect();
-    
-    for u in 0..n as NodeId {
-        let deg = degrees[u as usize];
-        if deg >= 3 {
-            star_4.count += deg * (deg - 1) * (deg - 2) / 6;
-        }
-    }
-    // Subtract stars that are part of larger structures (claw-free)
-    // Each 4-clique contains 4 stars (one centered at each vertex)
-    star_4.count -= 4 * four_clique.count;
-    // Each diamond contains 2 stars (centered at the two degree-3 vertices)
-    star_4.count -= 2 * diamond.count;
-    // Each paw contains 1 star (centered at the triangle vertex with the tail)
-    star_4.count -= paw.count;
-
-    // Count disconnected motifs
-    // Total number of 4-node subsets = C(n, 4)
-    let total_4_subsets = if n >= 4 {
-        n * (n - 1) * (n - 2) * (n - 3) / 24
-    } else {
-        0
-    };
-
-    // Count connected 4-node motifs
-    let connected_count = four_clique.count
-        + diamond.count
-        + four_cycle.count
-        + paw.count
-        + path_4.count
-        + star_4.count;
-
-    // Two disconnected edges: choose 2 edges that don't share vertices
-    // Total pairs of edges = C(m, 2)
-    let m = adj.m();
-    let total_edge_pairs = m * (m - 1) / 2;
-
-    // Pairs of edges sharing a vertex = sum over vertices of C(deg(v), 2)
-    let mut edge_pairs_sharing_vertex = 0;
-    for deg in &degrees {
-        if *deg >= 2 {
-            edge_pairs_sharing_vertex += deg * (deg - 1) / 2;
-        }
-    }
-
-    two_edges_disconnected.count = total_edge_pairs - edge_pairs_sharing_vertex;
-
-    // Triangle + isolated: number of triangles * (n - 3)
-    triangle_plus_isolated.count = triangles.len() * (n - 3);
-
-    // Path of length 2 (P3) + isolated: count P3s * (n - 3)
-    // P3 count = sum over vertices of C(deg(v), 2) - 3 * triangles
-    let mut p3_count = 0;
-    for deg in &degrees {
-        if *deg >= 2 {
-            p3_count += deg * (deg - 1) / 2;
-        }
-    }
-    p3_count -= 3 * triangles.len();
-    path_3_plus_isolated.count = p3_count * (n - 3);
-
-    // Edge + two isolated: m * C(n - 2, 2)
-    if n >= 4 {
-        edge_plus_two_isolated.count = m * (n - 2) * (n - 3) / 2;
-    }
-
-    // Four isolated: C(n, 4) - all other 4-node subsets
-    let accounted = connected_count
-        + two_edges_disconnected.count
-        + triangle_plus_isolated.count
-        + path_3_plus_isolated.count
-        + edge_plus_two_isolated.count;
-    four_isolated.count = total_4_subsets.saturating_sub(accounted);
+    // for u in 0..adj.n() as NodeId {
+    //     let neighbors_u = &adj_hash[u as usize];
+    //     for (v, _) in neighbors_u {
+    //         if *v <= u {
+    //             continue; // Process each edge once
+    //         }
+    //         let neighbors_v = &adj_hash[*v as usize];
+    //         let mut common = 0;
+    //         // Iterate over smaller neighbor set
+    //         if neighbors_u.len() < neighbors_v.len() {
+    //             for (w, _) in neighbors_u {
+    //                 if *w != *v && neighbors_v.contains_key(w) {
+    //                     common += 1;
+    //                 }
+    //             }
+    //         } else {
+    //             for (w, _) in neighbors_v {
+    //                 if *w != u && neighbors_u.contains_key(w) {
+    //                     common += 1;
+    //                 }
+    //             }
+    //         }
+    //         if common >= 2 {
+    //             // Number of 4-cycles with u,v as opposite vertices = C(common, 2)
+    //             four_cycle.count += common * (common - 1) / 2;
+    //         }
+    //     }
+    // }
+    //
+    // // Count paws: triangle + pendant edge
+    // // For each triangle, count nodes connected to exactly 1 vertex of the triangle
+    // for (a, b, c) in &triangles {
+    //     let neighbors_a = &adj_hash[*a as usize];
+    //     let neighbors_b = &adj_hash[*b as usize];
+    //     let neighbors_c = &adj_hash[*c as usize];
+    //
+    //     for d in 0..adj.n() as NodeId {
+    //         if d == *a || d == *b || d == *c {
+    //             continue;
+    //         }
+    //         let mut connections = 0;
+    //         if neighbors_a.contains_key(&d) {
+    //             connections += 1;
+    //         }
+    //         if neighbors_b.contains_key(&d) {
+    //             connections += 1;
+    //         }
+    //         if neighbors_c.contains_key(&d) {
+    //             connections += 1;
+    //         }
+    //
+    //         if connections == 1 {
+    //             paw.count += 1;
+    //         }
+    //     }
+    // }
+    //
+    // // Count paths of length 3 (P4)
+    // // For each edge (u,v), count pairs of neighbors (x,y) where x is neighbor of u (not v),
+    // // y is neighbor of v (not u), and x != y, and no edge between x and y
+    // for u in 0..adj.n() as NodeId {
+    //     let neighbors_u = &adj_hash[u as usize];
+    //     for (v, _) in neighbors_u {
+    //         if *v <= u {
+    //             continue; // Process each edge once
+    //         }
+    //         let neighbors_v = &adj_hash[*v as usize];
+    //
+    //         // Count neighbors of u excluding v
+    //         let mut neighbors_u_excl_v = Vec::new();
+    //         for (x, _) in neighbors_u {
+    //             if *x != *v {
+    //                 neighbors_u_excl_v.push(*x);
+    //             }
+    //         }
+    //
+    //         // Count neighbors of v excluding u
+    //         let mut neighbors_v_excl_u = Vec::new();
+    //         for (y, _) in neighbors_v {
+    //             if *y != u {
+    //                 neighbors_v_excl_u.push(*y);
+    //             }
+    //         }
+    //
+    //         // Count pairs (x,y) with no edge between them
+    //         for x in &neighbors_u_excl_v {
+    //             for y in &neighbors_v_excl_u {
+    //                 if x == y {
+    //                     continue;
+    //                 }
+    //                 // Check if x and y are adjacent
+    //                 if !adj_hash[*x as usize].contains_key(y) {
+    //                     path_4.count += 1;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+    // // Each P4 is counted twice (once from each end), so divide by 2
+    // path_4.count /= 2;
+    //
+    // // Count stars (K1,3): for each node, choose 3 neighbors
+    // let n = adj.n();
+    // let degrees: Vec<usize> = adj.adj.iter().map(|n| n.len()).collect();
+    //
+    // for u in 0..n as NodeId {
+    //     let deg = degrees[u as usize];
+    //     if deg >= 3 {
+    //         star_4.count += deg * (deg - 1) * (deg - 2) / 6;
+    //     }
+    // }
+    // // Subtract stars that are part of larger structures (claw-free)
+    // // Each 4-clique contains 4 stars (one centered at each vertex)
+    // star_4.count -= 4 * four_clique.count;
+    // // Each diamond contains 2 stars (centered at the two degree-3 vertices)
+    // star_4.count -= 2 * diamond.count;
+    // // Each paw contains 1 star (centered at the triangle vertex with the tail)
+    // star_4.count -= paw.count;
+    //
+    // // Count disconnected motifs
+    // // Total number of 4-node subsets = C(n, 4)
+    // let total_4_subsets = if n >= 4 {
+    //     n * (n - 1) * (n - 2) * (n - 3) / 24
+    // } else {
+    //     0
+    // };
+    //
+    // // Count connected 4-node motifs
+    // let connected_count = four_clique.count
+    //     + diamond.count
+    //     + four_cycle.count
+    //     + paw.count
+    //     + path_4.count
+    //     + star_4.count;
+    //
+    // // Two disconnected edges: choose 2 edges that don't share vertices
+    // // Total pairs of edges = C(m, 2)
+    // let m = adj.m();
+    // let total_edge_pairs = m * (m - 1) / 2;
+    //
+    // // Pairs of edges sharing a vertex = sum over vertices of C(deg(v), 2)
+    // let mut edge_pairs_sharing_vertex = 0;
+    // for deg in &degrees {
+    //     if *deg >= 2 {
+    //         edge_pairs_sharing_vertex += deg * (deg - 1) / 2;
+    //     }
+    // }
+    //
+    // two_edges_disconnected.count = total_edge_pairs - edge_pairs_sharing_vertex;
+    //
+    // // Triangle + isolated: number of triangles * (n - 3)
+    // triangle_plus_isolated.count = triangles.len() * (n - 3);
+    //
+    // // Path of length 2 (P3) + isolated: count P3s * (n - 3)
+    // // P3 count = sum over vertices of C(deg(v), 2) - 3 * triangles
+    // let mut p3_count = 0;
+    // for deg in &degrees {
+    //     if *deg >= 2 {
+    //         p3_count += deg * (deg - 1) / 2;
+    //     }
+    // }
+    // p3_count -= 3 * triangles.len();
+    // path_3_plus_isolated.count = p3_count * (n - 3);
+    //
+    // // Edge + two isolated: m * C(n - 2, 2)
+    // if n >= 4 {
+    //     edge_plus_two_isolated.count = m * (n - 2) * (n - 3) / 2;
+    // }
+    //
+    // // Four isolated: C(n, 4) - all other 4-node subsets
+    // let accounted = connected_count
+    //     + two_edges_disconnected.count
+    //     + triangle_plus_isolated.count
+    //     + path_3_plus_isolated.count
+    //     + edge_plus_two_isolated.count;
+    // four_isolated.count = total_4_subsets.saturating_sub(accounted);
 
     // Insert all motifs into the result map
     motif_stats.insert(FOUR_CLIQUE.fingerprint(), four_clique);

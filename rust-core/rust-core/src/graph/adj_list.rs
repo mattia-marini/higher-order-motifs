@@ -154,6 +154,81 @@ impl<W> AdjList<W> {
         (rv, original_index, compressed_index)
     }
 
+    pub fn incidence_from_edges_mapped(
+        edges: Vec<(NodeId, NodeId, W)>,
+    ) -> (
+        AdjList<(NodeId, W)>,
+        Vec<NodeId>,
+        HashMap<NodeId, NodeId, FixedState>,
+    )
+    where
+        W: Clone,
+    {
+        if edges.is_empty() {
+            return (
+                AdjList::<(NodeId, W)>::new(),
+                Vec::new(),
+                HashMap::with_hasher(FixedState::default()),
+            );
+        }
+
+        // Step 1: assign compact IDs
+        let mut compressed_index: HashMap<NodeId, NodeId, FixedState> =
+            HashMap::with_hasher(FixedState::default());
+        let mut curr_number = 0;
+
+        for (u, v, _w) in edges.iter() {
+            if let Entry::Vacant(e) = compressed_index.entry(*u) {
+                e.insert(curr_number);
+                curr_number += 1;
+            }
+            if let Entry::Vacant(e) = compressed_index.entry(*v) {
+                e.insert(curr_number);
+                curr_number += 1;
+            }
+        }
+
+        let n = curr_number as usize;
+
+        // Step 2: compute adjacency sizes
+        let mut sizes = vec![0; n];
+
+        for (u, _, _) in edges.iter() {
+            let u_idx = compressed_index[u];
+            sizes[u_idx as usize] += 1;
+        }
+
+        // Step 3: allocate graph
+        let mut rv = AdjList::<(NodeId, W)>::new();
+
+        for (u, adj) in rv.adj.iter_mut().enumerate() {
+            adj.reserve(sizes[u]);
+        }
+
+        // Step 4: fill adjacency
+        // (assuming add_edge handles internal cursor correctly)
+        for (edge_id, (u, v, w)) in edges.iter().enumerate() {
+            let u_idx = compressed_index[u];
+            let v_idx = compressed_index[v];
+
+            rv.add_edge(u_idx, v_idx, (edge_id as NodeId, w.clone()));
+
+            // If undirected:
+            // rv.add_edge(v_idx, u_idx);
+        }
+
+        // println!("Constructed adjacency list. n: {}, m: {}", rv.n(), rv.m());
+
+        rv.m = edges.len();
+        let mut original_index = Vec::with_capacity(n);
+        original_index.resize(n, 0);
+        for (node, &compressed) in compressed_index.iter() {
+            original_index[compressed as usize] = *node;
+        }
+
+        (rv, original_index, compressed_index)
+    }
+
     pub fn from_edges_unmapped(edges: Vec<(NodeId, NodeId, W)>) -> Self
     where
         W: Clone,

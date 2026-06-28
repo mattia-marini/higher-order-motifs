@@ -1,7 +1,7 @@
 use crate::triangle::cbs::hcbs::HCBSGraph;
 
 use crate::graph::{AdjList, types::NodeId};
-use crate::misc::{count_neighbors_sorted_list, degree_ordering};
+use crate::misc::{count_common_neighbors_sorted_list, degree_ordering};
 use pyo3::prelude::*;
 use pyo3_stub_gen::reexport_module_members;
 
@@ -62,7 +62,7 @@ pub fn forward<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
                 let v = v_node as usize;
                 if i < pos[v] as usize {
                     // a[u] works if u is usize. If u is NodeId, use u as usize
-                    count += count_neighbors_sorted_list(&a[u as usize], &a[v]);
+                    count += count_common_neighbors_sorted_list(&a[u as usize], &a[v]);
                     a[v].push((pos[u as usize] as NodeId, w)); // Cast back to NodeId for storage
                 }
             }
@@ -72,7 +72,7 @@ pub fn forward<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
             for &(v_node, ref w) in &adj[u] {
                 let v = v_node as usize;
                 if u < v {
-                    count += count_neighbors_sorted_list(&a[u], &a[v]);
+                    count += count_common_neighbors_sorted_list(&a[u], &a[v]);
                     a[v].push((u as NodeId, w));
                 }
             }

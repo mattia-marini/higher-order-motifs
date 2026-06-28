@@ -50,6 +50,24 @@ pub fn degree_ordering<W>(adj: &AdjList<W>, decreasing: bool) -> (Vec<NodeId>, V
     (order, pos, max_deg)
 }
 
+/// Sorts the neighbors of each vertex in the adjacency list by the following conditions:
+/// u ≺ v if deg(u) < deg(v); if deg(u) = deg(v) the tie breaker is arbitrary
+///
+/// Time Complexity: O(e log d), where e is the number of edges and d is the maximum degree.
+pub fn sort_by_degree<W>(
+    adj: &mut AdjList<W>,
+    descreasing: bool,
+) -> (Vec<NodeId>, Vec<NodeId>, usize) {
+    let (order, rank, max_deg) = degree_ordering(adj, false);
+
+    for v in 0..adj.n() {
+        adj.adj[v].sort_by_key(|&(neighbor, _)| rank[neighbor as usize]);
+    }
+
+    // adj.adj.enumerate().sort_by_key(|(i, v)| rank[*i]);
+    (order, rank, max_deg)
+}
+
 /// Returns a degeneracy ordering of the graph, the position of each vertex,
 /// and the degeneracy (k) of the graph.
 /// Complexity: O(n + m)

@@ -351,7 +351,7 @@ where
     Self::RelabelingMapIndex: IntoIterator<Item = u8> + Index<usize, Output = u8> + Debug,
     Self::RelabelingMap: IntoIterator<Item = Self::RelabelingMapIndex>
         + Index<usize, Output = Self::RelabelingMapIndex>,
-    Self::FingerprintType: Hash + Eq + PartialEq + From<Self> + Debug,
+    Self::FingerprintType: Hash + Eq + PartialEq + From<Self> + Into<Self> + Debug + Clone,
     Self::EdgeFilterBitmaskType: IntoIterator<Item = Self> + Index<usize, Output = Self>,
 {
     type ContainerType;
@@ -484,6 +484,12 @@ where
     pub fn remove_edge(&mut self, edge_number: usize) {
         self.container &= !(Self::CONTAINER_ONE << edge_number);
     }
+
+    pub fn remove_edge_with_nodes(&mut self, node_set: CompressedNodeSet) {
+        let edge_number = Self::EDGE_MAP[node_set.nodes as usize];
+        self.remove_edge(edge_number as usize);
+    }
+
     pub fn part_ovelaps(&self, edge_number: usize) -> Self {
         *self & Self::PART_OVERLAPS[edge_number]
     }
@@ -579,6 +585,10 @@ where
             edges.push(nodes);
         }
         edges
+    }
+
+    pub fn neighbors(&self, node: usize) -> Self {
+        Self::ADJ[node] & *self
     }
 }
 
@@ -918,6 +928,11 @@ impl From<CompactMotif<3>> for CompactMotif3 {
         Self { inner: value }
     }
 }
+impl Into<CompactMotif<3>> for CompactMotif3 {
+    fn into(self) -> CompactMotif<3> {
+        self.inner
+    }
+}
 impl Display for CompactMotif3 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <CompactMotif<3> as Display>::fmt(self, f)
@@ -942,6 +957,11 @@ impl From<CompactMotif<4>> for CompactMotif4 {
         Self { inner: value }
     }
 }
+impl Into<CompactMotif<4>> for CompactMotif4 {
+    fn into(self) -> CompactMotif<4> {
+        self.inner
+    }
+}
 impl Display for CompactMotif4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <CompactMotif<4> as Display>::fmt(self, f)
@@ -964,6 +984,11 @@ impl Deref for CompactMotif5 {
 impl From<CompactMotif<5>> for CompactMotif5 {
     fn from(value: CompactMotif<5>) -> Self {
         Self { inner: value }
+    }
+}
+impl Into<CompactMotif<5>> for CompactMotif5 {
+    fn into(self) -> CompactMotif<5> {
+        self.inner
     }
 }
 impl Display for CompactMotif5 {

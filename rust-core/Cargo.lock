@@ -2343,6 +2343,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-core-bindings"
+version = "0.1.0"
+dependencies = [
+ "rust-core",
+]
+
+[[package]]
 name = "rust-core-macros"
 version = "0.1.0"
 dependencies = [

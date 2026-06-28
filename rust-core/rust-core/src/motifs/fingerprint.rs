@@ -6,6 +6,7 @@ use crate::motifs::compressed_motif::{
 };
 use crate::motifs::compressed_node_set::CompressedNodeSet;
 use crate::util::sorting_network::TryNetSort;
+use std::cmp::{max, min};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -70,6 +71,12 @@ impl Debug for Fingerprint3 {
     }
 }
 
+impl Into<CompactMotif<3>> for Fingerprint3 {
+    fn into(self) -> CompactMotif<3> {
+        self.get_canonical_rep().into()
+    }
+}
+
 #[derive(Hash, PartialEq, Eq, Copy, Clone)]
 #[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
 #[pyclass(from_py_object)]
@@ -85,11 +92,156 @@ pub struct Fingerprint4 {
     inclusions: u32,
 }
 
+#[gen_stub_pymethods(module = "rust_core._core.motifs.types")]
+#[pymethods]
 impl Fingerprint4 {
     const SIZE: usize = <Self as CMAssociated>::CMType::SIZE;
 
     pub fn get_canonical_rep(&self) -> CompactMotif4 {
-        todo!()
+        let mut rv = CompactMotif::<4>::zero();
+
+        // 1. Reconstruct 2-edges (Corrected Havel-Hakimi)
+        let mut out_2 = [(0u8, 0u8); Self::SIZE];
+        for i in 0..Self::SIZE {
+            out_2[i] = (i as u8, self.order_map[i] & 3);
+        }
+
+        // Loop until all degrees are satisfied
+        loop {
+            // Sort descending by degree
+            out_2.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+
+            let (current_node, degree) = out_2[0];
+            if degree == 0 {
+                break;
+            } // All done
+
+            out_2[0].1 = 0; // Consume this node's degree
+
+            let mut to_remove = degree;
+            for j in 1..Self::SIZE {
+                if to_remove > 0 && out_2[j].1 > 0 {
+                    rv.add_edge_with_nodes(CompressedNodeSet::from_array([
+                        current_node,
+                        out_2[j].0,
+                    ]));
+                    out_2[j].1 -= 1;
+                    to_remove -= 1;
+                }
+            }
+        }
+
+        // 2. Reconstruct 3-edges and 4-edges
+        let count_4 = (self.order_map[0] >> 4) & 3;
+
+        // Correctly extract the 3-degrees (shift by 2) and sum them up
+        let total_3_deg: usize = self
+            .order_map
+            .iter()
+            .map(|&x| ((x >> 2) & 3) as usize)
+            .sum();
+        let count_3 = total_3_deg / 3;
+
+        // The exact nodes to exclude from each 3-edge are uniquely fixed by their 3-degrees
+        let mut check_3_edges = || {
+            match count_3 {
+                0 => {}
+                1 => {
+                    // One 3-edge: excludes the unique node with a 3-degree of 0
+                    let expected = ((self.inclusions >> (3 * count_4)) & ((1 << 3) - 1)) - 1;
+                    for i in 0..Self::SIZE {
+                        if rv.neighbors(i).edge_count() == expected {
+                            let mut nodes = CompressedNodeSet::from_array([0, 1, 2, 3]);
+                            nodes.remove(i);
+                            rv.add_edge_with_nodes(nodes);
+                            break;
+                        }
+                    }
+                }
+                2 => {
+                    for i in 0..Self::SIZE {
+                        for j in (i + 1)..Self::SIZE {
+                            let incl_0 = (rv.neighbors(i) & rv.neighbors(j)).edge_count();
+                            let incl_1 = (rv.neighbors(i) | rv.neighbors(j)).edge_count() - incl_0;
+                            let incl_2 = rv.edge_count() - incl_0 - incl_1;
+
+                            let expected_incl_0 =
+                                ((self.inclusions >> (3 * count_4)) & ((1 << 3) - 1)) - 2; // removing
+                            // 2 ttiangles
+                            let expected_incl_1 =
+                                (self.inclusions >> (3 * (1 + count_4))) & ((1 << 3) - 1);
+                            let expected_incl_2 =
+                                (self.inclusions >> (3 * (2 + count_4))) & ((1 << 3) - 1);
+
+                            if incl_0 == expected_incl_0
+                                && incl_1 == expected_incl_1
+                                && incl_2 == expected_incl_2
+                            {
+                                let mut e1 = CompressedNodeSet::from_array([0, 1, 2, 3]);
+                                let mut e2 = CompressedNodeSet::from_array([0, 1, 2, 3]);
+                                e1.remove(i);
+                                e2.remove(j);
+                                rv.add_edge_with_nodes(e1);
+                                rv.add_edge_with_nodes(e2);
+                                return;
+                            }
+                        }
+                    }
+                }
+                3 => {
+                    for i in 0..Self::SIZE {
+                        for j in 0..Self::SIZE {
+                            if i == j {
+                                continue;
+                            }
+
+                            let incl_2 = (rv.neighbors(i)).edge_count();
+                            let incl_1 = rv.edge_count() - incl_2;
+
+                            let expected_incl_1 =
+                                (self.inclusions >> (3 * (1 + count_4))) & ((1 << 3) - 1);
+                            let expected_incl_2 =
+                                (self.inclusions >> (3 * (2 + count_4))) & ((1 << 3) - 1);
+
+                            if incl_1 == expected_incl_1 && incl_2 == expected_incl_2 {
+                                let other_nodes = [0, 1, 2, 3]
+                                    .into_iter()
+                                    .filter(|e| *e != i && *e != j)
+                                    .collect::<Vec<_>>();
+                                let (a, b) = (other_nodes[0], other_nodes[1]);
+
+                                let mut e1 = CompressedNodeSet::from_array([0, 1, 2, 3]);
+                                let mut e2 = CompressedNodeSet::from_array([0, 1, 2, 3]);
+                                let mut e3 = CompressedNodeSet::from_array([0, 1, 2, 3]);
+                                e1.remove(a);
+                                e2.remove(b);
+                                e3.remove(j);
+                                rv.add_edge_with_nodes(e1);
+                                rv.add_edge_with_nodes(e2);
+                                rv.add_edge_with_nodes(e3);
+
+                                return;
+                            }
+                        }
+                    }
+                }
+                4 => {
+                    for i in 0..Self::SIZE {
+                        let mut e = CompressedNodeSet::from_array([0, 1, 2, 3]);
+                        e.remove(i);
+                        rv.add_edge_with_nodes(e);
+                    }
+                }
+                _ => {}
+            }
+        };
+        check_3_edges();
+
+        if count_4 == 1 {
+            rv.add_edge_with_nodes(CompressedNodeSet::from_array([0, 1, 2, 3]));
+        }
+
+        rv.into()
     }
 }
 
@@ -106,13 +258,19 @@ impl From<CompactMotif<4>> for Fingerprint4 {
         let mut inclusions = 0;
         for e in cm {
             let inclusions_count = cm.inclusions(e).edge_count() as u8 - 1;
-            inclusions += 1 << (2 * (inclusions_count as u32));
+            inclusions += 1 << (3 * (inclusions_count as u32));
         }
 
         Fingerprint4 {
             order_map,
             inclusions,
         }
+    }
+}
+
+impl Into<CompactMotif<4>> for Fingerprint4 {
+    fn into(self) -> CompactMotif<4> {
+        self.get_canonical_rep().into()
     }
 }
 
@@ -397,6 +555,12 @@ impl PartialEq for Fingerprint5 {
 }
 
 impl Eq for Fingerprint5 {}
+
+impl Into<CompactMotif<5>> for Fingerprint5 {
+    fn into(self) -> CompactMotif<5> {
+        todo!()
+    }
+}
 
 // Unused parts for furutre improvements
 // 4 => {

@@ -28,6 +28,10 @@ impl CompressedNodeSet {
         rv
     }
 
+    pub fn remove(&mut self, node: usize) {
+        self.nodes &= !(1 << node);
+    }
+
     pub const fn len(&self) -> u32 {
         self.nodes.count_ones()
     }

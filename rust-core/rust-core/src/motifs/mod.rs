@@ -12,7 +12,10 @@ pub mod motifs {
 
     use crate::{
         graph::{PyHypergraph, UnweightedHypergraph, WeightedHypergraph},
-        motifs::{fingerprint::Fingerprint3, types::MotifStats},
+        motifs::{
+            fingerprint::{Fingerprint3, Fingerprint4},
+            types::MotifStats,
+        },
     };
     use pyo3::pyfunction;
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
@@ -57,30 +60,27 @@ pub mod motifs {
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
-    pub fn orca_4(hg: PyHypergraph) -> HashMap<u32, u32> {
-        // match hg {
-        //     PyHypergraph::Unweighted(unweighted) => {
-        //         super::algorithms::orca::unweighted_4(&unweighted);
-        //     }
-        //     PyHypergraph::Weighted(weighted) => {
-        //         super::algorithms::orca::weighted_4(&weighted);
-        //     }
-        // }
-        todo!()
-    }
-
-    #[pyfunction]
-    #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
-    pub fn orca_5(hg: PyHypergraph) {
+    pub fn orca_4(hg: PyHypergraph) -> HashMap<Fingerprint4, MotifStats> {
         match hg {
             PyHypergraph::Unweighted(unweighted) => {
-                super::algorithms::orca::unweighted_5(&unweighted);
+                super::algorithms::orca::unweighted_4(&unweighted)
             }
-            PyHypergraph::Weighted(weighted) => {
-                super::algorithms::orca::weighted_5(&weighted);
-            }
+            PyHypergraph::Weighted(weighted) => super::algorithms::orca::weighted_4(&weighted),
         }
     }
+
+    // #[pyfunction]
+    // #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
+    // pub fn orca_5(hg: PyHypergraph) {
+    //     match hg {
+    //         PyHypergraph::Unweighted(unweighted) => {
+    //             super::algorithms::orca::unweighted_5(&unweighted);
+    //         }
+    //         PyHypergraph::Weighted(weighted) => {
+    //             super::algorithms::orca::weighted_5(&weighted);
+    //         }
+    //     }
+    // }
 }
 
 // impl_stub_type!(hashbrown::HashMap<_, _> = std::collections::HashMap<_, _>);
