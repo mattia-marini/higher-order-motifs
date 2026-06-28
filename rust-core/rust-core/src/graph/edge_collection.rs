@@ -7,7 +7,7 @@ use seq_macro::seq;
 
 use crate::graph::{
     error::GraphError,
-    types::{Hx, NodeId, NodeWeight},
+    hyperedge::{Hx, NodeId, NodeWeight},
 };
 
 pub const MIN_HX_SIZE: usize = 2;

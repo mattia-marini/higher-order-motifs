@@ -2,14 +2,13 @@ use foldhash::fast::FixedState;
 use hashbrown::HashMap;
 
 use crate::{
-    graph::{AdjList, NodeId, UnweightedHypergraph, WeightedHypergraph},
+    graph::{AdjList, Hypergraph, NodeId, NodeWeight},
     misc::common_neighbors_sorted_list_3_cloj,
     motifs::{fingerprint::Fingerprint4, types::MotifStats},
     triangle::forward::forward_hashed_cloj,
 };
 
-pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifStats> {
-    let hg = &hg.0;
+pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifStats> {
     // let mut motif_stats = HashMap::new();
 
     // Extract 2-edges (regular edges) and build adjacency list
@@ -78,6 +77,6 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
     todo!()
 }
 
-pub fn weighted_4(hg: &WeightedHypergraph) -> HashMap<Fingerprint4, MotifStats> {
+pub fn weighted_4(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint4, MotifStats> {
     todo!()
 }

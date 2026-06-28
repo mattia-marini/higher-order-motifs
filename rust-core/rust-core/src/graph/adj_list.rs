@@ -1,29 +1,17 @@
 use foldhash::fast::FixedState;
 use hashbrown::hash_map::Entry;
 use hashbrown::{HashMap, HashSet};
+use rust_core_macros::hoist_mod;
 use std::cmp::max;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 use duplicate::duplicate_item;
-use pyo3::{FromPyObject, PyRef, pyclass, pymethods};
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
-use pyo3_stub_gen::{PyStubType, impl_stub_type};
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::graph::NodeWeight;
 use crate::graph::serialize::DumpCacheToFile;
 
-use super::types::NodeId;
-
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
-#[gen_stub_pyclass(module = "rust_core._core.graph")]
-#[pyclass(from_py_object)]
-pub struct UnweightedAdjList(pub AdjList<()>);
-
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
-#[gen_stub_pyclass(module = "rust_core._core.graph")]
-#[pyclass(from_py_object)]
-pub struct WeightedAdjList(pub AdjList<NodeWeight>);
+use super::hyperedge::NodeId;
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct AdjList<W> {
@@ -363,107 +351,128 @@ impl<W> AdjList<W> {
     }
 }
 
-#[duplicate_item(
+#[cfg(feature = "bindings")]
+#[hoist_mod]
+mod bindings {
+    use pyo3::{FromPyObject, PyRef, pyclass, pymethods};
+    use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+    use pyo3_stub_gen::{PyStubType, impl_stub_type};
+
+    #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
+    #[gen_stub_pyclass(module = "rust_core._core.graph")]
+    #[pyclass(from_py_object)]
+    pub struct UnweightedAdjList(pub AdjList<()>);
+
+    #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
+    #[gen_stub_pyclass(module = "rust_core._core.graph")]
+    #[pyclass(from_py_object)]
+    pub struct WeightedAdjList(pub AdjList<NodeWeight>);
+
+    #[duplicate_item(
     adj_type            weight_type  tuple_edge_type;
     [UnweightedAdjList] [()]         [(NodeId, NodeId)];
     [WeightedAdjList]   [NodeWeight] [(NodeId, NodeId, NodeWeight)];
 )]
-#[gen_stub_pymethods(module = "rust_core._core.graph")]
-#[pymethods]
-impl adj_type {
-    #[new]
-    pub fn new() -> Self {
-        Self(AdjList::new())
+    #[gen_stub_pymethods(module = "rust_core._core.graph")]
+    #[pymethods]
+    impl adj_type {
+        #[new]
+        pub fn new() -> Self {
+            Self(AdjList::new())
+        }
+
+        #[staticmethod]
+        pub fn with_nodes(n: usize) -> Self {
+            Self(AdjList::with_nodes(n))
+        }
+
+        #[staticmethod]
+        pub fn from_edges_mapped(
+            edges: Vec<tuple_edge_type>,
+        ) -> (adj_type, Vec<NodeId>, HashMap<NodeId, NodeId, FixedState>) {
+            let edges = Self::normalize_edge_list(edges);
+
+            let (adj, m1, m2) = AdjList::<weight_type>::from_edges_mapped(edges);
+            (Self(adj), m1, m2)
+        }
+
+        #[staticmethod]
+        pub fn from_edges_unmapped(edges: Vec<tuple_edge_type>) -> Self {
+            let edges = Self::normalize_edge_list(edges);
+            Self(AdjList::from_edges_unmapped(edges))
+        }
+
+        pub fn remove_self_loops(&mut self) -> usize {
+            self.0.remove_self_loops()
+        }
+
+        pub fn remove_multiedges(&mut self) -> usize {
+            self.0.remove_multiedges()
+        }
+
+        // The presence of multiesges makes this operation ambiguous. Multiedges are hence removed
+        pub fn make_undirected(&mut self) {
+            self.0.make_undirected()
+        }
+
+        /// Efficiently sorts each adjacency list in-place.
+        /// Time Complexity: O(n + m)
+        /// Space Complexity: O(n + m)
+        pub fn sort_neighbors(&mut self) {
+            self.0.sort_neighbors()
+        }
     }
 
-    #[staticmethod]
-    pub fn with_nodes(n: usize) -> Self {
-        Self(AdjList::with_nodes(n))
+    impl UnweightedAdjList {
+        pub(crate) fn normalize_edge_list(
+            edges: Vec<(NodeId, NodeId)>,
+        ) -> Vec<(NodeId, NodeId, ())> {
+            edges.into_iter().map(|(u, v)| (u, v, ())).collect()
+        }
     }
 
-    #[staticmethod]
-    pub fn from_edges_mapped(
-        edges: Vec<tuple_edge_type>,
-    ) -> (adj_type, Vec<NodeId>, HashMap<NodeId, NodeId, FixedState>) {
-        let edges = Self::normalize_edge_list(edges);
-
-        let (adj, m1, m2) = AdjList::<weight_type>::from_edges_mapped(edges);
-        (Self(adj), m1, m2)
+    impl WeightedAdjList {
+        pub(crate) fn normalize_edge_list(
+            edges: Vec<(NodeId, NodeId, NodeWeight)>,
+        ) -> Vec<(NodeId, NodeId, NodeWeight)> {
+            edges
+        }
     }
 
-    #[staticmethod]
-    pub fn from_edges_unmapped(edges: Vec<tuple_edge_type>) -> Self {
-        let edges = Self::normalize_edge_list(edges);
-        Self(AdjList::from_edges_unmapped(edges))
+    #[derive(FromPyObject)]
+    pub enum PyAdjList<'py> {
+        Weighted(PyRef<'py, WeightedAdjList>),
+        Unweighted(PyRef<'py, UnweightedAdjList>),
     }
 
-    pub fn remove_self_loops(&mut self) -> usize {
-        self.0.remove_self_loops()
+    impl_stub_type!(PyAdjList<'_> = WeightedAdjList | UnweightedAdjList);
+
+    impl Deref for UnweightedAdjList {
+        type Target = AdjList<()>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
     }
 
-    pub fn remove_multiedges(&mut self) -> usize {
-        self.0.remove_multiedges()
+    impl DerefMut for UnweightedAdjList {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
     }
 
-    // The presence of multiesges makes this operation ambiguous. Multiedges are hence removed
-    pub fn make_undirected(&mut self) {
-        self.0.make_undirected()
+    impl Deref for WeightedAdjList {
+        type Target = AdjList<NodeWeight>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
     }
 
-    /// Efficiently sorts each adjacency list in-place.
-    /// Time Complexity: O(n + m)
-    /// Space Complexity: O(n + m)
-    pub fn sort_neighbors(&mut self) {
-        self.0.sort_neighbors()
-    }
-}
-
-impl UnweightedAdjList {
-    pub(crate) fn normalize_edge_list(edges: Vec<(NodeId, NodeId)>) -> Vec<(NodeId, NodeId, ())> {
-        edges.into_iter().map(|(u, v)| (u, v, ())).collect()
-    }
-}
-
-impl WeightedAdjList {
-    pub(crate) fn normalize_edge_list(
-        edges: Vec<(NodeId, NodeId, NodeWeight)>,
-    ) -> Vec<(NodeId, NodeId, NodeWeight)> {
-        edges
-    }
-}
-
-#[derive(FromPyObject)]
-pub enum PyAdjList<'py> {
-    Weighted(PyRef<'py, WeightedAdjList>),
-    Unweighted(PyRef<'py, UnweightedAdjList>),
-}
-impl_stub_type!(PyAdjList<'_> = WeightedAdjList | UnweightedAdjList);
-
-impl Deref for UnweightedAdjList {
-    type Target = AdjList<()>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for UnweightedAdjList {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Deref for WeightedAdjList {
-    type Target = AdjList<NodeWeight>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for WeightedAdjList {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    impl DerefMut for WeightedAdjList {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
     }
 }
 

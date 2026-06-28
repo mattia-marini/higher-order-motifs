@@ -1,13 +1,13 @@
 use crate::graph::AdjList;
-use crate::graph::types::NodeId;
+use crate::graph::hyperedge::NodeId;
 use crate::misc::{bfs, common_neighbors_sorted_list};
-use pyo3::prelude::*;
-use pyo3_stub_gen::reexport_module_members;
 
-#[pymodule(submodule)]
+#[cfg(feature = "bindings")]
+#[pyo3::pymodule(submodule)]
 pub mod cetc {
     use pyo3::prelude::*;
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
+    use pyo3_stub_gen::reexport_module_members;
 
     use crate::graph::{AdjList, PyAdjList};
 
@@ -28,6 +28,8 @@ pub mod cetc {
             PyAdjList::Unweighted(g) => super::cetc_s(&g),
         }
     }
+
+    reexport_module_members!("rust_core.triangle.cetc" from "rust_core._core.triangle.cetc");
 }
 
 /// Computes intersection of two sorted vectors and returns the common elements.
@@ -122,5 +124,3 @@ where
 
     count
 }
-
-reexport_module_members!("rust_core.triangle.cetc" from "rust_core._core.triangle.cetc");

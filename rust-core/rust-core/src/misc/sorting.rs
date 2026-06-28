@@ -1,5 +1,4 @@
-use crate::graph::{AdjList, types::NodeId};
-use pyo3::prelude::PyResult;
+use crate::graph::{AdjList, hyperedge::NodeId};
 
 /// Returns a degree ordering of the vertices, the position of each vertex in that ordering, and
 /// the maximum degree of the graph.
@@ -140,7 +139,10 @@ pub fn degeneracy_ordering<W>(adj: &AdjList<W>) -> (Vec<usize>, Vec<usize>, usiz
 
 /// A version of degeneracy_ordering that accepts Python objects.
 /// It maps Python objects to internal indices to perform the O(n + m) sort.
-pub fn degeneracy_ordering_py<W>(adj: &AdjList<W>) -> PyResult<(Vec<usize>, Vec<usize>, usize)> {
+#[cfg(feature = "bindings")]
+pub fn degeneracy_ordering_py<W>(
+    adj: &AdjList<W>,
+) -> pyo3::prelude::PyResult<(Vec<usize>, Vec<usize>, usize)> {
     let n = adj.n();
     if n == 0 {
         return Ok((vec![], vec![], 0));

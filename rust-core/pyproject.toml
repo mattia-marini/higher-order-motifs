@@ -27,6 +27,7 @@ cache-keys = [
 python-source = "stubs"
 module-name = "rust_core._core"
 manifest-path = "rust-core/Cargo.toml"
+features = ["bindings"]
 
 [tool.pyo3-stub-gen]
 generate-init-py = true 

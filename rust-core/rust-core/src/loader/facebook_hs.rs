@@ -1,6 +1,7 @@
 use crate::{
-    graph::{Hypergraph, NodeId, UnweightedHypergraph},
+    graph::{Hypergraph, NodeId, UnweightedHx, UnweightedHypergraph},
     loader::common::Loader,
+    loader::error::LoaderError,
 };
 use std::{error::Error, path::Path};
 
@@ -11,7 +12,7 @@ impl Loader for FacebookHsStdUnweightedLoader {
 
     const VARIANT: &'static str = "uw";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         // The python loader uses pandas and only reads triples (a,b,c) and if only_confirmed then c==1.
         // Here we'll load the file naively, assuming whitespace-separated columns a b c per line.
@@ -36,7 +37,7 @@ impl Loader for FacebookHsStdUnweightedLoader {
                     true
                 };
                 if include {
-                    hg.add_edge(crate::graph::UnweightedHx::new_unchecked([a, b]).0);
+                    hg.add_edge(UnweightedHx::new_unchecked([a, b]).0);
                 }
             }
         }

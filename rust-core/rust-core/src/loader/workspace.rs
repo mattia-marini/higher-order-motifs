@@ -6,9 +6,11 @@ use std::path::Path;
 use hashbrown::HashMap;
 use seq_macro::seq;
 
+use crate::graph::AdjList;
 use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedAdjList, WeightedAdjList},
+    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
     loader::common::Loader,
+    loader::error::LoaderError,
     misc::find_cliques,
 };
 
@@ -18,11 +20,11 @@ pub struct Unweighted;
 pub struct Weighted;
 
 impl Loader for WorkspaceStdUnweightedLoader {
-    type Output = crate::graph::UnweightedHypergraph;
+    type Output = UnweightedHypergraph;
 
     const VARIANT: &'static str = "uw";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
@@ -48,8 +50,9 @@ impl Loader for WorkspaceStdUnweightedLoader {
         let mut hg = Hypergraph::new();
 
         for (_t, edge_list) in edges.into_iter() {
-            let (mut adj_list, original_index, _compressed_index) =
-                UnweightedAdjList::from_edges_mapped(edge_list);
+            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(
+                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+            );
             adj_list.make_undirected();
 
             let mut cliques = find_cliques(&adj_list);
@@ -87,11 +90,11 @@ impl Loader for WorkspaceStdUnweightedLoader {
 }
 
 impl Loader for WorkspaceStdWeightedLoader {
-    type Output = crate::graph::WeightedHypergraph;
+    type Output = WeightedHypergraph;
 
     const VARIANT: &'static str = "w";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
@@ -117,8 +120,9 @@ impl Loader for WorkspaceStdWeightedLoader {
         let mut hg = Hypergraph::new();
 
         for (_t, edge_list) in edges.into_iter() {
-            let (mut adj_list, original_index, _compressed_index) =
-                UnweightedAdjList::from_edges_mapped(edge_list);
+            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(
+                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+            );
             adj_list.make_undirected();
 
             let mut cliques = find_cliques(&adj_list);

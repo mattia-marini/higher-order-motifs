@@ -1,17 +1,17 @@
 use crate::triangle::cbs::hcbs::HCBSGraph;
 
-use crate::graph::{AdjList, types::NodeId};
+use crate::graph::{AdjList, hyperedge::NodeId};
 use crate::misc::{count_common_neighbors_sorted_list, degree_ordering};
-use pyo3::prelude::*;
-use pyo3_stub_gen::reexport_module_members;
 
 /// Computes the degree ordering: (order, position)
 
-#[pymodule(submodule)]
+#[cfg(feature = "bindings")]
+#[pyo3::pymodule(submodule)]
 pub mod forward {
     use crate::graph::{AdjList, PyAdjList};
     use pyo3::prelude::*;
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
+    use pyo3_stub_gen::reexport_module_members;
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
@@ -39,6 +39,8 @@ pub mod forward {
             PyAdjList::Weighted(g) => super::forward_hbs(&g, sort_degrees),
         }
     }
+
+    reexport_module_members!("rust_core.triangle.forward" from "rust_core._core.triangle.forward");
 }
 
 /// Forward algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
@@ -203,5 +205,3 @@ where
         }
     }
 }
-
-reexport_module_members!("rust_core.triangle.forward" from "rust_core._core.triangle.forward");

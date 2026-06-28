@@ -5,13 +5,14 @@ use std::path::Path;
 use seq_macro::seq;
 
 use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight},
+    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
     loader::common::Loader,
+    loader::error::LoaderError,
 };
 
 use super::{EuStdUnweightedLoader, EuStdWeightedLoader};
 
-fn read_ints_from_file<P: AsRef<Path>>(path: &P) -> Result<Vec<NodeId>, Box<dyn Error>> {
+fn read_ints_from_file<P: AsRef<Path>>(path: &P) -> Result<Vec<NodeId>, LoaderError> {
     let s = read_to_string(path)?;
     let mut v = Vec::new();
     for line in s.lines() {
@@ -27,11 +28,11 @@ fn read_ints_from_file<P: AsRef<Path>>(path: &P) -> Result<Vec<NodeId>, Box<dyn 
 }
 
 impl Loader for EuStdUnweightedLoader {
-    type Output = crate::graph::UnweightedHypergraph;
+    type Output = UnweightedHypergraph;
 
     const VARIANT: &'static str = "uw";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let base = dataset_location;
         let nverts_path = if base.is_dir() {
@@ -82,11 +83,11 @@ impl Loader for EuStdUnweightedLoader {
 }
 
 impl Loader for EuStdWeightedLoader {
-    type Output = crate::graph::WeightedHypergraph;
+    type Output = WeightedHypergraph;
 
     const VARIANT: &'static str = "w";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let base = dataset_location;
         let nverts_path = if base.is_dir() {

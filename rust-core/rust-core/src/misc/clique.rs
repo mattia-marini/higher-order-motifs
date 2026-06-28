@@ -1,6 +1,4 @@
 use hashbrown::{HashMap, HashSet};
-use pyo3::pymethods;
-use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 use std::hash::Hash;
 
 use crate::{

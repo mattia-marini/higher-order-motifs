@@ -7,13 +7,16 @@ use rkyv::validation::Validator;
 use rkyv::validation::archive::ArchiveValidator;
 use rkyv::validation::shared::SharedValidator;
 use rkyv::{Archive, Deserialize};
+use rust_core_macros::hoist_mod;
 use std::cmp::Eq;
 use std::fs::File;
 use std::hash::Hash;
 use std::path::Path;
 use std::{error::Error, io::Write};
 
-use crate::graph::{AdjList, ArchivedAdjList, ArchivedHx, ArchivedHypergraph, Hx, Hypergraph};
+use crate::graph::{
+    AdjList, ArchivedAdjList, ArchivedHx, ArchivedHypergraph, Hx, Hypergraph, SerializationError,
+};
 
 pub trait StdSerializable:
     for<'a> rkyv::Serialize<
@@ -49,23 +52,24 @@ pub trait StdCheckBytes<'a>:
     CheckBytes<Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>>
 {
 }
+
 impl<'a, T> StdCheckBytes<'a> for T where
     T: CheckBytes<Strategy<Validator<ArchiveValidator<'a>, SharedValidator>, rkyv::rancor::Error>>
 {
 }
 
 pub trait DumpCacheToFile {
-    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn Error>>;
+    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), SerializationError>;
 }
 
 pub trait LoadFromCacheDeserialized: Sized {
-    fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>>;
+    fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Self, SerializationError>;
 }
 
 pub trait LoadFromCacheArchived: Sized {
     type Container;
 
-    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>>;
+    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, SerializationError>;
 }
 
 impl<const N: usize, T, W> Hash for ArchivedHx<N, T, W>
@@ -128,7 +132,7 @@ where
     <T as Archive>::Archived: Hash + Eq,
     W: StdSerializable,
 {
-    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn Error>> {
+    fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), SerializationError> {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
 
         let mut file = File::create(path)?;
@@ -148,7 +152,7 @@ where
     <T as Archive>::Archived: StdDeserializable<T>,
     <W as Archive>::Archived: StdDeserializable<W>,
 {
-    fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+    fn load_deserialized<P: AsRef<Path>>(path: P) -> Result<Self, SerializationError> {
         let mut file = File::open(path)?;
 
         // Fix: Explicitly type your AlignedVec if the compiler gets confused
@@ -171,7 +175,7 @@ where
 {
     type Container = ArchivedHypergraphHandle<T, W>;
 
-    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>> {
+    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, SerializationError> {
         let mut file = File::open(path)?;
         let mut bytes = AlignedVec::new();
         bytes.extend_from_reader(&mut file)?;
@@ -183,7 +187,8 @@ where
                     .map_err(|e| Box::new(e) as Box<dyn Error>)
             },
         }
-        .try_build()?;
+        .try_build()
+        .map_err(|e| SerializationError::Unknown(e.to_string()))?;
 
         Ok(container)
     }
@@ -193,10 +198,7 @@ impl<W> DumpCacheToFile for AdjList<W>
 where
     W: StdSerializable,
 {
-    fn save_to_file<P: AsRef<std::path::Path>>(
-        &self,
-        path: P,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), SerializationError> {
         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
 
         let mut file = File::create(path)?;
@@ -211,9 +213,7 @@ where
     W: StdDeserializable<W> + Archive,
     for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
 {
-    fn load_deserialized<P: AsRef<std::path::Path>>(
-        path: P,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, SerializationError> {
         let mut file = File::open(path)?;
 
         let mut bytes: AlignedVec = AlignedVec::new();
@@ -233,7 +233,7 @@ where
 {
     type Container = ArchivedAdjListHandle<W>;
 
-    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, Box<dyn Error>> {
+    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, SerializationError> {
         let mut file = File::open(path)?;
         let mut bytes = AlignedVec::new();
         bytes.extend_from_reader(&mut file)?;
@@ -245,7 +245,8 @@ where
                     .map_err(|e| Box::new(e) as Box<dyn Error>)
             },
         }
-        .try_build()?;
+        .try_build()
+        .map_err(|e| SerializationError::Unknown(e.to_string()))?;
 
         Ok(container)
     }
@@ -256,26 +257,26 @@ where
 use crate::graph::{UnweightedHypergraph, WeightedHypergraph};
 
 impl DumpCacheToFile for UnweightedHypergraph {
-    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), Box<dyn Error>> {
+    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), SerializationError> {
         self.0.save_to_file(path)
     }
 }
 
 impl LoadFromCacheDeserialized for UnweightedHypergraph {
-    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, SerializationError> {
         let hg: Hypergraph<_, _> = Hypergraph::load_deserialized(path)?;
         Ok(hg.into())
     }
 }
 
 impl DumpCacheToFile for WeightedHypergraph {
-    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), Box<dyn Error>> {
+    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), SerializationError> {
         self.0.save_to_file(path)
     }
 }
 
 impl LoadFromCacheDeserialized for WeightedHypergraph {
-    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, SerializationError> {
         let hg: Hypergraph<_, _> = Hypergraph::load_deserialized(path)?;
         Ok(hg.into())
     }

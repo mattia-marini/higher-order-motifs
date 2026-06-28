@@ -1,4 +1,4 @@
-use std::error::Error;
+use super::error::*;
 use std::fs::{self, File, create_dir_all};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::io::{self, Read};
@@ -33,29 +33,6 @@ pub fn parse_datasets_descriptor() -> Result<DatasetConfig, Box<dyn std::error::
     let toml_str = fs::read_to_string(path_str)?;
     let config: DatasetConfig = toml::from_str(&toml_str)?;
     Ok(config)
-}
-
-/// Returns the paths for the dataset and cache files based on the provided relative path. Creates
-/// the cache directory if it does not exist.
-pub fn get_dataset_paths<P1, P2, P3>(
-    dataset_dir: &P1,
-    cache_dir: &P2,
-    path: &P3,
-) -> Result<(PathBuf, PathBuf), Box<dyn Error>>
-where
-    P1: AsRef<Path> + ?Sized,
-    P2: AsRef<Path> + ?Sized,
-    P3: AsRef<Path> + ?Sized,
-{
-    // let dataset_dir = std::env::var("DATASET_DIR")?;
-    // let cache_dir = std::env::var("CACHE_DIR")?;
-
-    let dataset_path = dataset_dir.as_ref().join(path.as_ref());
-    let cache_path = cache_dir.as_ref().join(path.as_ref().with_extension("bin"));
-
-    create_dir_all(cache_path.parent().unwrap())?;
-
-    Ok((dataset_path, cache_path))
 }
 
 fn hash_file_metadata<P: AsRef<Path>>(path: P) -> io::Result<u64> {
@@ -130,18 +107,15 @@ where
 
     type Output;
 
-    fn load(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn load(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.get_dataset_location();
         let cache_dir = self.get_cache_dir();
 
         if !dataset_location.exists() {
             log::error!("Invalid dataset location '{}'", dataset_location.display());
-            return Err(Box::new(io::Error::new(
-                io::ErrorKind::NotFound,
-                format!(
-                    "Dataset file '{}' does not exist",
-                    dataset_location.display()
-                ),
+            return Err(LoaderError::IoError(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Invalid dataset location",
             )));
         }
         if cache_dir.is_none() {
@@ -172,7 +146,13 @@ where
                         cache_file.display()
                     );
                     let rv = self.from_file()?;
-                    rv.save_to_file(&cache_file)?;
+                    if let Err(e) = rv.save_to_file(&cache_file) {
+                        log::error!(
+                            "Failed to save hypergraph to cache file {}: {}",
+                            cache_file.display(),
+                            e
+                        );
+                    }
                     Ok(rv)
                 }
             }
@@ -182,12 +162,19 @@ where
                 cache_file.display()
             );
             let rv = self.from_file()?;
-            rv.save_to_file(&cache_file)?;
+
+            if let Err(e) = rv.save_to_file(&cache_file) {
+                log::error!(
+                    "Failed to save hypergraph to cache file {}: {}",
+                    cache_file.display(),
+                    e
+                );
+            }
             Ok(rv)
         }
     }
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>>;
+    fn from_file(&self) -> Result<Self::Output, LoaderError>;
 }
 
 #[inline(always)]

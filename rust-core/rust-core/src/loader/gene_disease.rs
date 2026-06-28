@@ -8,8 +8,9 @@ use std::{
 };
 
 use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight},
+    graph::{Hx, Hypergraph, NodeId, NodeWeight, WeightedHypergraph},
     loader::common::Loader,
+    loader::error::LoaderError,
 };
 
 use super::GeneDiseaseStdWeightedLoader;
@@ -17,10 +18,11 @@ use super::GeneDiseaseStdWeightedLoader;
 pub struct Weighted;
 
 impl Loader for GeneDiseaseStdWeightedLoader {
-    type Output = crate::graph::WeightedHypergraph;
+    type Output = WeightedHypergraph;
+
     const VARIANT: &'static str = "w";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         // Parse TSV and aggregate diseases -> list of genes
         let file = File::open(dataset_location)?;

@@ -1,13 +1,13 @@
-use crate::graph::{AdjList, types::NodeId};
+use crate::graph::{AdjList, hyperedge::NodeId};
 use crate::misc::degeneracy_ordering;
-use pyo3::{prelude::*, types::PyList};
-use pyo3_stub_gen::reexport_module_members;
 
-#[pymodule(submodule)]
+#[cfg(feature = "bindings")]
+#[pyo3::pymodule]
 pub mod kclist {
     use crate::graph::{AdjList, PyAdjList};
     use pyo3::pyfunction;
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
+    use pyo3_stub_gen::reexport_module_members;
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.kclist")]
@@ -17,6 +17,8 @@ pub mod kclist {
             PyAdjList::Unweighted(g) => super::kclist(&g),
         }
     }
+
+    reexport_module_members!("rust_core.triangle.kclist" from "rust_core._core.triangle.kclist");
 
     // #[pyfunction]
     // #[gen_stub_pyfunction(module = "rust_core._core.triangle.kclist")]
@@ -128,5 +130,3 @@ pub fn kclist<W>(adj: &AdjList<W>) -> usize {
 //
 //     Ok(count)
 // }
-
-reexport_module_members!("rust_core.triangle.kclist" from "rust_core._core.triangle.kclist");

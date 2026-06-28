@@ -2,16 +2,15 @@ use polars::lazy::prelude::*;
 use polars::prelude::*;
 
 use seq_macro::seq;
-use std::{error::Error, path::Path};
+use std::{error::Error, path::Path, sync::Arc};
 
 use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight},
+    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
     loader::common::Loader,
+    loader::error::LoaderError,
 };
 
-pub fn load_pacs_common_from_csv<P>(
-    dataset_location: &P,
-) -> Result<Vec<Vec<NodeId>>, Box<dyn Error>>
+pub fn load_pacs_common_from_csv<P>(dataset_location: &P) -> Result<Vec<Vec<NodeId>>, LoaderError>
 where
     P: AsRef<Path> + ?Sized,
 {
@@ -26,7 +25,8 @@ where
     let lf = LazyCsvReader::new(path)
         .with_null_values(Some(NullValues::AllColumnsSingle("".into())))
         .with_schema(Some(Arc::new(schema)))
-        .finish()?;
+        .finish()
+        .map_err(|e| LoaderError::Unknown(format!("Failed to read csv: {}", e)))?;
 
     let names_lf = lf
         .clone()
@@ -45,20 +45,22 @@ where
         .how(JoinType::Left)
         .finish()
         .group_by([col("ArticleID")])
-        .agg([
-            col("author_id").unique().alias("authors"),
-            // Removed PACS since it doesn't seem to be used in the graph!
-        ]);
+        .agg([col("author_id").unique().alias("authors")]);
 
-    let rv = grouped_lf.collect()?;
+    let rv = grouped_lf
+        .collect()
+        .map_err(|e| LoaderError::Unknown(format!("Polars error: {}", e)))?;
 
-    let authors_col = rv.column("authors")?.list()?;
+    let authors_col = rv
+        .column("authors")
+        .map_err(|e| LoaderError::Unknown(format!("Column error: {}", e)))?
+        .list()
+        .map_err(|e| LoaderError::Unknown(format!("List error: {}", e)))?;
 
-    // Use filter_map to avoid extracting data we don't need
     Ok(authors_col
         .into_iter()
         .filter_map(|opt_auth_series| {
-            let series = opt_auth_series?; // Returns None (skips) if null
+            let series = opt_auth_series?;
 
             let mut author_ids: Vec<NodeId> = series
                 .u32()
@@ -68,9 +70,7 @@ where
                 .map(|val| val as NodeId)
                 .collect();
 
-            // Filter sizes *before* returning them to save memory
             if author_ids.len() > 1 && author_ids.len() <= 10 {
-                // Highly recommended: Sort so [A, B] and [B, A] are identical edges
                 author_ids.sort_unstable();
                 Some(author_ids)
             } else {
@@ -86,20 +86,20 @@ pub struct Unweighted;
 pub struct Weighted;
 
 impl Loader for PacsStdUnweightedLoader {
-    type Output = crate::graph::UnweightedHypergraph;
+    type Output = UnweightedHypergraph;
+
     const VARIANT: &'static str = "uw";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let valid_author_groups = load_pacs_common_from_csv(&dataset_location)?;
         let mut hg = Hypergraph::new();
 
         for ids in valid_author_groups {
-            // We already filtered lengths 2..=10 in the loader!
             seq!(N in 2..11 {
                 if ids.len() == N {
                     let mut arr = [0 as NodeId; N];
-                    arr.copy_from_slice(&ids); // Blazing fast memory copy
+                    arr.copy_from_slice(&ids);
                     hg.add_edge(Hx::new(arr, ()).unwrap());
                 }
             });
@@ -110,10 +110,11 @@ impl Loader for PacsStdUnweightedLoader {
 }
 
 impl Loader for PacsStdWeightedLoader {
-    type Output = crate::graph::WeightedHypergraph;
+    type Output = WeightedHypergraph;
+
     const VARIANT: &'static str = "w";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let valid_author_groups = load_pacs_common_from_csv(&dataset_location)?;
         let mut hg = Hypergraph::new();
@@ -122,10 +123,7 @@ impl Loader for PacsStdWeightedLoader {
             seq!(N in 2..11 {
                 if ids.len() == N {
                     let mut arr = [0 as NodeId; N];
-                    arr.copy_from_slice(&ids); // Blazing fast memory copy
-
-                    // If your graph API has an `add_or_modify` or `entry` API,
-                    // use that to avoid hashing `arr` twice!
+                    arr.copy_from_slice(&ids);
                     if !hg.has_hyperedge(&arr) {
                         hg.add_edge(Hx::new_unchecked(arr, 0.0));
                     }

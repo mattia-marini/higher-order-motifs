@@ -1,12 +1,17 @@
+#[cfg(feature = "bindings")]
 use pyo3::prelude::*;
+
+#[cfg(feature = "bindings")]
 use pyo3_stub_gen::{PyStubType, impl_stub_type, reexport_module_members};
+
 pub mod algorithms;
 pub mod compressed_motif;
 pub mod compressed_node_set;
 pub mod fingerprint;
 pub mod types;
 
-#[pymodule(submodule)]
+#[cfg(feature = "bindings")]
+#[pymodule]
 pub mod motifs {
     use hashbrown::HashMap;
 
@@ -18,11 +23,10 @@ pub mod motifs {
         },
     };
     use pyo3::pyfunction;
-    use pyo3_stub_gen::derive::gen_stub_pyfunction;
+    use pyo3_stub_gen::{derive::gen_stub_pyfunction, reexport_module_members};
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
-    /// Computed
     pub fn analyze_esu_based_3(hg: PyHypergraph) {
         match hg {
             PyHypergraph::Unweighted(unweighted) => {
@@ -81,16 +85,6 @@ pub mod motifs {
     //         }
     //     }
     // }
+    //
+    reexport_module_members!("rust_core.motifs" from "rust_core._core.motifs");
 }
-
-// impl_stub_type!(hashbrown::HashMap<_, _> = std::collections::HashMap<_, _>);
-// impl<K, V> PyStubType for hashbrown::HashMap<K, V> {
-//     fn type_output() -> ::pyo3_stub_gen::TypeInfo {
-//         std::collections::HashMap::<K, V>::type_output()
-//     }
-//     fn type_input() -> ::pyo3_stub_gen::TypeInfo {
-//         std::collections::HashMap::<K, V>::type_input()
-//     }
-// }
-
-reexport_module_members!("rust_core.motifs" from "rust_core._core.motifs");

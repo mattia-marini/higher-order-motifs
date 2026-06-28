@@ -1,3 +1,5 @@
+#![cfg(feature = "bindings")]
+
 /// This allows to import like this: from module.submodule import something
 use pyo3::{
     Bound, PyResult,

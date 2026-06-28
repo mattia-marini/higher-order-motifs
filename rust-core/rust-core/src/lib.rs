@@ -4,23 +4,15 @@ pub mod loader;
 pub mod misc;
 pub mod motifs;
 pub mod triangle;
-
-use pyo3::prelude::*;
-
-use pyo3_stub_gen::{
-    StubInfo, define_stub_info_gatherer, exclude_from_all, reexport_module_members,
-};
-
 pub mod util;
 
-#[pymodule]
+#[cfg(feature = "bindings")]
+#[cfg_attr(feature = "bindings", pyo3::pymodule)]
 pub mod _core {
     use crate::util::submodules_initializer::PyModuleSubmoduleExt;
-    use pyo3::{Bound, PyResult, types::PyModule};
+    use pyo3::prelude::*;
+    use pyo3_stub_gen::{define_stub_info_gatherer, exclude_from_all, reexport_module_members};
 
-    // use crate::util::submodules_initializer::PyModuleSubmoduleExt;
-    // use pyo3::{Bound, PyResult, types::PyModule};
-    //
     #[pymodule_export]
     use super::triangle::triangle;
 
@@ -33,18 +25,17 @@ pub mod _core {
     #[pymodule_export]
     use super::loader::loader;
 
-    #[pymodule_init]
     pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.init_submodules()?;
         Ok(())
     }
+    reexport_module_members!("rust_core" from "rust_core._core");
+    exclude_from_all!("rust_core", "loader");
+    exclude_from_all!("rust_core._core", "loader");
 }
 
-reexport_module_members!("rust_core" from "rust_core._core");
-exclude_from_all!("rust_core", "loader");
-exclude_from_all!("rust_core._core", "loader");
-
-pub fn stub_info() -> pyo3_stub_gen::Result<StubInfo> {
+#[cfg(feature = "bindings")]
+pub fn stub_info() -> pyo3_stub_gen::Result<pyo3_stub_gen::StubInfo> {
     let project_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let workspace_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -53,6 +44,6 @@ pub fn stub_info() -> pyo3_stub_gen::Result<StubInfo> {
             "CARGO_MANIFEST_DIR has no parent",
         ))?;
 
-    let infos = StubInfo::from_pyproject_toml(workspace_dir.join("pyproject.toml"))?;
+    let infos = pyo3_stub_gen::StubInfo::from_pyproject_toml(workspace_dir.join("pyproject.toml"))?;
     Ok(infos)
 }

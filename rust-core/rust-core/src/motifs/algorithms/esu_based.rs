@@ -1,9 +1,9 @@
-use crate::graph::{UnweightedHypergraph, WeightedHypergraph};
+use crate::graph::{Hypergraph, NodeId, NodeWeight};
 
-pub fn unweighted_3(hg: &UnweightedHypergraph) {}
+pub fn unweighted_3(hg: &Hypergraph<NodeId, ()>) {}
 
-pub fn weighted_3(hg: &WeightedHypergraph) {}
+pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) {}
 
-pub fn unweighted_4(hg: &UnweightedHypergraph) {}
+pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) {}
 
-pub fn weighted_4(hg: &WeightedHypergraph) {}
+pub fn weighted_4(hg: &Hypergraph<NodeId, NodeWeight>) {}

@@ -1,9 +1,11 @@
+#[cfg(feature = "bindings")]
 use pyo3::{pyclass, pymethods};
+
+#[cfg(feature = "bindings")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::motifs::compressed_motif::{
-    CMAssociated, CompactMotif, CompactMotif3, CompactMotif4, CompactMotifConfigurator,
-};
+use crate::motifs::compressed_motif::{CMAssociated, CompactMotif, CompactMotifConfigurator};
+use crate::motifs::compressed_motif::{CompactMotif3, CompactMotif4};
 use crate::motifs::compressed_node_set::CompressedNodeSet;
 use crate::util::sorting_network::TryNetSort;
 use std::cmp::{max, min};
@@ -11,16 +13,22 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
-#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
-#[pyclass(from_py_object)]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.motifs.types"),
+    pyclass(from_py_object)
+)]
 pub struct Fingerprint3 {
     /// The number of edges of size 2 and 3. layed out as follows:
     /// [3-edge count (4 bits)][2-edge count (4 bits)]
     edge_counts: u8,
 }
 
-#[gen_stub_pymethods(module = "rust_core._core.motifs.types")]
-#[pymethods]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pymethods(module = "rust_core._core.motifs.types"),
+    pymethods
+)]
 impl Fingerprint3 {
     const SIZE: usize = <Self as CMAssociated>::CMType::SIZE;
     const MAX_EDGE_COUNT: usize = <Self as CMAssociated>::CMType::MAX_EDGE_COUNT;
@@ -78,8 +86,11 @@ impl Into<CompactMotif<3>> for Fingerprint3 {
 }
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone)]
-#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
-#[pyclass(from_py_object)]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.motifs.types"),
+    pyclass(from_py_object)
+)]
 pub struct Fingerprint4 {
     /// For each node, a histogram of the sizes of the edges it participates in. Sorted by node
     /// degree, then lexicographically by histogram
@@ -92,8 +103,11 @@ pub struct Fingerprint4 {
     inclusions: u32,
 }
 
-#[gen_stub_pymethods(module = "rust_core._core.motifs.types")]
-#[pymethods]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pymethods(module = "rust_core._core.motifs.types"),
+    pymethods
+)]
 impl Fingerprint4 {
     const SIZE: usize = <Self as CMAssociated>::CMType::SIZE;
 
@@ -290,8 +304,11 @@ impl Debug for Fingerprint4 {
 }
 
 #[derive(Copy, Clone)]
-#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
-#[pyclass(from_py_object)]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.motifs.types"),
+    pyclass(from_py_object)
+)]
 pub struct Fingerprint5 {
     /// for each node, a histogram of the sizes of the edges it participates in. Sorted by node
     /// degree, then lexicographically by histogram

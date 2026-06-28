@@ -7,8 +7,9 @@ use hashbrown::HashMap;
 use seq_macro::seq;
 
 use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight},
+    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
     loader::common::Loader,
+    loader::error::LoaderError,
 };
 
 pub struct Unweighted;
@@ -20,26 +21,27 @@ use std::sync::Arc;
 use super::{JusticeStdUnweightedLoader, JusticeStdWeightedLoader};
 
 impl Loader for JusticeStdUnweightedLoader {
-    type Output = crate::graph::UnweightedHypergraph;
+    type Output = UnweightedHypergraph;
+
     const VARIANT: &'static str = "uw";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
-        let dataset_location = self.dataset_location.clone();
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let path = dataset_location;
 
         // 1. Read the CSV lazily without headers to access columns by their index.
-        // Polars automatically names them "column_1", "column_2", etc.
-        let lf = LazyCsvReader::new(path).with_ignore_errors(true).finish()?;
+        let lf = LazyCsvReader::new(path)
+            .with_ignore_errors(true)
+            .finish()
+            .map_err(|e| LoaderError::Unknown(format!("Polars reader error: {}", e)))?;
 
-        // 2. Select and cast only the columns we need (indices 0, 54, 55 map to 1, 55, 56)
+        // 2. Select and cast only the columns we need
         let lf = lf
             .select([
                 col("caseId").alias("case_id"),
                 col("justiceName").alias("justice_name"),
                 col("vote").cast(DataType::Int32).alias("vote"),
             ])
-            // Drop rows where vote failed to parse, or where core fields are missing
             .filter(col("vote").is_not_null())
             .filter(col("justice_name").is_not_null())
             .filter(col("case_id").is_not_null());
@@ -61,22 +63,26 @@ impl Loader for JusticeStdUnweightedLoader {
             .on([col("justice_name")])
             .how(JoinType::Left)
             .finish()
-            // Grouping by both gives us the exact equivalent of your nested HashMaps
             .group_by([col("case_id"), col("vote")])
             .agg([col("justice_id").unique().alias("justices")]);
 
-        let df = grouped_lf.collect()?;
+        let df = grouped_lf
+            .collect()
+            .map_err(|e| LoaderError::Unknown(format!("Polars collect error: {}", e)))?;
 
         // 5. Build the Hypergraph
         let mut hg = Hypergraph::new();
-        let justices_col = df.column("justices")?.list()?;
+        let justices_col = df
+            .column("justices")
+            .map_err(|e| LoaderError::Unknown(format!("Column error: {}", e)))?
+            .list()
+            .map_err(|e| LoaderError::Unknown(format!("List error: {}", e)))?;
 
         for opt_justice_series in justices_col.into_iter() {
             let Some(series) = opt_justice_series else {
                 continue;
             };
 
-            // Polars row indices are generated as u32 (UInt32Chunked)
             let mut justice_ids: Vec<NodeId> = series
                 .u32()
                 .expect("Justices inner list was not a UInt32 type")
@@ -109,26 +115,27 @@ impl Loader for JusticeStdUnweightedLoader {
 }
 
 impl Loader for JusticeStdWeightedLoader {
-    type Output = crate::graph::WeightedHypergraph;
+    type Output = WeightedHypergraph;
+
     const VARIANT: &'static str = "w";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
-        let dataset_location = self.dataset_location.clone();
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let path = dataset_location;
 
         // 1. Read the CSV lazily without headers to access columns by their index.
-        // Polars automatically names them "column_1", "column_2", etc.
-        let lf = LazyCsvReader::new(path).with_ignore_errors(true).finish()?;
+        let lf = LazyCsvReader::new(path)
+            .with_ignore_errors(true)
+            .finish()
+            .map_err(|e| LoaderError::Unknown(format!("Polars reader error: {}", e)))?;
 
-        // 2. Select and cast only the columns we need (indices 0, 54, 55 map to 1, 55, 56)
+        // 2. Select and cast only the columns we need
         let lf = lf
             .select([
                 col("caseId").alias("case_id"),
                 col("justiceName").alias("justice_name"),
                 col("vote").cast(DataType::Int32).alias("vote"),
             ])
-            // Drop rows where vote failed to parse, or where core fields are missing
             .filter(col("vote").is_not_null())
             .filter(col("justice_name").is_not_null())
             .filter(col("case_id").is_not_null());
@@ -150,22 +157,26 @@ impl Loader for JusticeStdWeightedLoader {
             .on([col("justice_name")])
             .how(JoinType::Left)
             .finish()
-            // Grouping by both gives us the exact equivalent of your nested HashMaps
             .group_by([col("case_id"), col("vote")])
             .agg([col("justice_id").unique().alias("justices")]);
 
-        let df = grouped_lf.collect()?;
+        let df = grouped_lf
+            .collect()
+            .map_err(|e| LoaderError::Unknown(format!("Polars collect error: {}", e)))?;
 
         // 5. Build the Hypergraph
         let mut hg = Hypergraph::new();
-        let justices_col = df.column("justices")?.list()?;
+        let justices_col = df
+            .column("justices")
+            .map_err(|e| LoaderError::Unknown(format!("Column error: {}", e)))?
+            .list()
+            .map_err(|e| LoaderError::Unknown(format!("List error: {}", e)))?;
 
         for opt_justice_series in justices_col.into_iter() {
             let Some(series) = opt_justice_series else {
                 continue;
             };
 
-            // Polars row indices are generated as u32 (UInt32Chunked)
             let mut justice_ids: Vec<NodeId> = series
                 .u32()
                 .expect("Justices inner list was not a UInt32 type")

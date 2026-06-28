@@ -47,9 +47,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.102"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
+checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 
 [[package]]
 name = "ar_archive_writer"
@@ -1990,6 +1990,7 @@ version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd274650b21d4bfc26a0a47587962c1edb425f69287324355cd040c3ea66071c"
 dependencies = [
+ "anyhow",
  "hashbrown 0.17.1",
  "inventory",
  "libc",
@@ -2317,6 +2318,7 @@ dependencies = [
 name = "rust-core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "better_default",
  "bit-set",
  "csv",
@@ -2343,18 +2345,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-core-bindings"
-version = "0.1.0"
-dependencies = [
- "rust-core",
-]
-
-[[package]]
 name = "rust-core-macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
+ "regex",
  "syn 2.0.117",
 ]
 
@@ -2366,7 +2362,6 @@ dependencies = [
  "hashbrown 0.17.1",
  "indicatif",
  "paste",
- "pyo3",
  "rust-core",
 ]
 

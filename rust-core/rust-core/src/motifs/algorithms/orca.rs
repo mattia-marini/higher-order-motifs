@@ -2,9 +2,7 @@ use super::const_graphlets::*;
 use foldhash::fast::FixedState;
 
 use crate::{
-    graph::{
-        AdjList, HypergraphAccessor, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph,
-    },
+    graph::{AdjList, Hypergraph, HypergraphAccessor, NodeId, NodeWeight},
     misc::common_neighbors_sorted_list_3_cloj,
     motifs::{
         compressed_motif::{CompactMotif, CompactMotif3},
@@ -17,11 +15,44 @@ use crate::{
 use crate::triangle::forward::forward_hashed_cloj;
 
 use hashbrown::HashMap;
-use pyo3::pyfunction;
-use pyo3_stub_gen::derive::gen_stub_pyfunction;
 
-pub fn unweighted_3(hg: &UnweightedHypergraph) -> HashMap<Fingerprint3, MotifStats> {
-    let hg = &hg.0;
+#[derive(Clone, Default, Debug)]
+struct Equation4<T> {
+    f_12_14: T,
+    f_10_13: T,
+    f_13_14: T,
+    f_11_13: T,
+    f_7_11: T,
+    f_5_8: T,
+    f_6_9: T,
+    f_9_12: T,
+    f_4_8: T,
+    f_8_12: T,
+    f_14: T,
+}
+
+impl<T> Equation4<T>
+where
+    T: num_traits::Zero,
+{
+    pub fn new() -> Self {
+        Self {
+            f_12_14: T::zero(),
+            f_10_13: T::zero(),
+            f_13_14: T::zero(),
+            f_11_13: T::zero(),
+            f_7_11: T::zero(),
+            f_5_8: T::zero(),
+            f_6_9: T::zero(),
+            f_9_12: T::zero(),
+            f_4_8: T::zero(),
+            f_8_12: T::zero(),
+            f_14: T::zero(),
+        }
+    }
+}
+
+pub fn unweighted_3(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint3, MotifStats> {
     let mut motif_stats = HashMap::new();
     let mut triangles = MotifStats::new();
     let mut straight_paths = MotifStats::new();
@@ -115,8 +146,7 @@ pub fn unweighted_3(hg: &UnweightedHypergraph) -> HashMap<Fingerprint3, MotifSta
     motif_stats
 }
 
-pub fn weighted_3(hg: &WeightedHypergraph) -> HashMap<Fingerprint3, MotifStats> {
-    let hg = &hg.0;
+pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, MotifStats> {
     let mut motif_stats = HashMap::new();
     let mut triangles = MotifStats::new();
     let mut straight_paths = MotifStats::new();
@@ -260,44 +290,7 @@ pub fn weighted_3(hg: &WeightedHypergraph) -> HashMap<Fingerprint3, MotifStats> 
     motif_stats
 }
 
-#[derive(Clone, Default, Debug)]
-struct Equation4<T> {
-    f_12_14: T,
-    f_10_13: T,
-    f_13_14: T,
-    f_11_13: T,
-    f_7_11: T,
-    f_5_8: T,
-    f_6_9: T,
-    f_9_12: T,
-    f_4_8: T,
-    f_8_12: T,
-    f_14: T,
-}
-
-impl<T> Equation4<T>
-where
-    T: num_traits::Zero,
-{
-    pub fn new() -> Self {
-        Self {
-            f_12_14: T::zero(),
-            f_10_13: T::zero(),
-            f_13_14: T::zero(),
-            f_11_13: T::zero(),
-            f_7_11: T::zero(),
-            f_5_8: T::zero(),
-            f_6_9: T::zero(),
-            f_9_12: T::zero(),
-            f_4_8: T::zero(),
-            f_8_12: T::zero(),
-            f_14: T::zero(),
-        }
-    }
-}
-
-pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifStats> {
-    let hg = &hg.0;
+pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifStats> {
     let mut motif_stats = HashMap::new();
 
     // Extract 2-edges (regular edges) and build adjacency list
@@ -672,22 +665,19 @@ pub fn unweighted_4(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifSta
     motif_stats
 }
 
-pub fn weighted_4(hg: &WeightedHypergraph) -> HashMap<Fingerprint4, MotifStats> {
-    let hg = &hg.0;
+pub fn weighted_4(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint4, MotifStats> {
     let mut motif_stats = HashMap::new();
     // TODO: Implement weighted 4-node motif counting
     motif_stats
 }
 
-pub fn unweighted_5(hg: &UnweightedHypergraph) -> HashMap<Fingerprint4, MotifStats> {
-    let hg = &hg.0;
+pub fn unweighted_5(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifStats> {
     let mut motif_stats = HashMap::new();
     // TODO: Implement 5-node motif counting
     motif_stats
 }
 
-pub fn weighted_5(hg: &WeightedHypergraph) -> HashMap<Fingerprint4, MotifStats> {
-    let hg = &hg.0;
+pub fn weighted_5(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint4, MotifStats> {
     let mut motif_stats = HashMap::new();
     // TODO: Implement weighted 5-node motif counting
     motif_stats

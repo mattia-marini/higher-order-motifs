@@ -9,19 +9,21 @@ use hashbrown::HashMap;
 use seq_macro::seq;
 
 use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedAdjList, WeightedAdjList},
-    loader::common::Loader,
+    graph::{
+        AdjList, Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph,
+    },
+    loader::{common::Loader, error::LoaderError},
     misc::find_cliques,
 };
 
 use super::{ConferenceStdUnweightedLoader, ConferenceStdWeightedLoader};
 
 impl Loader for ConferenceStdUnweightedLoader {
-    type Output = crate::graph::UnweightedHypergraph;
+    type Output = UnweightedHypergraph;
 
     const VARIANT: &'static str = "uw";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
@@ -51,13 +53,12 @@ impl Loader for ConferenceStdUnweightedLoader {
 
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) =
-                UnweightedAdjList::from_edges_mapped(
-                    edge_list,
-                    // .iter()
-                    // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                    // .collect(),
-                );
+            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
+                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+                // .iter()
+                // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
+                // .collect(),
+            );
 
             adj_list.make_undirected();
 
@@ -95,11 +96,11 @@ impl Loader for ConferenceStdUnweightedLoader {
 }
 
 impl Loader for ConferenceStdWeightedLoader {
-    type Output = crate::graph::WeightedHypergraph;
+    type Output = WeightedHypergraph;
 
     const VARIANT: &'static str = "w";
 
-    fn from_file(&self) -> Result<Self::Output, Box<dyn Error>> {
+    fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
         let file = File::open(dataset_location)?;
         let reader = BufReader::new(file);
@@ -129,12 +130,9 @@ impl Loader for ConferenceStdWeightedLoader {
 
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) =
-                UnweightedAdjList::from_edges_mapped(
-                    edge_list, // .iter()
-                              // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                              // .collect(),
-                );
+            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
+                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+            );
 
             adj_list.make_undirected();
 

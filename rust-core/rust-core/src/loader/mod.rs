@@ -1,8 +1,8 @@
 pub mod common;
 pub mod conference;
 pub mod dblp;
-pub mod descriptors;
 pub mod enron;
+pub mod error;
 pub mod eu;
 pub mod facebook_hs;
 pub mod friendship_hs;
@@ -23,11 +23,16 @@ pub mod workspace;
 
 pub use self::loader::*;
 
-use pyo3::pymodule;
+use std::error::Error;
 use std::path::PathBuf;
 
+#[cfg(feature = "bindings")]
 use pyo3::{pyclass, pymethods};
+#[cfg(feature = "bindings")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+
+use rust_core_macros::remove_attr;
+
 use rust_core_macros::loaders;
 
 use super::loader::common::parse_datasets_descriptor;
@@ -94,13 +99,20 @@ macro_rules! new_loader {
 }
 
 /// Only class exposed to python bindings.
-#[gen_stub_pyclass(module = "rust_core._core.graph")]
-#[pyclass(from_py_object)]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.graph"),
+    pyclass(from_py_object)
+)]
 #[derive(Clone)]
 pub struct DatasetLoader {}
 
-#[gen_stub_pymethods(module = "rust_core._core.graph")]
-#[pymethods]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pymethods(module = "rust_core._core.graph"),
+    pymethods
+)]
+#[cfg_attr(not(feature = "bindings"), remove_attr("staticmethod"))]
 impl DatasetLoader {
     #[staticmethod]
     pub fn builder() -> self::loader::DatasetLoaderDispatcher {
@@ -111,34 +123,50 @@ impl DatasetLoader {
 // Mod is removed by hoist_mod; it just provides context for the loaders macro
 #[loaders]
 #[loaders::struct_attr(derive(Default, Clone, Debug, Hash, PartialEq, Eq))]
-#[loaders::struct_attr(gen_stub_pyclass(module = "rust_core._core.loader"))]
-#[loaders::struct_attr(pyclass(from_py_object))]
-#[loaders::impl_attr(gen_stub_pymethods(module = "rust_core._core.loader"))]
-#[loaders::impl_attr(pymethods)]
-#[pymodule(submodule)]
+#[loaders::struct_attr(cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.loader"),
+    pyclass(from_py_object)
+))]
+#[loaders::impl_attr(cfg_attr(
+    feature = "bindings",
+    gen_stub_pymethods(module = "rust_core._core.loader"),
+    pymethods
+))]
+#[cfg_attr(feature = "bindings", pyo3::pymodule)]
 pub mod loader {
     use crate::loader::common::DatasetInfo;
     use crate::loader::common::Loader;
     use crate::loader::common::parse_datasets_descriptor;
+    use crate::loader::error::LoaderError;
     use better_default::Default;
-    use pyo3::PyResult;
-    use pyo3::exceptions::PyIOError;
-    use pyo3::pymodule;
-    use pyo3::{pyclass, pymethods};
-    use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
-    use pyo3_stub_gen::exclude_from_all;
-    use pyo3_stub_gen::reexport_module_members;
+
+    #[cfg(feature = "bindings")]
+    use pyo3::{PyResult, exceptions::PyIOError, pyclass, pymethods, pymodule};
+    #[cfg(feature = "bindings")]
+    use pyo3_stub_gen::{
+        derive::{gen_stub_pyclass, gen_stub_pymethods},
+        exclude_from_all, reexport_module_members,
+    };
     use rust_core_macros::hoist_mod;
     use std::error::Error;
     use std::path::Path;
     use std::path::PathBuf;
 
+    // #[cfg(feature = "bindings")]
+    // #[loaders::leaf_function]
+    // pub fn load(&self) -> Result<<struct_ident as Loader>::Output, LoaderError> {
+    //     let dataset_location = self.dataset_location.clone();
+    //     <struct_ident as Loader>::load(self)
+    //         .map(|v| v.into())
+    //         .map_err(|e| {
+    //             PyIOError::new_err(format!("Could not load {}", dataset_location.display()))
+    //         })
+    // }
+
     #[loaders::leaf_function]
-    pub fn load(&self) -> PyResult<<struct_ident as Loader>::Output> {
-        let dataset_location = self.dataset_location.clone();
-        <struct_ident as Loader>::load(self).map_err(|e| {
-            PyIOError::new_err(format!("Could not load {}", dataset_location.display()))
-        })
+    pub fn load(&self) -> Result<<struct_ident as Loader>::Output, LoaderError> {
+        <struct_ident as Loader>::load(self)
     }
 
     // #[loaders::for_each]

@@ -1,22 +1,26 @@
 use num_traits::AsPrimitive;
 use ouroboros::self_referencing;
-use pyo3::PyErr;
-use pyo3::exceptions::PyValueError;
-use pyo3_stub_gen::TypeInfo;
+use rust_core_macros::{hoist_mod, remove_attr};
 use seq_macro::seq;
 use std::error::Error;
 use std::hash::Hash;
+use std::ops::{Deref, DerefMut};
 use std::{collections::HashMap, fs::File, io::Write, path::Path};
 
 use duplicate::duplicate_item;
 use rust_core_macros::{ct_map_accessor, inherent, repeat};
 
+#[cfg(feature = "bindings")]
 use pyo3::{
-    Bound, FromPyObject, IntoPyObject, PyRef, PyResult, Python, pyclass, pymethods,
+    Bound, FromPyObject, IntoPyObject, PyErr, PyRef, PyResult, Python,
+    exceptions::PyValueError,
+    pyclass, pymethods,
     types::{PyAnyMethods, PySet, PyTuple},
 };
+
+#[cfg(feature = "bindings")]
 use pyo3_stub_gen::{
-    PyStubType,
+    PyStubType, TypeInfo,
     derive::{gen_stub_pyclass, gen_stub_pymethods},
     impl_stub_type, type_alias,
 };
@@ -29,8 +33,9 @@ use rust_core_macros::ct_map;
 
 use crate::graph::edge_collection::{HashSet, MAX_HX_SIZE, MIN_HX_SIZE};
 use crate::graph::error::GraphError;
-use crate::graph::types::{NodeId, NodeWeight};
-use crate::graph::{edge_collection::StaticEdgeSet, types::Hx};
+use crate::graph::hyperedge::{NodeId, NodeWeight};
+use crate::graph::{UnweightedHx, WeightedHx};
+use crate::graph::{edge_collection::StaticEdgeSet, hyperedge::Hx};
 
 #[derive(Archive, Serialize, Deserialize, Debug, Clone)]
 pub struct Hypergraph<T, W> {
@@ -63,9 +68,7 @@ impl<T, W> HypergraphAccessor<N, T, W> for Hypergraph<T, W> {
     }
 }
 
-// #[pymethods]
 impl<T, W> Hypergraph<T, W> {
-    // #[new]
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
@@ -359,56 +362,19 @@ impl<T, W> Hypergraph<T, W> {
     }
 }
 
-#[derive(FromPyObject)]
-pub enum PyHypergraph<'py> {
-    Weighted(PyRef<'py, WeightedHypergraph>),
-    Unweighted(PyRef<'py, UnweightedHypergraph>),
-}
-impl_stub_type!(PyHypergraph<'_> = UnweightedHypergraph | WeightedHypergraph);
-
-#[pyclass(skip_from_py_object)]
-#[gen_stub_pyclass(module = "rust_core._core.graph")]
-pub struct WeightedHypergraph(pub Hypergraph<NodeId, NodeWeight>);
-pub struct WeightedHx<const N: usize>(pub Hx<N, NodeId, NodeWeight>);
-
-#[pyclass(skip_from_py_object)]
-#[gen_stub_pyclass(module = "rust_core._core.graph")]
+#[cfg_attr(
+    feature = "bindings",
+    pyclass(skip_from_py_object),
+    gen_stub_pyclass(module = "rust_core._core.graph")
+)]
 pub struct UnweightedHypergraph(pub Hypergraph<NodeId, ()>);
-pub struct UnweightedHx<const N: usize>(pub Hx<N, NodeId, ()>);
 
-impl<const N: usize> WeightedHx<N> {
-    pub fn new(nodes: [NodeId; N], weight: NodeWeight) -> Result<Self, GraphError<NodeId>> {
-        let inner = Hx::new(nodes, weight)?;
-        Ok(Self(inner))
-    }
-    pub fn new_unchecked(nodes: [NodeId; N], weight: NodeWeight) -> Self {
-        let inner = Hx::new_unchecked(nodes, weight);
-        Self(inner)
-    }
-}
-
-impl<const N: usize> UnweightedHx<N> {
-    pub fn new(nodes: [NodeId; N]) -> Result<Self, GraphError<NodeId>> {
-        let inner = Hx::new_unweighted(nodes)?;
-        Ok(Self(inner))
-    }
-    pub fn new_unchecked(nodes: [NodeId; N]) -> Self {
-        let inner = Hx::new_unweighted_unchecked(nodes);
-        Self(inner)
-    }
-}
-
-impl<const N: usize> Into<WeightedHx<N>> for Hx<N, NodeId, NodeWeight> {
-    fn into(self) -> WeightedHx<N> {
-        WeightedHx(self)
-    }
-}
-
-impl<const N: usize> Into<UnweightedHx<N>> for Hx<N, NodeId, ()> {
-    fn into(self) -> UnweightedHx<N> {
-        UnweightedHx(self)
-    }
-}
+#[cfg_attr(
+    feature = "bindings",
+    pyclass(skip_from_py_object),
+    gen_stub_pyclass(module = "rust_core._core.graph")
+)]
+pub struct WeightedHypergraph(pub Hypergraph<NodeId, NodeWeight>);
 
 impl Into<UnweightedHypergraph> for Hypergraph<NodeId, ()> {
     fn into(self) -> UnweightedHypergraph {
@@ -422,226 +388,273 @@ impl Into<WeightedHypergraph> for Hypergraph<NodeId, NodeWeight> {
     }
 }
 
-// Common methods for both weighted and unweighted hypergraphs
-#[duplicate_item(
-    hg_type                 hx_type;
-    [UnweightedHypergraph]  [UnweightedHx];
-    [WeightedHypergraph]    [WeightedHx];
-)]
-#[pymethods]
-#[gen_stub_pymethods(module = "rust_core._core.graph")]
-impl hg_type {
-    #[new]
-    pub fn new() -> Self {
-        Self(Hypergraph::new())
-    }
+impl Deref for UnweightedHypergraph {
+    type Target = Hypergraph<NodeId, ()>;
 
-    #[staticmethod]
-    pub fn from_edges(edges: Vec<Bound<'_, PyTuple>>) -> Self {
-        let mut hx = Self(Hypergraph::new());
-        for edge in edges {
-            hx.insert_hx_tuple(edge).unwrap();
-        }
-        hx
-    }
-
-    pub fn n(&self) -> usize {
-        self.0.n
-    }
-
-    pub fn m(&self) -> usize {
-        self.0.m
-    }
-
-    pub fn nodes(&self) -> HashMap<NodeId, usize> {
-        self.0.nodes.clone()
-    }
-
-    pub fn count(&self, order: usize) -> PyResult<usize> {
-        seq!( N in 2..11 {
-        match order {
-             #( N => Ok(self.0.edges::<N>().len()),             )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-            }
-        })
-    }
-
-    pub fn edges_by_order<'a>(
-        &self,
-        py: Python<'a>,
-        order: usize,
-    ) -> PyResult<Vec<Bound<'a, PyTuple>>> {
-        seq!( N in 2..11 {
-        match order {
-             #( N => Ok(self
-                        .0
-                        .iter_edges::<N>()
-                        .cloned()
-                        .map(|e| {
-                            let wrapped:hx_type<N> = e.into();
-                            wrapped.into_pyobject(py).unwrap()
-                        })
-                        .collect()),
-              )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-            }
-        })
-    }
-
-    pub fn edges<'a>(&self, py: Python<'a>) -> Vec<Bound<'a, PyTuple>> {
-        let mut rv = Vec::new();
-        seq!( N in 2..11 {
-            rv.extend(self.edges_by_order(py, N).unwrap());
-        });
-        rv
-    }
-
-    fn has_hx(&self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
-        let order = edge.len()?;
-        seq!( N in 2..11 {
-        match order {
-            #(
-                N => {
-                    let hx: UnweightedHx<N> = edge.extract()?;
-                    Ok(self.0.has_hyperedge(&hx.0.nodes))
-                },
-            )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-        }
-        })
-    }
-
-    fn get_hx<'a>(
-        &self,
-        py: Python<'a>,
-        edge: Bound<'_, PyTuple>,
-    ) -> PyResult<Option<Bound<'a, PyTuple>>> {
-        let order = edge.len()?;
-        seq!( N in 2..11 {
-        match order {
-            #(
-                N => {
-                    let hx: UnweightedHx<N> = edge.extract()?;
-                    Ok(self
-                        .0
-                        .get_hyperedge(&hx.0.nodes)
-                        .map(|e| {
-                            let wrapped:hx_type<N> = e.clone().into();
-                            wrapped.into_pyobject(py).unwrap()
-                        }
-                        ))
-                },
-            )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-        }
-        })
-    }
-
-    fn remove_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
-        let order = edge.len()?;
-        seq!( N in 2..11 {
-        match order {
-            #(
-                N => {
-                    let nodes = edge.extract::<UnweightedHx<N>>()?.0.nodes;
-                    Ok(self.0.remove_edge_unchecked(&nodes))
-                },
-            )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-        }
-        })
-    }
-
-    fn remove_isolated_nodes(&mut self) -> usize {
-        self.0.remove_isolated_nodes()
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-// Methods requiring specific implementation for weighted and unweighted hypergraphs
-#[pymethods]
-#[gen_stub_pymethods(module = "rust_core._core.graph")]
-impl UnweightedHypergraph {
-    fn insert_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
-        let order = edge.len()?;
-        seq!(N in 2..11 {
-        match order {
-            #(
-                N => {
-                    let unweighted_hx: UnweightedHx<N> = edge.extract()?;
-                    Ok(self.0.add_edge(unweighted_hx.0))
-                },
-            )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-        }
-        })
-    }
-
-    fn insert_hx_tuple(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
-        let order = edge.len()?;
-
-        seq!(N in 2..11 {
-        match order {
-            #(
-                N => {
-                    let hx: UnweightedHx<N> = edge.extract()?;
-                    Ok(self.0.add_edge(hx.0))
-                },
-            )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-        }
-        })
+impl DerefMut for UnweightedHypergraph {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
-// Methods requiring specific implementation for weighted and unweighted hypergraphs
-#[pymethods]
-#[gen_stub_pymethods(module = "rust_core._core.graph")]
-impl WeightedHypergraph {
-    fn insert_hx(&mut self, edge: Bound<'_, PyTuple>, weight: NodeWeight) -> PyResult<bool> {
-        let order = edge.len()?;
-        seq!(N in 2..11 {
-        match order {
-            #(
-                N => {
-                    let unweighted_hx: UnweightedHx<N> = edge.extract()?;
-                    let weighted_hx = WeightedHx::new_unchecked(unweighted_hx.0.nodes, weight);
-                    Ok(self.0.add_edge(weighted_hx.0))
-                },
-            )*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
-        }
-        })
+impl Deref for WeightedHypergraph {
+    type Target = Hypergraph<NodeId, NodeWeight>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
+}
 
-    fn insert_hx_tuple(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
-        let len = edge.len()?;
+impl DerefMut for WeightedHypergraph {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
-        if len != 2 {
-            return Err(PyErr::new::<PyValueError, _>(format!(
-                "Expected a tuple of length 2 (nodes, weight), got {}",
-                len
-            )));
+#[cfg(feature = "bindings")]
+#[derive(FromPyObject)]
+pub enum PyHypergraph<'py> {
+    Weighted(PyRef<'py, WeightedHypergraph>),
+    Unweighted(PyRef<'py, UnweightedHypergraph>),
+}
+
+#[cfg(feature = "bindings")]
+impl_stub_type!(PyHypergraph<'_> = UnweightedHypergraph | WeightedHypergraph);
+#[cfg(feature = "bindings")]
+#[hoist_mod]
+mod bindings {
+    // Common methods for both weighted and unweighted hypergraphs
+    #[duplicate_item(
+        hg_type                 hx_type;
+        [UnweightedHypergraph]  [UnweightedHx];
+        [WeightedHypergraph]    [WeightedHx];
+    )]
+    #[gen_stub_pymethods(module = "rust_core._core.graph")]
+    #[pymethods]
+    impl hg_type {
+        #[new]
+        pub fn new() -> Self {
+            Self(Hypergraph::new())
         }
 
-        let first_item = edge.get_item(0)?;
-        let nodes = first_item.cast::<PyTuple>()?;
-        let weight = edge.get_item(1)?.extract::<NodeWeight>()?;
-        let order = nodes.len()?;
+        #[staticmethod]
+        pub fn from_edges(edges: Vec<Bound<'_, PyTuple>>) -> Self {
+            let mut hx = Self(Hypergraph::new());
+            for edge in edges {
+                hx.insert_hx_tuple(edge).unwrap();
+            }
+            hx
+        }
 
-        seq!(N in 2..11 {
+        pub fn n(&self) -> usize {
+            self.0.n
+        }
+
+        pub fn m(&self) -> usize {
+            self.0.m
+        }
+
+        pub fn nodes(&self) -> HashMap<NodeId, usize> {
+            self.0.nodes.clone()
+        }
+
+        pub fn count(&self, order: usize) -> Result<usize, GraphError<usize>> {
+            seq!( N in 2..11 {
+            match order {
+                 #( N => Ok(self.0.edges::<N>().len()),             )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                }
+            })
+        }
+
+        pub fn edges_by_order<'a>(
+            &self,
+            py: Python<'a>,
+            order: usize,
+        ) -> PyResult<Vec<Bound<'a, PyTuple>>> {
+            seq!( N in 2..11 {
+            match order {
+                 #( N => Ok(self
+                            .0
+                            .iter_edges::<N>()
+                            .cloned()
+                            .map(|e| {
+                                let wrapped:hx_type<N> = e.into();
+                                wrapped.into_pyobject(py).unwrap()
+                            })
+                            .collect()),
+                  )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                }
+            })
+        }
+
+        pub fn edges<'a>(&self, py: Python<'a>) -> Vec<Bound<'a, PyTuple>> {
+            let mut rv = Vec::new();
+            seq!( N in 2..11 {
+                rv.extend(self.edges_by_order(py, N).unwrap());
+            });
+            rv
+        }
+
+        fn has_hx(&self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
+            let order = edge.len()?;
+            seq!( N in 2..11 {
             match order {
                 #(
                     N => {
-                        let mut nodes_v = [0; N];
-                        for i in 0..N {
-                            nodes_v[i] = nodes.get_item(i)?.extract::<NodeId>()?;
-                        }
-                        let hx: WeightedHx<N> = WeightedHx::new(nodes_v, weight)?;
+                        let hx: UnweightedHx<N> = edge.extract()?;
+                        Ok(self.0.has_hyperedge(&hx.0.nodes))
+                    },
+                )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+            }
+            })
+        }
+
+        fn get_hx<'a>(
+            &self,
+            py: Python<'a>,
+            edge: Bound<'_, PyTuple>,
+        ) -> PyResult<Option<Bound<'a, PyTuple>>> {
+            let order = edge.len()?;
+            seq!( N in 2..11 {
+            match order {
+                #(
+                    N => {
+                        let hx: UnweightedHx<N> = edge.extract()?;
+                        Ok(self
+                            .0
+                            .get_hyperedge(&hx.0.nodes)
+                            .map(|e| {
+                                let wrapped:hx_type<N> = e.clone().into();
+                                wrapped.into_pyobject(py).unwrap()
+                            }
+                            ))
+                    },
+                )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+            }
+            })
+        }
+
+        fn remove_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
+            let order = edge.len()?;
+            seq!( N in 2..11 {
+            match order {
+                #(
+                    N => {
+                        let nodes = edge.extract::<UnweightedHx<N>>()?.0.nodes;
+                        Ok(self.0.remove_edge_unchecked(&nodes))
+                    },
+                )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+            }
+            })
+        }
+
+        fn remove_isolated_nodes(&mut self) -> usize {
+            self.0.remove_isolated_nodes()
+        }
+    }
+
+    // Methods requiring specific implementation for weighted and unweighted hypergraphs
+    #[cfg_attr(
+        feature = "bindings",
+        pymethods,
+        gen_stub_pymethods(module = "rust_core._core.graph")
+    )]
+    impl UnweightedHypergraph {
+        fn insert_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
+            let order = edge.len()?;
+            seq!(N in 2..11 {
+            match order {
+                #(
+                    N => {
+                        let unweighted_hx: UnweightedHx<N> = edge.extract()?;
+                        Ok(self.0.add_edge(unweighted_hx.0))
+                    },
+                )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+            }
+            })
+        }
+
+        fn insert_hx_tuple(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
+            let order = edge.len()?;
+
+            seq!(N in 2..11 {
+            match order {
+                #(
+                    N => {
+                        let hx: UnweightedHx<N> = edge.extract()?;
                         Ok(self.0.add_edge(hx.0))
                     },
                 )*
                     _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
             }
-        })
+            })
+        }
+    }
+
+    // Methods requiring specific implementation for weighted and unweighted hypergraphs
+    #[cfg_attr(
+        feature = "bindings",
+        pymethods,
+        gen_stub_pymethods(module = "rust_core._core.graph")
+    )]
+    impl WeightedHypergraph {
+        fn insert_hx(&mut self, edge: Bound<'_, PyTuple>, weight: NodeWeight) -> PyResult<bool> {
+            let order = edge.len()?;
+            seq!(N in 2..11 {
+            match order {
+                #(
+                    N => {
+                        let unweighted_hx: UnweightedHx<N> = edge.extract()?;
+                        let weighted_hx = WeightedHx::new_unchecked(unweighted_hx.0.nodes, weight);
+                        Ok(self.0.add_edge(weighted_hx.0))
+                    },
+                )*
+                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+            }
+            })
+        }
+
+        fn insert_hx_tuple(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
+            let len = edge.len()?;
+
+            if len != 2 {
+                return Err(PyErr::new::<PyValueError, _>(format!(
+                    "Expected a tuple of length 2 (nodes, weight), got {}",
+                    len
+                )));
+            }
+
+            let first_item = edge.get_item(0)?;
+            let nodes = first_item.cast::<PyTuple>()?;
+            let weight = edge.get_item(1)?.extract::<NodeWeight>()?;
+            let order = nodes.len()?;
+
+            seq!(N in 2..11 {
+                match order {
+                    #(
+                        N => {
+                            let mut nodes_v = [0; N];
+                            for i in 0..N {
+                                nodes_v[i] = nodes.get_item(i)?.extract::<NodeId>()?;
+                            }
+                            let hx: WeightedHx<N> = WeightedHx::new(nodes_v, weight)?;
+                            Ok(self.0.add_edge(hx.0))
+                        },
+                    )*
+                        _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                }
+            })
+        }
     }
 }

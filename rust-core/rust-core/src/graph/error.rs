@@ -1,9 +1,8 @@
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
+use rust_core_macros::hoist_mod;
 use std::fmt::{self, Display};
 use thiserror::Error;
 
-use super::types::NodeId;
+use super::hyperedge::NodeId;
 use crate::graph::edge_collection::{MAX_HX_SIZE, MIN_HX_SIZE};
 
 #[derive(Error, Debug)]
@@ -20,15 +19,33 @@ pub enum GraphError<T> {
     UnsupportedHyperedgeSize(T),
 
     #[error("Generic error: {0}")]
-    GenericError(String),
+    Unknown(String),
 }
 
-impl<T> From<GraphError<T>> for PyErr
-where
-    T: Display,
-{
-    fn from(err: GraphError<T>) -> PyErr {
-        PyValueError::new_err(err.to_string())
+#[derive(Error, Debug)]
+pub enum SerializationError {
+    #[error("Failed to serialize data: {0}")]
+    Serialization(#[from] rkyv::rancor::Error),
+
+    #[error("I/O error occurred: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Unknown error: {0}")]
+    Unknown(String),
+}
+
+#[cfg(feature = "bindings")]
+#[hoist_mod]
+mod bindings {
+    use pyo3::exceptions::PyValueError;
+    use pyo3::prelude::*;
+    impl<T> From<GraphError<T>> for PyErr
+    where
+        T: Display,
+    {
+        fn from(err: GraphError<T>) -> PyErr {
+            PyValueError::new_err(err.to_string())
+        }
     }
 }
 

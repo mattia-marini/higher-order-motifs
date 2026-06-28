@@ -1,8 +1,7 @@
 use crate::iter_hyperedges;
 use foldhash::fast::FixedState;
 use hashbrown::HashSet;
-use pyo3::pyclass;
-use pyo3_stub_gen::derive::gen_stub_pyclass;
+use rust_core_macros::hoist_mod;
 use std::fmt::{Binary, Debug};
 use std::hash::Hash;
 use std::ops::{AddAssign, Deref, Not, RangeInclusive};
@@ -910,9 +909,18 @@ define_compact_motif!(u8, 3, Fingerprint3);
 define_compact_motif!(u16, 4, Fingerprint4);
 define_compact_motif!(u32, 5, Fingerprint5);
 
-#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
-#[pyclass(from_py_object, str)]
+#[cfg(feature = "bindings")]
+use pyo3::pyclass;
+
+#[cfg(feature = "bindings")]
+use pyo3_stub_gen::derive::gen_stub_pyclass;
+
 #[derive(Clone)]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.motifs.types"),
+    pyclass(from_py_object, str)
+)]
 pub struct CompactMotif3 {
     inner: CompactMotif<3>,
 }
@@ -939,9 +947,12 @@ impl Display for CompactMotif3 {
     }
 }
 
-#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
-#[pyclass(from_py_object, str)]
 #[derive(Clone)]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.motifs.types"),
+    pyclass(from_py_object, str)
+)]
 pub struct CompactMotif4 {
     inner: CompactMotif<4>,
 }
@@ -968,9 +979,12 @@ impl Display for CompactMotif4 {
     }
 }
 
-#[gen_stub_pyclass(module = "rust_core._core.motifs.types")]
-#[pyclass(from_py_object, str)]
 #[derive(Clone)]
+#[cfg_attr(
+    feature = "bindings",
+    gen_stub_pyclass(module = "rust_core._core.motifs.types"),
+    pyclass(from_py_object, str)
+)]
 pub struct CompactMotif5 {
     inner: CompactMotif<5>,
 }
