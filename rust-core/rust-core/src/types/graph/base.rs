@@ -66,8 +66,8 @@ where
 }
 
 // Implemented by both adjacency list and incidence list
-pub trait AdjacencyList<W, T>:
-    AdjacencyBase<W, NeighborContainer = Vec<ListNeighbor<NodeId, W>>>
+pub trait AdjacencyList<W>:
+    AdjacencyBase<W>
 {
     fn remove_multiedges(&mut self) -> usize;
 
@@ -76,6 +76,6 @@ pub trait AdjacencyList<W, T>:
 
 // Implemented by both adjacency set and incidence set
 pub trait AdjacencySet<W>:
-    AdjacencyBase<W, NeighborContainer = HashMap<NodeId, W, FixedState>>
+    AdjacencyBase<W>
 {
 }

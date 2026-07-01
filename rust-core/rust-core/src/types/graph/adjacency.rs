@@ -10,9 +10,8 @@ use std::ops::{Deref, DerefMut, Index, IndexMut, Range, RangeBounds};
 use duplicate::duplicate_item;
 use rkyv::{Archive, Deserialize, Serialize};
 
-use super::base::{Directed, Directionality, Undirected};
+use super::base::{AdjacencyBase, AdjacencyList, AdjacencySet, Directed, Directionality, DirectionalityDependent, Undirected};
 use crate::misc::serialize::DumpCacheToFile;
-use crate::types::base::{AdjacencyBase, AdjacencyList, DirectionalityDependent};
 use crate::types::{EdgeId, NodeId, NodeWeight};
 
 pub trait AdjBase<W> {
@@ -66,279 +65,9 @@ where
     _directionality_marker: PhantomData<D>,
 }
 
-// impl<W, D> AdjList<W, D>
-// where
-//     D: Directionality,
-//     Self: AdjBase<W>,
-// {
-//     pub fn new() -> Self {
-//         Self::default()
-//     }
-//
-//     pub fn with_nodes(n: usize) -> Self {
-//         Self {
-//             adj: (0..n).map(|_| Vec::new()).collect(),
-//             n,
-//             m: 0,
-//             _directionality_marker: PhantomData,
-//         }
-//     }
-//
-//     pub fn from_edges_mapped(
-//         edges: Vec<(NodeId, NodeId, W)>,
-//     ) -> (
-//         AdjList<W, D>,
-//         Vec<NodeId>,
-//         HashMap<NodeId, NodeId, FixedState>,
-//     )
-//     where
-//         W: Clone,
-//     {
-//         if edges.is_empty() {
-//             return (
-//                 Self::new(),
-//                 Vec::new(),
-//                 HashMap::with_hasher(FixedState::default()),
-//             );
-//         }
-//
-//         // Step 1: assign compact IDs
-//         let mut compressed_index: HashMap<NodeId, NodeId, FixedState> =
-//             HashMap::with_hasher(FixedState::default());
-//         let mut curr_number = 0;
-//
-//         for (u, v, _w) in edges.iter() {
-//             if let Entry::Vacant(e) = compressed_index.entry(*u) {
-//                 e.insert(curr_number);
-//                 curr_number += 1;
-//             }
-//             if let Entry::Vacant(e) = compressed_index.entry(*v) {
-//                 e.insert(curr_number);
-//                 curr_number += 1;
-//             }
-//         }
-//
-//         let n = curr_number as usize;
-//
-//         // Step 2: compute adjacency sizes
-//         let mut sizes = vec![0; n];
-//
-//         for (u, v, _) in edges.iter() {
-//             let u_idx = compressed_index[u];
-//             let v_idx = compressed_index[v];
-//             sizes[u_idx as usize] += 1;
-//             sizes[v_idx as usize] += 1;
-//         }
-//
-//         // Step 3: allocate graph
-//         let mut rv = Self::with_nodes(n);
-//
-//         for (u, adj) in rv.adj.iter_mut().enumerate() {
-//             adj.reserve(sizes[u]);
-//         }
-//
-//         // Step 4: fill adjacency
-//         for (u, v, w) in edges.iter() {
-//             let u_idx = compressed_index[u];
-//             let v_idx = compressed_index[v];
-//
-//             rv.add_edge(u_idx, v_idx, w.clone());
-//         }
-//
-//         rv.m = edges.len();
-//         let mut original_index = Vec::with_capacity(n);
-//         original_index.resize(n, 0);
-//         for (node, &compressed) in compressed_index.iter() {
-//             original_index[compressed as usize] = *node;
-//         }
-//
-//         (rv, original_index, compressed_index)
-//     }
-//
-//     pub fn from_edges_unmapped(edges: Vec<(NodeId, NodeId, W)>) -> Self
-//     where
-//         W: Clone,
-//     {
-//         if edges.is_empty() {
-//             return Self::new();
-//         }
-//
-//         let n = (edges
-//             .iter()
-//             .fold(0, |acc, (u, v, _w)| max(acc, max(*u, *v)))
-//             + 1) as usize;
-//
-//         let mut sizes = vec![0; n];
-//
-//         for (u, _, _) in edges.iter() {
-//             sizes[*u as usize] += 1;
-//         }
-//
-//         let mut rv = Self::with_nodes(n);
-//
-//         for (u, adj) in rv.adj.iter_mut().enumerate() {
-//             adj.reserve(sizes[u]);
-//         }
-//
-//         for (u, v, w) in edges.iter() {
-//             rv.add_edge(*u, *v, w.clone());
-//         }
-//
-//         rv.m = edges.len();
-//         rv
-//     }
-//
-//     pub fn n(&self) -> usize {
-//         self.n
-//     }
-//
-//     pub fn m(&self) -> usize {
-//         self.m
-//     }
-//
-//     pub fn remove_self_loops(&mut self) -> usize {
-//         let mut removed = 0;
-//         for (x, neighbors) in self.adj.iter_mut().enumerate() {
-//             neighbors.retain(|neighbor| {
-//                 if neighbor.node as usize == x {
-//                     removed += 1;
-//                     false
-//                 } else {
-//                     true
-//                 }
-//             });
-//         }
-//         self.m -= removed;
-//         removed
-//     }
-//
-//     pub fn remove_multiedges(&mut self) -> usize {
-//         let mut removed = 0;
-//         let mut present = HashSet::new();
-//
-//         for neighbors in self.adj.iter_mut() {
-//             present.clear();
-//             neighbors.retain(|neighbor| {
-//                 if !present.insert(neighbor.node) {
-//                     removed += 1;
-//                     false
-//                 } else {
-//                     true
-//                 }
-//             });
-//         }
-//         self.m -= removed;
-//         removed
-//     }
-//
-//     /// Efficiently sorts each adjacency list.
-//     /// Time Complexity: O(n + m)
-//     /// Space Complexity: O(n + m)
-//     pub fn sort_neighbors(&mut self)
-//     where
-//         W: Clone,
-//     {
-//         let n = self.n();
-//         let mut rv = vec![Vec::new(); n];
-//
-//         for u in 0..n {
-//             rv[u].reserve(self[u].len());
-//         }
-//
-//         for u in 0..n {
-//             for neighbor in self.adj[u].drain(..) {
-//                 rv[neighbor.node as usize].push(ListNeighbor::new(u as NodeId, neighbor.weight));
-//             }
-//         }
-//         self.adj = rv;
-//     }
-//
-//     pub fn iter_neighbors(&self) -> impl Iterator<Item = &Vec<ListNeighbor<NodeId, W>>> + '_ {
-//         self.adj.iter()
-//     }
-//
-//     pub fn iter_neighbors_mut(
-//         &mut self,
-//     ) -> impl Iterator<Item = &mut Vec<ListNeighbor<NodeId, W>>> + '_ {
-//         self.adj.iter_mut()
-//     }
-//
-//     pub fn drain_neighbors(
-//         &mut self,
-//         range: impl RangeBounds<usize>,
-//     ) -> impl Iterator<Item = Vec<ListNeighbor<NodeId, W>>> + '_ {
-//         self.adj.drain(range)
-//     }
-// }
-//
-// impl<W> AdjBase<W> for AdjList<W, Undirected> {
-//     #[inline(always)]
-//     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
-//     where
-//         W: Clone,
-//     {
-//         self.adj[u as usize].push(ListNeighbor::new(v, w.clone()));
-//         self.adj[v as usize].push(ListNeighbor::new(u, w));
-//         self.m += 1;
-//     }
-//
-//     #[inline(always)]
-//     fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
-//         self.adj[u as usize].retain(|e| e.node != v);
-//         self.adj[v as usize].retain(|e| e.node != u);
-//     }
-// }
-//
-// impl<W> AdjList<W, Undirected> {
-//     pub fn into_directed(mut self) -> AdjList<W, Directed> {
-//         AdjList {
-//             adj: self.adj,
-//             n: self.n,
-//             m: self.m,
-//             _directionality_marker: PhantomData,
-//         }
-//     }
-// }
-//
-// impl<W> AdjList<W, Directed> {
-//     /// Makes the directed graph undirected by adding an edge (v,u) for each edge (u,v). If
-//     /// `allow_multiedges` is set to `false`, it will remove any multiedges that may arise from this
-//     /// operation.
-//     pub fn into_undirected(mut self, allow_multiedges: bool) -> AdjList<W, Undirected>
-//     where
-//         W: Clone,
-//     {
-//         let mut rv = AdjList::<W, Undirected>::with_nodes(self.n());
-//         for (x, neighbors) in self.drain_neighbors(..).enumerate() {
-//             rv.adj[x].reserve(neighbors.len());
-//
-//             for neighbor in neighbors.into_iter() {
-//                 rv.add_edge(x as NodeId, neighbor.node, neighbor.weight);
-//             }
-//         }
-//
-//         if !allow_multiedges {
-//             rv.remove_multiedges();
-//         }
-//
-//         rv
-//     }
-// }
-//
-// impl<W> AdjBase<W> for AdjList<W, Directed> {
-//     #[inline(always)]
-//     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W) {
-//         self.adj[u as usize].push(ListNeighbor::new(v, w));
-//         self.m += 1;
-//     }
-//
-//     #[inline(always)]
-//     fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
-//         self.adj[u as usize].retain(|e| e.node != v);
-//     }
-// }
-//
-//
+// -----------------------------------------------------------------------
+// Index / IndexMut implementations (shared by both structs)
+// -----------------------------------------------------------------------
 
 impl<W, D> Index<usize> for AdjList<W, D>
 where
@@ -394,10 +123,11 @@ where
     }
 }
 
-impl<W, D> DirectionalityDependent<W> for AdjList<W, D>
-where
-    D: Directionality,
-{
+// -----------------------------------------------------------------------
+// DirectionalityDependent implementations for AdjList
+// -----------------------------------------------------------------------
+
+impl<W> DirectionalityDependent<W> for AdjList<W, Undirected> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
     where
@@ -414,6 +144,26 @@ where
         self.adj[v as usize].retain(|e| e.node != u);
     }
 }
+
+impl<W> DirectionalityDependent<W> for AdjList<W, Directed> {
+    #[inline(always)]
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone,
+    {
+        self.adj[u as usize].push(ListNeighbor::new(v, w));
+        self.m += 1;
+    }
+
+    #[inline(always)]
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].retain(|e| e.node != v);
+    }
+}
+
+// -----------------------------------------------------------------------
+// AdjacencyBase implementation for AdjList
+// -----------------------------------------------------------------------
 
 impl<W, D> AdjacencyBase<W> for AdjList<W, D>
 where
@@ -562,10 +312,6 @@ where
         removed
     }
 
-    /// Efficiently sorts each adjacency list.
-    /// Time Complexity: O(n + m)
-    /// Space Complexity: O(n + m)
-
     fn iter_neighbors<'a>(&'a self) -> impl Iterator<Item = &'a Vec<ListNeighbor<NodeId, W>>> + 'a
     where
         W: 'a,
@@ -590,7 +336,11 @@ where
     }
 }
 
-impl<W, D> AdjacencyList<W, Vec<ListNeighbor<NodeId, W>>> for AdjList<W, D>
+// -----------------------------------------------------------------------
+// AdjacencyList implementation for AdjList
+// -----------------------------------------------------------------------
+
+impl<W, D> AdjacencyList<W> for AdjList<W, D>
 where
     D: Directionality,
     W: Clone,
@@ -610,6 +360,7 @@ where
         }
         self.adj = rv;
     }
+
     fn remove_multiedges(&mut self) -> usize {
         let mut removed = 0;
         let mut present = HashSet::new();
@@ -630,256 +381,341 @@ where
     }
 }
 
-// impl<W, T, D> AdjacencyList<W, T> for AdjList<W, D> where D: Directionality {}
-//
-// impl<W, D> AdjSet<W, D>
-// where
-//     D: Directionality,
-//     Self: AdjBase<W>,
-// {
-//     pub fn new() -> Self {
-//         Self::default()
-//     }
-//
-//     pub fn with_nodes(n: usize) -> Self {
-//         Self {
-//             adj: (0..n)
-//                 .map(|_| HashMap::with_hasher(FixedState::default()))
-//                 .collect(),
-//             n,
-//             m: 0,
-//             _directionality_marker: PhantomData,
-//         }
-//     }
-//
-//     pub fn from_edges_mapped(
-//         edges: Vec<(NodeId, NodeId, W)>,
-//     ) -> (
-//         AdjSet<W, D>,
-//         Vec<NodeId>,
-//         HashMap<NodeId, NodeId, FixedState>,
-//     )
-//     where
-//         W: Clone,
-//     {
-//         if edges.is_empty() {
-//             return (
-//                 Self::new(),
-//                 Vec::new(),
-//                 HashMap::with_hasher(FixedState::default()),
-//             );
-//         }
-//
-//         let mut compressed_index: HashMap<NodeId, NodeId, FixedState> =
-//             HashMap::with_hasher(FixedState::default());
-//         let mut curr_number = 0;
-//
-//         for (u, v, _w) in edges.iter() {
-//             if let Entry::Vacant(e) = compressed_index.entry(*u) {
-//                 e.insert(curr_number);
-//                 curr_number += 1;
-//             }
-//             if let Entry::Vacant(e) = compressed_index.entry(*v) {
-//                 e.insert(curr_number);
-//                 curr_number += 1;
-//             }
-//         }
-//
-//         let n = curr_number as usize;
-//
-//         let mut rv = Self::with_nodes(n);
-//
-//         for (u, v, w) in edges.iter() {
-//             let u_idx = compressed_index[u];
-//             let v_idx = compressed_index[v];
-//             rv.add_edge(u_idx, v_idx, w.clone());
-//         }
-//
-//         rv.m = edges.len();
-//
-//         let mut original_index = Vec::with_capacity(n);
-//         original_index.resize(n, 0);
-//         for (node, &compressed) in compressed_index.iter() {
-//             original_index[compressed as usize] = *node;
-//         }
-//
-//         (rv, original_index, compressed_index)
-//     }
-//
-//     pub fn from_edges_unmapped(edges: Vec<(NodeId, NodeId, W)>) -> Self
-//     where
-//         W: Clone,
-//     {
-//         if edges.is_empty() {
-//             return Self::new();
-//         }
-//
-//         let n = (edges
-//             .iter()
-//             .fold(0, |acc, (u, v, _w)| max(acc, max(*u, *v)))
-//             + 1) as usize;
-//
-//         let mut rv = Self::with_nodes(n);
-//
-//         for (u, v, w) in edges.iter() {
-//             rv.add_edge(*u, *v, w.clone());
-//         }
-//
-//         rv.m = edges.len();
-//         rv
-//     }
-//
-//     pub fn n(&self) -> usize {
-//         self.n
-//     }
-//
-//     pub fn m(&self) -> usize {
-//         self.m
-//     }
-//
-//     pub fn remove_self_loops(&mut self) -> usize {
-//         let mut removed = 0;
-//         for (x, neighbors) in self.adj.iter_mut().enumerate() {
-//             if neighbors.remove(&(x as NodeId)).is_some() {
-//                 removed += 1;
-//             }
-//         }
-//         self.m -= removed;
-//         removed
-//     }
-//
-//     pub fn iter_neighbors(&self) -> impl Iterator<Item = &HashMap<NodeId, W, FixedState>> + '_ {
-//         self.adj.iter()
-//     }
-//
-//     pub fn iter_neighbors_mut(
-//         &mut self,
-//     ) -> impl Iterator<Item = &mut HashMap<NodeId, W, FixedState>> + '_ {
-//         self.adj.iter_mut()
-//     }
-//
-//     pub fn drain_neighbors(
-//         &mut self,
-//         range: impl RangeBounds<usize>,
-//     ) -> impl Iterator<Item = HashMap<NodeId, W, FixedState>> + '_ {
-//         self.adj.drain(range)
-//     }
-// }
-//
-// impl<W> AdjBase<W> for AdjSet<W, Undirected> {
-//     #[inline(always)]
-//     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
-//     where
-//         W: Clone,
-//     {
-//         self.adj[u as usize].insert(v, w.clone());
-//         self.adj[v as usize].insert(u, w);
-//         self.m += 1;
-//     }
-//
-//     #[inline(always)]
-//     fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
-//         self.adj[u as usize].remove(&v);
-//         self.adj[v as usize].remove(&u);
-//     }
-// }
-//
-// impl<W> AdjSet<W, Undirected> {
-//     pub fn into_directed(mut self) -> AdjSet<W, Directed> {
-//         AdjSet {
-//             adj: self.adj,
-//             n: self.n,
-//             m: self.m,
-//             _directionality_marker: PhantomData,
-//         }
-//     }
-// }
-//
-// impl<W> AdjBase<W> for AdjSet<W, Directed> {
-//     #[inline(always)]
-//     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
-//     where
-//         W: Clone,
-//     {
-//         self.adj[u as usize].insert(v, w);
-//         self.m += 1;
-//     }
-//
-//     #[inline(always)]
-//     fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
-//         self.adj[u as usize].remove(&v);
-//     }
-// }
-//
-// impl<W> AdjSet<W, Directed> {
-//     /// Convert from directed to undirected by adding the reverse edges.
-//     pub fn into_undirected(mut self) -> AdjSet<W, Undirected>
-//     where
-//         W: Clone,
-//     {
-//         let mut rv = AdjSet::<W, Undirected>::with_nodes(self.n());
-//         for (x, neighbors) in self.drain_neighbors(..).enumerate() {
-//             for (v, w) in neighbors.into_iter() {
-//                 rv.add_edge(x as NodeId, v, w);
-//             }
-//         }
-//         rv
-//     }
-// }
-//
-// impl<W, D> Index<usize> for AdjSet<W, D>
-// where
-//     D: Directionality,
-// {
-//     type Output = HashMap<NodeId, W, FixedState>;
-//
-//     fn index(&self, index: usize) -> &Self::Output {
-//         &self.adj[index]
-//     }
-// }
-//
-// impl<W, D> IndexMut<usize> for AdjSet<W, D>
-// where
-//     D: Directionality,
-// {
-//     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-//         &mut self.adj[index]
-//     }
-// }
-//
-// impl<W, D> Index<NodeId> for AdjSet<W, D>
-// where
-//     D: Directionality,
-// {
-//     type Output = HashMap<NodeId, W, FixedState>;
-//
-//     fn index(&self, index: NodeId) -> &Self::Output {
-//         &self.adj[index as usize]
-//     }
-// }
-//
-// impl<W, D> IndexMut<NodeId> for AdjSet<W, D>
-// where
-//     D: Directionality,
-// {
-//     fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
-//         &mut self.adj[index as usize]
-//     }
-// }
-//
-// impl<W, D> Default for AdjSet<W, D>
-// where
-//     D: Directionality,
-// {
-//     fn default() -> Self {
-//         Self {
-//             adj: Vec::new(),
-//             n: 0,
-//             m: 0,
-//             _directionality_marker: PhantomData,
-//         }
-//     }
-// }
+// -----------------------------------------------------------------------
+// Inherent methods for AdjList (conversions)
+// -----------------------------------------------------------------------
+
+impl<W> AdjList<W, Undirected> {
+    pub fn into_directed(mut self) -> AdjList<W, Directed> {
+        AdjList {
+            adj: self.adj,
+            n: self.n,
+            m: self.m,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+impl<W> AdjList<W, Directed> {
+    /// Makes the directed graph undirected by adding an edge (v,u) for each edge (u,v). If
+    /// `allow_multiedges` is set to `false`, it will remove any multiedges that may arise from this
+    /// operation.
+    pub fn into_undirected(mut self, allow_multiedges: bool) -> AdjList<W, Undirected>
+    where
+        W: Clone,
+    {
+        let mut rv = AdjList::<W, Undirected>::with_nodes(self.n());
+        for (x, neighbors) in self.drain_neighbors(..).enumerate() {
+            rv.adj[x].reserve(neighbors.len());
+
+            for neighbor in neighbors.into_iter() {
+                rv.add_edge(x as NodeId, neighbor.node, neighbor.weight);
+            }
+        }
+
+        if !allow_multiedges {
+            rv.remove_multiedges();
+        }
+
+        rv
+    }
+}
+
+// ========================================================================
+// AdjSet implementations
+// ========================================================================
+
+impl<W, D> Index<usize> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, W, FixedState>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.adj[index]
+    }
+}
+
+impl<W, D> IndexMut<usize> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.adj[index]
+    }
+}
+
+impl<W, D> Index<NodeId> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, W, FixedState>;
+
+    fn index(&self, index: NodeId) -> &Self::Output {
+        &self.adj[index as usize]
+    }
+}
+
+impl<W, D> IndexMut<NodeId> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
+        &mut self.adj[index as usize]
+    }
+}
+
+impl<W, D> Default for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    fn default() -> Self {
+        Self {
+            adj: Vec::new(),
+            n: 0,
+            m: 0,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+// DirectionalityDependent implementations for AdjSet
+// -----------------------------------------------------------------------
+
+impl<W> DirectionalityDependent<W> for AdjSet<W, Undirected> {
+    #[inline(always)]
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone,
+    {
+        self.adj[u as usize].insert(v, w.clone());
+        self.adj[v as usize].insert(u, w);
+        self.m += 1;
+    }
+
+    #[inline(always)]
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].remove(&v);
+        self.adj[v as usize].remove(&u);
+    }
+}
+
+impl<W> DirectionalityDependent<W> for AdjSet<W, Directed> {
+    #[inline(always)]
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone,
+    {
+        self.adj[u as usize].insert(v, w);
+        self.m += 1;
+    }
+
+    #[inline(always)]
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].remove(&v);
+    }
+}
+
+// -----------------------------------------------------------------------
+// AdjacencyBase implementation for AdjSet
+// -----------------------------------------------------------------------
+
+impl<W, D> AdjacencyBase<W> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    type NeighborContainer = HashMap<NodeId, W, FixedState>;
+
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn with_nodes(n: usize) -> Self {
+        Self {
+            adj: (0..n)
+                .map(|_| HashMap::with_hasher(FixedState::default()))
+                .collect(),
+            n,
+            m: 0,
+            _directionality_marker: PhantomData,
+        }
+    }
+
+    fn from_edges_mapped(
+        edges: Vec<(NodeId, NodeId, W)>,
+    ) -> (
+        AdjSet<W, D>,
+        Vec<NodeId>,
+        HashMap<NodeId, NodeId, FixedState>,
+    )
+    where
+        W: Clone,
+    {
+        if edges.is_empty() {
+            return (
+                Self::new(),
+                Vec::new(),
+                HashMap::with_hasher(FixedState::default()),
+            );
+        }
+
+        let mut compressed_index: HashMap<NodeId, NodeId, FixedState> =
+            HashMap::with_hasher(FixedState::default());
+        let mut curr_number = 0;
+
+        for (u, v, _w) in edges.iter() {
+            if let Entry::Vacant(e) = compressed_index.entry(*u) {
+                e.insert(curr_number);
+                curr_number += 1;
+            }
+            if let Entry::Vacant(e) = compressed_index.entry(*v) {
+                e.insert(curr_number);
+                curr_number += 1;
+            }
+        }
+
+        let n = curr_number as usize;
+
+        let mut rv = Self::with_nodes(n);
+
+        for (u, v, w) in edges.iter() {
+            let u_idx = compressed_index[u];
+            let v_idx = compressed_index[v];
+            rv.add_edge(u_idx, v_idx, w.clone());
+        }
+
+        rv.m = edges.len();
+
+        let mut original_index = Vec::with_capacity(n);
+        original_index.resize(n, 0);
+        for (node, &compressed) in compressed_index.iter() {
+            original_index[compressed as usize] = *node;
+        }
+
+        (rv, original_index, compressed_index)
+    }
+
+    fn from_edges_unmapped(edges: Vec<(NodeId, NodeId, W)>) -> Self
+    where
+        W: Clone,
+    {
+        if edges.is_empty() {
+            return Self::new();
+        }
+
+        let n = (edges
+            .iter()
+            .fold(0, |acc, (u, v, _w)| max(acc, max(*u, *v)))
+            + 1) as usize;
+
+        let mut rv = Self::with_nodes(n);
+
+        for (u, v, w) in edges.iter() {
+            rv.add_edge(*u, *v, w.clone());
+        }
+
+        rv.m = edges.len();
+        rv
+    }
+
+    fn n(&self) -> usize {
+        self.n
+    }
+
+    fn m(&self) -> usize {
+        self.m
+    }
+
+    fn remove_self_loops(&mut self) -> usize {
+        let mut removed = 0;
+        for (x, neighbors) in self.adj.iter_mut().enumerate() {
+            if neighbors.remove(&(x as NodeId)).is_some() {
+                removed += 1;
+            }
+        }
+        self.m -= removed;
+        removed
+    }
+
+    fn iter_neighbors<'a>(&'a self) -> impl Iterator<Item = &'a HashMap<NodeId, W, FixedState>> + 'a
+    where
+        W: 'a,
+    {
+        self.adj.iter()
+    }
+
+    fn iter_neighbors_mut<'a>(
+        &'a mut self,
+    ) -> impl Iterator<Item = &'a mut HashMap<NodeId, W, FixedState>> + 'a
+    where
+        W: 'a,
+    {
+        self.adj.iter_mut()
+    }
+
+    fn drain_neighbors(
+        &mut self,
+        range: impl RangeBounds<usize>,
+    ) -> impl Iterator<Item = HashMap<NodeId, W, FixedState>> + '_ {
+        self.adj.drain(range)
+    }
+}
+
+// -----------------------------------------------------------------------
+// AdjacencySet implementation for AdjSet (marker)
+// -----------------------------------------------------------------------
+
+impl<W, D> AdjacencySet<W> for AdjSet<W, D> where D: Directionality {}
+
+// -----------------------------------------------------------------------
+// Inherent methods for AdjSet (conversions, remove_multiedges, sort_neighbors)
+// -----------------------------------------------------------------------
+
+impl<W> AdjSet<W, Undirected> {
+    pub fn into_directed(mut self) -> AdjSet<W, Directed> {
+        AdjSet {
+            adj: self.adj,
+            n: self.n,
+            m: self.m,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+impl<W> AdjSet<W, Directed> {
+    /// Convert from directed to undirected by adding the reverse edges.
+    pub fn into_undirected(mut self) -> AdjSet<W, Undirected>
+    where
+        W: Clone,
+    {
+        let mut rv = AdjSet::<W, Undirected>::with_nodes(self.n());
+        for (x, neighbors) in self.drain_neighbors(..).enumerate() {
+            for (v, w) in neighbors.into_iter() {
+                rv.add_edge(x as NodeId, v, w);
+            }
+        }
+        rv
+    }
+}
+
+impl<W, D> AdjSet<W, D>
+where
+    D: Directionality,
+{
+    /// No‑op for AdjSet because the underlying HashMap already makes
+    /// multi‑edges impossible.
+    pub fn remove_multiedges(&mut self) -> usize {
+        0
+    }
+
+    /// No‑op for AdjSet because ordering is irrelevant.
+    pub fn sort_neighbors(&mut self) {}
+}
+
+// ========================================================================
+// Python bindings (unchanged except for using the new trait infrastructure)
+// ========================================================================
 
 #[cfg(feature = "bindings")]
 #[hoist_mod]
