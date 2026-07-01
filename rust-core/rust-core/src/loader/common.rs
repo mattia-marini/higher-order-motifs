@@ -8,8 +8,12 @@ use std::time::UNIX_EPOCH;
 use std::collections::HashMap;
 
 use super::DatasetLoaderDispatcherAttr;
-use crate::graph::Hypergraph;
-use crate::graph::serialize::{DumpCacheToFile, LoadFromCacheDeserialized};
+
+use crate::misc::serialize::{DumpCacheToFile, LoadFromCacheDeserialized};
+use crate::types::{
+    Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
+};
 use serde::Deserialize;
 
 /// Struct to hold the dataset information specified in dataset.toml

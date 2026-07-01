@@ -7,11 +7,11 @@ use std::{
     path::Path,
 };
 
-use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight, WeightedHypergraph},
-    loader::common::Loader,
-    loader::error::LoaderError,
+use crate::types::{
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
 };
+use crate::{loader::common::Loader, loader::error::LoaderError};
 
 use super::GeneDiseaseStdWeightedLoader;
 

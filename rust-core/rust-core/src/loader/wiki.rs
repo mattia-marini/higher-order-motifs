@@ -5,11 +5,11 @@ use std::path::Path;
 use hashbrown::HashMap;
 use seq_macro::seq;
 
-use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
-    loader::common::Loader,
-    loader::error::LoaderError,
+use crate::types::{
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
 };
+use crate::{loader::common::Loader, loader::error::LoaderError};
 
 pub struct Unweighted;
 pub struct Weighted;

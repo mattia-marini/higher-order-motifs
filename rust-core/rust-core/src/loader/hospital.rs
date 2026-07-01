@@ -8,11 +8,12 @@ use std::{
 use hashbrown::HashMap;
 use seq_macro::seq;
 
+use crate::types::{
+    AdjList, Hx, Hypergraph, NodeId, NodeWeight, Undirected, UnweightedHx, UnweightedHypergraph,
+    WeightedHx, WeightedHypergraph,
+};
 use crate::{
-    graph::{AdjList, Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
-    loader::common::DatasetInfo,
-    loader::common::Loader,
-    loader::error::LoaderError,
+    loader::common::DatasetInfo, loader::common::Loader, loader::error::LoaderError,
     misc::find_cliques,
 };
 
@@ -50,10 +51,13 @@ impl Loader for HospitalStdUnweightedLoader {
         let mut hg = Hypergraph::new();
 
         for (_t, edge_list) in edges.into_iter() {
-            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(
-                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
-            );
-            adj_list.make_undirected();
+            let (mut adj_list, original_index, _compressed_index) =
+                AdjList::<(), Undirected>::from_edges_mapped(
+                    edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+                );
+            adj_list.remove_self_loops();
+            adj_list.remove_multiedges();
+
             let mut cliques = find_cliques(&adj_list);
             cliques = cliques
                 .into_iter()
@@ -116,10 +120,13 @@ impl Loader for HospitalStdWeightedLoader {
         let mut hg = Hypergraph::new();
 
         for (_t, edge_list) in edges.into_iter() {
-            let (mut adj_list, original_index, _compressed_index) = AdjList::from_edges_mapped(
-                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
-            );
-            adj_list.make_undirected();
+            let (mut adj_list, original_index, _compressed_index) =
+                AdjList::<(), Undirected>::from_edges_mapped(
+                    edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+                );
+            adj_list.remove_self_loops();
+            adj_list.remove_multiedges();
+
             let mut cliques = find_cliques(&adj_list);
             cliques = cliques
                 .into_iter()

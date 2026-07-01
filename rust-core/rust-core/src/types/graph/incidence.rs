@@ -10,13 +10,48 @@ use std::ops::{Deref, DerefMut, Index, IndexMut, Range, RangeBounds};
 use duplicate::duplicate_item;
 use rkyv::{Archive, Deserialize, Serialize};
 
-use crate::graph::base::incidence::{ListNeighbor, SetNeighbor};
-use crate::graph::base::{AdjBase, Directed, Directionality, Neighbor, Undirected};
-use crate::graph::serialize::DumpCacheToFile;
-use crate::graph::{EdgeId, NodeWeight};
+use super::base::{Directed, Directionality, Undirected};
+use crate::misc::serialize::DumpCacheToFile;
+use crate::types::{EdgeId, NodeId, NodeWeight};
 
-use crate::graph::hyperedge::NodeId;
+pub trait IncBase<W> {
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone;
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId);
+}
 
+/// A neighbor node ID, used for storing in a vec.
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
+pub struct ListNeighbor<N, E, W> {
+    /// The node ID
+    pub node: N,
+    /// The edge ID associated with this neighbor.
+    pub edge: E,
+    /// The weight of the edge connecting to this neighbor.
+    pub weight: W,
+}
+
+impl<N, E, W> ListNeighbor<N, E, W> {
+    pub fn new(node: N, weight: W, edge: E) -> Self {
+        Self { node, weight, edge }
+    }
+}
+
+/// A neighbor with no node ID, used for storing in a set.
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
+pub struct SetNeighbor<E, W> {
+    /// The edge ID associated with this neighbor.
+    pub edge: E,
+    /// The weight of the edge connecting to this neighbor.
+    pub weight: W,
+}
+
+impl<E, W> SetNeighbor<E, W> {
+    pub fn new(weight: W, edge: E) -> Self {
+        Self { weight, edge }
+    }
+}
 /// A incidence list where each node's neighbors is stored in a Vec.
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct IncList<W, D = Undirected>
@@ -35,7 +70,7 @@ where
 impl<W, D> IncList<W, D>
 where
     D: Directionality,
-    Self: AdjBase<W>,
+    Self: IncBase<W>,
 {
     pub fn new() -> Self {
         Self::default()
@@ -268,7 +303,7 @@ where
     }
 }
 
-impl<W> AdjBase<W> for IncList<W, Undirected> {
+impl<W> IncBase<W> for IncList<W, Undirected> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
     where
@@ -335,7 +370,7 @@ impl<W> IncList<W, Directed> {
     }
 }
 
-impl<W> AdjBase<W> for IncList<W, Directed> {
+impl<W> IncBase<W> for IncList<W, Directed> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W) {
         self.adj[u as usize].push(ListNeighbor::new(v, w, self.next_edge_id));
@@ -422,7 +457,7 @@ where
 impl<W, D> IncSet<W, D>
 where
     D: Directionality,
-    Self: AdjBase<W>,
+    Self: IncBase<W>,
 {
     pub fn new() -> Self {
         Self::default()
@@ -571,7 +606,7 @@ where
     }
 }
 
-impl<W> AdjBase<W> for IncSet<W, Undirected> {
+impl<W> IncBase<W> for IncSet<W, Undirected> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
     where
@@ -609,7 +644,7 @@ impl<W> IncSet<W, Undirected> {
     }
 }
 
-impl<W> AdjBase<W> for IncSet<W, Directed> {
+impl<W> IncBase<W> for IncSet<W, Directed> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
     where
@@ -700,7 +735,6 @@ where
     }
 }
 
-/*
 #[cfg(feature = "bindings")]
 #[hoist_mod]
 mod bindings {
@@ -711,18 +745,18 @@ mod bindings {
     #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
     #[gen_stub_pyclass(module = "rust_core._core.graph")]
     #[pyclass(from_py_object)]
-    pub struct UnweightedAdjList(pub IncList<()>);
+    pub struct UnweightedIncList(pub IncList<()>);
 
     #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
     #[gen_stub_pyclass(module = "rust_core._core.graph")]
     #[pyclass(from_py_object)]
-    pub struct WeightedAdjList(pub IncList<NodeWeight>);
+    pub struct WeightedIncList(pub IncList<NodeWeight>);
 
     #[duplicate_item(
     adj_type            weight_type  tuple_edge_type;
-    [UnweightedAdjList] [()]         [(NodeId, NodeId)];
-    [WeightedAdjList]   [NodeWeight] [(NodeId, NodeId, NodeWeight)];
-)]
+    [UnweightedIncList] [()]         [(NodeId, NodeId)];
+    [WeightedIncList]   [NodeWeight] [(NodeId, NodeId, NodeWeight)];
+    )]
     #[gen_stub_pymethods(module = "rust_core._core.graph")]
     #[pymethods]
     impl adj_type {
@@ -760,11 +794,6 @@ mod bindings {
             self.0.remove_multiedges()
         }
 
-        // The presence of multiesges makes this operation ambiguous. Multiedges are hence removed
-        pub fn make_undirected(&mut self) {
-            self.0.make_undirected()
-        }
-
         /// Efficiently sorts each adjacency list in-place.
         /// Time Complexity: O(n + m)
         /// Space Complexity: O(n + m)
@@ -773,7 +802,7 @@ mod bindings {
         }
     }
 
-    impl UnweightedAdjList {
+    impl UnweightedIncList {
         pub(crate) fn normalize_edge_list(
             edges: Vec<(NodeId, NodeId)>,
         ) -> Vec<(NodeId, NodeId, ())> {
@@ -781,7 +810,7 @@ mod bindings {
         }
     }
 
-    impl WeightedAdjList {
+    impl WeightedIncList {
         pub(crate) fn normalize_edge_list(
             edges: Vec<(NodeId, NodeId, NodeWeight)>,
         ) -> Vec<(NodeId, NodeId, NodeWeight)> {
@@ -790,14 +819,14 @@ mod bindings {
     }
 
     #[derive(FromPyObject)]
-    pub enum PyAdjList<'py> {
-        Weighted(PyRef<'py, WeightedAdjList>),
-        Unweighted(PyRef<'py, UnweightedAdjList>),
+    pub enum PyIncList<'py> {
+        Weighted(PyRef<'py, WeightedIncList>),
+        Unweighted(PyRef<'py, UnweightedIncList>),
     }
 
-    impl_stub_type!(PyAdjList<'_> = WeightedAdjList | UnweightedAdjList);
+    impl_stub_type!(PyIncList<'_> = WeightedIncList | UnweightedIncList);
 
-    impl Deref for UnweightedAdjList {
+    impl Deref for UnweightedIncList {
         type Target = IncList<()>;
 
         fn deref(&self) -> &Self::Target {
@@ -805,13 +834,13 @@ mod bindings {
         }
     }
 
-    impl DerefMut for UnweightedAdjList {
+    impl DerefMut for UnweightedIncList {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
         }
     }
 
-    impl Deref for WeightedAdjList {
+    impl Deref for WeightedIncList {
         type Target = IncList<NodeWeight>;
 
         fn deref(&self) -> &Self::Target {
@@ -819,7 +848,7 @@ mod bindings {
         }
     }
 
-    impl DerefMut for WeightedAdjList {
+    impl DerefMut for WeightedIncList {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
         }
@@ -843,7 +872,7 @@ mod bindings {
     adj_type            weight_type  tuple_edge_type;
     [UnweightedAdjSet] [()]         [(NodeId, NodeId)];
     [WeightedAdjSet]   [NodeWeight] [(NodeId, NodeId, NodeWeight)];
-)]
+    )]
     #[gen_stub_pymethods(module = "rust_core._core.graph")]
     #[pymethods]
     impl adj_type {
@@ -879,12 +908,6 @@ mod bindings {
         pub fn remove_multiedges(&mut self) -> usize {
             self.0.remove_multiedges()
         }
-
-        /// No‑op for IncSet because the underlying HashMap already makes
-        /// multi‑edges impossible, and ordering is irrelevant.
-        pub fn sort_neighbors(&mut self) {
-            self.0.sort_neighbors()
-        }
     }
 
     impl UnweightedAdjSet {
@@ -904,12 +927,12 @@ mod bindings {
     }
 
     #[derive(FromPyObject)]
-    pub enum PyAdjSet<'py> {
+    pub enum PyIncSet<'py> {
         Weighted(PyRef<'py, WeightedAdjSet>),
         Unweighted(PyRef<'py, UnweightedAdjSet>),
     }
 
-    impl_stub_type!(PyAdjSet<'_> = WeightedAdjSet | UnweightedAdjSet);
+    impl_stub_type!(PyIncSet<'_> = WeightedAdjSet | UnweightedAdjSet);
 
     impl Deref for UnweightedAdjSet {
         type Target = IncSet<()>;
@@ -939,4 +962,3 @@ mod bindings {
         }
     }
 }
-*/

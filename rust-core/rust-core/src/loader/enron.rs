@@ -4,11 +4,11 @@ use std::path::Path;
 
 use seq_macro::seq;
 
-use crate::{
-    graph::{Hypergraph, Hx, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
-    loader::common::Loader,
-    loader::error::LoaderError,
+use crate::types::{
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
 };
+use crate::{loader::common::Loader, loader::error::LoaderError};
 
 use super::{EnronStdUnweightedLoader, EnronStdWeightedLoader};
 

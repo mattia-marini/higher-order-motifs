@@ -1,7 +1,7 @@
 use crate::triangle::cbs::hcbs::HCBSGraph;
 
-use crate::graph::{AdjList, hyperedge::NodeId};
 use crate::misc::{count_common_neighbors_sorted_list, degree_ordering};
+use crate::types::{AdjList, NodeId};
 
 /// Computes the degree ordering: (order, position)
 
@@ -45,7 +45,7 @@ pub mod forward {
 
 /// Forward algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
 /// the natural order (u < v). Common neighbors are counted with the sorted list strategy
-pub fn forward<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
+pub fn forward<W: Clone>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
     let n = adj.n();
     let mut a = vec![Vec::new(); n];
     for i in 0..n {
@@ -59,23 +59,26 @@ pub fn forward<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
 
         for i in 0..n {
             let u = order[i]; // order usually contains NodeId
-            for &(v_node, ref w) in &adj[u] {
+            for neighbor in &adj[u] {
                 // Using Index trait
-                let v = v_node as usize;
+                let v = neighbor.node as usize;
+                let w = neighbor.weight.clone();
                 if i < pos[v] as usize {
                     // a[u] works if u is usize. If u is NodeId, use u as usize
                     count += count_common_neighbors_sorted_list(&a[u as usize], &a[v]);
-                    a[v].push((pos[u as usize] as NodeId, w)); // Cast back to NodeId for storage
+                    a[v].push((pos[u as usize] as NodeId, ())); // Cast back to NodeId for storage
                 }
             }
         }
     } else {
         for u in 0..n {
-            for &(v_node, ref w) in &adj[u] {
-                let v = v_node as usize;
+            for neighbor in &adj[u] {
+                // &(v_node, ref w)
+                let v = neighbor.node as usize;
+                let w = neighbor.weight.clone();
                 if u < v {
                     count += count_common_neighbors_sorted_list(&a[u], &a[v]);
-                    a[v].push((u as NodeId, w));
+                    a[v].push((u as NodeId, ()));
                 }
             }
         }
@@ -102,8 +105,9 @@ pub fn forward_hashed<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
     for i in 0..n {
         let u = order[i] as usize; // Cast once per outer loop
 
-        for &(v_node, ref _w) in &adj[u] {
-            let v = v_node as usize;
+        for neighbor in &adj[u] {
+            // &(v_node, ref _w)
+            let v = neighbor.node as usize;
             let is_forward = i < pos[v] as usize;
 
             if is_forward {
@@ -143,8 +147,8 @@ pub fn forward_hbs<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
         for i in 0..n {
             let u = order[i];
             let u_idx = u as usize;
-            for &(v_node, ref _w) in &adj[u_idx] {
-                let v = v_node as usize;
+            for neighbor in &adj[u_idx] {
+                let v = neighbor.node as usize;
                 if i < pos[v] as usize {
                     count += a.count_common_neighbors(u_idx, v);
                     a.append_neighbor(v as NodeId, pos[u_idx] as NodeId);
@@ -153,8 +157,8 @@ pub fn forward_hbs<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
         }
     } else {
         for u in 0..n {
-            for &(v_node, ref _w) in &adj[u] {
-                let v = v_node as usize;
+            for neighbor in &adj[u] {
+                let v = neighbor.node as usize;
                 if u < v {
                     count += a.count_common_neighbors(u, v);
                     a.append_neighbor(v as NodeId, u as NodeId);
@@ -184,8 +188,8 @@ where
     for i in 0..n {
         let u = order[i] as usize; // Cast once per outer loop
 
-        for &(v_node, ref _w) in &adj[u] {
-            let v = v_node as usize;
+        for neighbor in &adj[u] {
+            let v = neighbor.node as usize;
             let is_forward = i < pos[v] as usize;
 
             if is_forward {

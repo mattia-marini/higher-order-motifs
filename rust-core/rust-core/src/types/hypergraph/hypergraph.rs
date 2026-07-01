@@ -31,11 +31,11 @@ use rkyv::{
 
 use rust_core_macros::ct_map;
 
-use crate::graph::edge_collection::{HashSet, MAX_HX_SIZE, MIN_HX_SIZE};
-use crate::graph::error::GraphError;
-use crate::graph::hyperedge::{NodeId, NodeWeight};
-use crate::graph::{UnweightedHx, WeightedHx};
-use crate::graph::{edge_collection::StaticEdgeSet, hyperedge::Hx};
+use super::edge_collection::StaticEdgeSet;
+use super::edge_collection::{HashSet, MAX_HX_SIZE, MIN_HX_SIZE};
+use super::hyperedge::{Hx, UnweightedHx, WeightedHx};
+use crate::types::error::HypergraphError;
+use crate::types::{NodeId, NodeWeight};
 
 #[derive(Archive, Serialize, Deserialize, Debug, Clone)]
 pub struct Hypergraph<T, W> {
@@ -141,7 +141,7 @@ impl<T, W> Hypergraph<T, W> {
         }
     }
 
-    pub fn add_edge_vec(&mut self, edge: (Vec<T>, W)) -> Result<bool, GraphError<T>>
+    pub fn add_edge_vec(&mut self, edge: (Vec<T>, W)) -> Result<bool, HypergraphError<T>>
     where
         T: Hash + Eq + Clone + Ord + Copy + 'static,
         usize: AsPrimitive<T>,
@@ -154,12 +154,12 @@ impl<T, W> Hypergraph<T, W> {
             .windows(2)
             .find_map(|w| (w[0] == w[1]).then_some(&w[0]))
         {
-            return Err(GraphError::DuplicateNodes(*dup));
+            return Err(HypergraphError::DuplicateNodes(*dup));
         }
         self.add_edge_vec_unchecked(edge)
     }
 
-    pub fn add_edge_vec_unchecked(&mut self, edge: (Vec<T>, W)) -> Result<bool, GraphError<T>>
+    pub fn add_edge_vec_unchecked(&mut self, edge: (Vec<T>, W)) -> Result<bool, HypergraphError<T>>
     where
         T: Hash + Eq + Clone + Ord + Copy + 'static,
         usize: AsPrimitive<T>, // Fixed: Changed from Into<T> to AsPrimitive<T>
@@ -173,12 +173,12 @@ impl<T, W> Hypergraph<T, W> {
                         .0
                         .try_into()
                         // This shouldn't ever fail because len == N, but if it does:
-                        .map_err(|_| GraphError::UnsupportedHyperedgeSize(len.as_()))?;
+                        .map_err(|_| HypergraphError::UnsupportedHyperedgeSize(len.as_()))?;
 
                     let edge = Hx::new_unchecked(array, edge.1);
                     Ok(self.add_edge(edge))
                 })*
-                _ => Err(GraphError::UnsupportedHyperedgeSize(len.as_())), // Fixed: .into() -> .as_()
+                _ => Err(HypergraphError::UnsupportedHyperedgeSize(len.as_())), // Fixed: .into() -> .as_()
             }
         })
     }
@@ -463,11 +463,11 @@ mod bindings {
             self.0.nodes.clone()
         }
 
-        pub fn count(&self, order: usize) -> Result<usize, GraphError<usize>> {
+        pub fn count(&self, order: usize) -> Result<usize, HypergraphError<usize>> {
             seq!( N in 2..11 {
             match order {
                  #( N => Ok(self.0.edges::<N>().len()),             )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
                 }
             })
         }
@@ -489,7 +489,7 @@ mod bindings {
                             })
                             .collect()),
                   )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
                 }
             })
         }
@@ -512,7 +512,7 @@ mod bindings {
                         Ok(self.0.has_hyperedge(&hx.0.nodes))
                     },
                 )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
             }
             })
         }
@@ -538,7 +538,7 @@ mod bindings {
                             ))
                     },
                 )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
             }
             })
         }
@@ -553,7 +553,7 @@ mod bindings {
                         Ok(self.0.remove_edge_unchecked(&nodes))
                     },
                 )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
             }
             })
         }
@@ -580,7 +580,7 @@ mod bindings {
                         Ok(self.0.add_edge(unweighted_hx.0))
                     },
                 )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
             }
             })
         }
@@ -596,7 +596,7 @@ mod bindings {
                         Ok(self.0.add_edge(hx.0))
                     },
                 )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
             }
             })
         }
@@ -620,7 +620,7 @@ mod bindings {
                         Ok(self.0.add_edge(weighted_hx.0))
                     },
                 )*
-                    _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                    _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
             }
             })
         }
@@ -652,7 +652,7 @@ mod bindings {
                             Ok(self.0.add_edge(hx.0))
                         },
                     )*
-                        _ => Err(GraphError::UnsupportedHyperedgeSize(order).into()),
+                        _ => Err(HypergraphError::UnsupportedHyperedgeSize(order).into()),
                 }
             })
         }

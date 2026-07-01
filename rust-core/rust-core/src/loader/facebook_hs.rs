@@ -1,8 +1,8 @@
-use crate::{
-    graph::{Hypergraph, NodeId, UnweightedHx, UnweightedHypergraph},
-    loader::common::Loader,
-    loader::error::LoaderError,
+use crate::types::{
+    Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
 };
+use crate::{loader::common::Loader, loader::error::LoaderError};
 use std::{error::Error, path::Path};
 
 use super::FacebookHsStdUnweightedLoader;

@@ -2,7 +2,6 @@ use foldhash::fast::FixedState;
 use hashbrown::HashMap;
 
 use crate::{
-    graph::{AdjList, Hypergraph, NodeId, NodeWeight},
     misc::{
         common_neighbors_sorted_list_3_cloj,
         cycle::{count_c4, count_c4_no_sort},
@@ -10,6 +9,7 @@ use crate::{
     },
     motifs::{fingerprint::Fingerprint4, types::MotifStats},
     triangle::forward::forward_hashed_cloj,
+    types::{Hypergraph, IncList, IncSet, NodeId, Undirected},
 };
 
 pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifStats> {
@@ -23,8 +23,10 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
         .map(|e| (e.nodes[0], e.nodes[1], ()))
         .collect();
 
-    let (mut adj, _direct_map, inverse_map) = AdjList::incidence_from_edges_mapped(edges_2);
-    adj.make_undirected();
+    let (mut adj, _direct_map, inverse_map) = IncSet::<(), Undirected>::from_edges_mapped(edges_2);
+
+    // adj.remove_multiedges();
+
     let (order, rank, max_deg) = sort_by_degree(&mut adj, false);
 
     // After degree sorting, for each node u, the number of neighbors v such that v ≺ u

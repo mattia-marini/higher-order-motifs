@@ -2,15 +2,15 @@ use hashbrown::{HashMap, HashSet};
 use std::hash::Hash;
 
 use crate::{
-    graph::{AdjList, NodeId},
     misc::neighbors_sorted_list_cloj,
+    types::{AdjList, NodeId, Undirected},
 };
 
 /// Returns all maximal cliques in the undirected graph.
 ///
 /// This is an iterative implementation of the Bron-Kerbosch algorithm with pivoting,
 /// translating the provided Python implementation to avoid recursion depth limits.
-pub fn find_cliques<W>(adj: &AdjList<W>) -> Vec<Vec<NodeId>> {
+pub fn find_cliques<W>(adj: &AdjList<W, Undirected>) -> Vec<Vec<NodeId>> {
     let mut cliques = Vec::new();
 
     if adj.n() == 0 {
@@ -21,7 +21,8 @@ pub fn find_cliques<W>(adj: &AdjList<W>) -> Vec<Vec<NodeId>> {
     let mut adj_sets: Vec<HashSet<NodeId>> = Vec::with_capacity(adj.n());
     for u in 0..adj.n() {
         let mut set = HashSet::new();
-        for &(v, ref _w) in &adj.adj[u] {
+        for n in &adj[u] {
+            let v = n.node;
             if v as usize != u {
                 set.insert(v);
             }

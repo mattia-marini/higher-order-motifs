@@ -5,11 +5,7 @@ use std::{error::Error, fmt::Display, hash::Hash, ops::Index};
 
 use rkyv::{Archive, Archived, Deserialize, Serialize};
 
-use super::error::GraphError;
-
-pub type NodeId = u32;
-pub type EdgeId = u32;
-pub type NodeWeight = f32;
+use crate::types::{NodeId, NodeWeight, error::HypergraphError};
 
 #[derive(Archive, Deserialize, Serialize, Debug, Clone)]
 pub struct Hx<const N: usize, T, W> {
@@ -18,7 +14,7 @@ pub struct Hx<const N: usize, T, W> {
 }
 
 impl<const N: usize, T, W> Hx<N, T, W> {
-    pub fn new(mut nodes: [T; N], weight: W) -> Result<Self, GraphError<T>>
+    pub fn new(mut nodes: [T; N], weight: W) -> Result<Self, HypergraphError<T>>
     where
         T: Ord + Copy,
     {
@@ -28,7 +24,7 @@ impl<const N: usize, T, W> Hx<N, T, W> {
             .windows(2)
             .find_map(|w| (w[0] == w[1]).then_some(&w[0]))
         {
-            return Err(GraphError::DuplicateNodes(dup));
+            return Err(HypergraphError::DuplicateNodes(dup));
         }
 
         Ok(Self { nodes, weight })
@@ -40,7 +36,7 @@ impl<const N: usize, T, W> Hx<N, T, W> {
 }
 
 impl<const N: usize, T> Hx<N, T, ()> {
-    pub fn new_unweighted(vertices: [T; N]) -> Result<Self, GraphError<T>>
+    pub fn new_unweighted(vertices: [T; N]) -> Result<Self, HypergraphError<T>>
     where
         T: Ord + Copy,
     {
@@ -116,7 +112,7 @@ pub struct WeightedHx<const N: usize>(pub Hx<N, NodeId, NodeWeight>);
 pub struct UnweightedHx<const N: usize>(pub Hx<N, NodeId, ()>);
 
 impl<const N: usize> WeightedHx<N> {
-    pub fn new(nodes: [NodeId; N], weight: NodeWeight) -> Result<Self, GraphError<NodeId>> {
+    pub fn new(nodes: [NodeId; N], weight: NodeWeight) -> Result<Self, HypergraphError<NodeId>> {
         let inner = Hx::new(nodes, weight)?;
         Ok(Self(inner))
     }
@@ -127,7 +123,7 @@ impl<const N: usize> WeightedHx<N> {
 }
 
 impl<const N: usize> UnweightedHx<N> {
-    pub fn new(nodes: [NodeId; N]) -> Result<Self, GraphError<NodeId>> {
+    pub fn new(nodes: [NodeId; N]) -> Result<Self, HypergraphError<NodeId>> {
         let inner = Hx::new_unweighted(nodes)?;
         Ok(Self(inner))
     }

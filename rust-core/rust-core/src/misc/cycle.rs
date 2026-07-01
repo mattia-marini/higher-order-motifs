@@ -1,28 +1,28 @@
 use std::ops::AddAssign;
 
 use crate::{
-    graph::{AdjList, NodeId},
     misc::{degree_ordering, sort_by_degree},
+    types::{AdjList, NodeId, Undirected},
 };
 
 // Orient the adj list such that:
 //
 // Sort the adjacency list N +(v) of each vertex v, such that the neighborhood
 // begins with N −(v) (in arbitrary order), and then is followed by N +(v) (sorted in order of ≺).
-fn count_c4_base<W>(adj: &AdjList<W>, order: &[NodeId]) -> usize {
+fn count_c4_base<W>(adj: &AdjList<W, Undirected>, order: &[NodeId]) -> usize {
     let mut n_less_count = vec![0; adj.n()];
 
     let n_less_count = adj
-        .adj
-        .iter()
+        .iter_neighbors()
         .enumerate()
         .map(|(v, neighbors)| {
             neighbors
                 .iter()
-                .filter(|(&&(neighbor, ref weight))| {
-                    adj.adj[neighbor as usize].len() < neighbors.len()
-                        || (adj.adj[neighbor as usize].len() == neighbors.len()
-                            && (neighbor as usize) < v)
+                .filter(|neighbor| {
+                    // (neighbor, ref weight)
+                    let neighbor = neighbor.node;
+                    adj[neighbor].len() < neighbors.len()
+                        || (adj[neighbor].len() == neighbors.len() && neighbor < v as NodeId)
                 })
                 .count()
         })
@@ -34,10 +34,10 @@ fn count_c4_base<W>(adj: &AdjList<W>, order: &[NodeId]) -> usize {
     for i in 0..adj.n() {
         let x = order[i] as usize;
         for j in 0..n_less_count[x] {
-            let y = adj.adj[x][j].0 as usize;
+            let y = adj[x][j].node as usize;
             let mut k = 0;
             loop {
-                let z = adj.adj[y][k].0 as usize;
+                let z = adj[y][k].node as usize;
                 if z == x {
                     break;
                 }
@@ -49,10 +49,10 @@ fn count_c4_base<W>(adj: &AdjList<W>, order: &[NodeId]) -> usize {
         }
 
         for j in 0..n_less_count[x] {
-            let y = adj.adj[x][j].0 as usize;
+            let y = adj[x][j].node as usize;
             let mut k = 0;
             loop {
-                let z = adj.adj[y][k].0 as usize;
+                let z = adj[y][k].node as usize;
                 if z == x {
                     break;
                 }
@@ -93,16 +93,16 @@ where
     let mut n_less_count = vec![0; adj.n()];
 
     let n_less_count = adj
-        .adj
-        .iter()
+        .iter_neighbors()
         .enumerate()
         .map(|(v, neighbors)| {
             neighbors
                 .iter()
-                .filter(|(&&(neighbor, ref weight))| {
-                    adj.adj[neighbor as usize].len() < neighbors.len()
-                        || (adj.adj[neighbor as usize].len() == neighbors.len()
-                            && (neighbor as usize) < v)
+                .filter(|neighbor| {
+                    // (neighbor, ref weight)
+                    let neighbor = neighbor.node;
+                    adj[neighbor].len() < neighbors.len()
+                        || (adj[neighbor].len() == neighbors.len() && neighbor < v as NodeId)
                 })
                 .count()
         })
@@ -117,13 +117,13 @@ where
     for i in 0..adj.n() {
         let x = order[i] as usize;
         for j in 0..n_less_count[x] {
-            let y = adj.adj[x][j].0 as usize;
-            let w_xy = adj.adj[x][j].1;
+            let y = adj[x][j].node as usize;
+            let w_xy = adj[x][j].weight;
 
             let mut k = 0;
             loop {
-                let z = adj.adj[y][k].0 as usize;
-                let w_yz = adj.adj[y][k].1;
+                let z = adj[y][k].node as usize;
+                let w_yz = adj[y][k].weight;
                 if z == x {
                     break;
                 }
@@ -139,10 +139,10 @@ where
         }
 
         for j in 0..n_less_count[x] {
-            let y = adj.adj[x][j].0 as usize;
+            let y = adj[x][j].node as usize;
             let mut k = 0;
             loop {
-                let z = adj.adj[y][k].0 as usize;
+                let z = adj[y][k].node as usize;
                 if z == x {
                     break;
                 }

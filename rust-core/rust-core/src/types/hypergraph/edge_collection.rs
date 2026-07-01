@@ -5,16 +5,16 @@ use std::hash::Hash;
 use rust_core_macros::{ct_map, ct_map_accessor, hoist_mod, repeat};
 use seq_macro::seq;
 
-use crate::graph::{
-    error::GraphError,
-    hyperedge::{Hx, NodeId, NodeWeight},
-};
-
 pub const MIN_HX_SIZE: usize = 2;
 pub const MAX_HX_SIZE: usize = 10;
 pub const STATIC_BUCKET_SIZE: usize = MAX_HX_SIZE - MIN_HX_SIZE + 1;
 
 pub type HashSet<T> = hashbrown::HashSet<T, FixedState>;
+
+use crate::types::{NodeId, NodeWeight};
+
+use super::hyperedge::Hx;
+use crate::types::error::HypergraphError;
 
 #[hoist_mod(attr(repeat(rg(2..11), abs = "N", rel = "I", bucket_name = "__bucket_$N")))]
 mod __ {
@@ -98,7 +98,7 @@ impl<T, W> StaticEdgeSet<T, W> {
         self.get_bucket_mut().insert(e)
     }
 
-    pub fn contains<const N: usize>(&self, nodes: &[T; N]) -> Result<bool, GraphError<T>>
+    pub fn contains<const N: usize>(&self, nodes: &[T; N]) -> Result<bool, HypergraphError<T>>
     where
         T: PartialEq + Hash + Eq,
         W: Default,
@@ -140,11 +140,4 @@ where
             .field("bucket_10", &self.__bucket_10)
             .finish()
     }
-}
-
-fn test() {
-    let mut x: StaticEdgeSet<NodeId, NodeWeight> = StaticEdgeSet::new();
-    x.insert(Hx::new_unchecked([1, 2, 3], 2.5));
-    x.contains(&[1, 2]);
-    let count = x.get_count::<2>();
 }

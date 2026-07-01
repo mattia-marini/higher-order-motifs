@@ -1,5 +1,6 @@
-use crate::graph::AdjList;
 use std::collections::VecDeque;
+
+use crate::types::AdjList;
 
 /// A simple BFS to calculate levels/distances from a starting component.
 /// In most CETC contexts, this assumes node 0 is the root or
@@ -14,8 +15,8 @@ pub fn bfs<W>(adj: &AdjList<W>) -> Vec<i32> {
             levels[i] = 0;
             queue.push_back(i);
             while let Some(u) = queue.pop_front() {
-                for &(v_node, ref _w) in &adj.adj[u] {
-                    let v = v_node as usize;
+                for neighbor in &adj[u] {
+                    let v = neighbor.node as usize;
                     if levels[v] == -1 {
                         levels[v] = levels[u] + 1;
                         queue.push_back(v);

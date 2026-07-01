@@ -4,11 +4,11 @@ use polars::prelude::*;
 use seq_macro::seq;
 use std::{error::Error, path::Path, sync::Arc};
 
-use crate::{
-    graph::{Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph},
-    loader::common::Loader,
-    loader::error::LoaderError,
+use crate::types::{
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
 };
+use crate::{loader::common::Loader, loader::error::LoaderError};
 
 pub fn load_pacs_common_from_csv<P>(dataset_location: &P) -> Result<Vec<Vec<NodeId>>, LoaderError>
 where

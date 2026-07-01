@@ -1,4 +1,4 @@
-use crate::graph::hyperedge::NodeId;
+use crate::types::NodeId;
 
 /// Efficiently computes the common elements shared by two sorted lists.
 /// Time Complexity: O(deg(u) + deg(v))

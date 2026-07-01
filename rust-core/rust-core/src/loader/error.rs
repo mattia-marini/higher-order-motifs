@@ -5,11 +5,6 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::graph::{
-    SerializationError,
-    edge_collection::{MAX_HX_SIZE, MIN_HX_SIZE},
-};
-
 #[derive(Error, Debug)]
 pub enum LoaderError {
     #[error("Io error occurred while accessing path: {0}")]

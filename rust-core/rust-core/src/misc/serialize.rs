@@ -14,9 +14,11 @@ use std::hash::Hash;
 use std::path::Path;
 use std::{error::Error, io::Write};
 
-use crate::graph::{
-    AdjList, ArchivedAdjList, ArchivedHx, ArchivedHypergraph, Hx, Hypergraph, SerializationError,
-};
+use crate::misc::error::SerializationError;
+use crate::types::graph::adjacency::{AdjList, AdjSet, ArchivedAdjList, ArchivedAdjSet};
+use crate::types::graph::incidence::{ArchivedIncList, ArchivedIncSet, IncList, IncSet};
+use crate::types::hypergraph::hypergraph::{ArchivedHypergraph, Hypergraph};
+use crate::types::{ArchivedHx, UnweightedHypergraph, WeightedHypergraph};
 
 pub trait StdSerializable:
     for<'a> rkyv::Serialize<
@@ -254,7 +256,6 @@ where
 
 // Delegate cache (de)serialization for the public wrapper hypergraph types so they can be
 // used directly as Loader::Output in loader implementations.
-use crate::graph::{UnweightedHypergraph, WeightedHypergraph};
 
 impl DumpCacheToFile for UnweightedHypergraph {
     fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), SerializationError> {

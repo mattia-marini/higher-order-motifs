@@ -1,5 +1,4 @@
-use crate::graph::{AdjList, hyperedge::NodeId};
-use crate::misc::degeneracy_ordering;
+use crate::{misc::degeneracy_ordering, types::AdjList};
 
 #[cfg(feature = "bindings")]
 #[pyo3::pymodule]
@@ -43,8 +42,8 @@ pub fn kclist<W>(adj: &AdjList<W>) -> usize {
     // This creates a Directed Acyclic Graph (DAG)
     let mut out_adj: Vec<Vec<usize>> = vec![vec![]; n];
     for u in 0..n {
-        for &(v_node, ref _w) in &adj.adj[u] {
-            let v = v_node as usize;
+        for neighbor in &adj[u] {
+            let v = neighbor.node as usize;
             if pos[u] < pos[v] {
                 out_adj[u].push(v);
             }

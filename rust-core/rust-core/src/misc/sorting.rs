@@ -1,4 +1,4 @@
-use crate::graph::{AdjList, hyperedge::NodeId};
+use crate::types::{AdjList, NodeId};
 
 /// Returns a degree ordering of the vertices, the position of each vertex in that ordering, and
 /// the maximum degree of the graph.
@@ -9,7 +9,10 @@ pub fn degree_ordering<W>(adj: &AdjList<W>, decreasing: bool) -> (Vec<NodeId>, V
         return (Vec::new(), Vec::new(), 0);
     }
 
-    let deg: Vec<usize> = adj.adj.iter().map(|neighbors| neighbors.len()).collect();
+    let deg: Vec<usize> = adj
+        .iter_neighbors()
+        .map(|neighbors| neighbors.len())
+        .collect();
     let max_deg = *deg.iter().max().unwrap_or(&0);
 
     // Count how many vertices have each degree
@@ -60,7 +63,7 @@ pub fn sort_by_degree<W>(
     let (order, rank, max_deg) = degree_ordering(adj, false);
 
     for v in 0..adj.n() {
-        adj.adj[v].sort_by_key(|&(neighbor, _)| rank[neighbor as usize]);
+        adj[v].sort_by_key(|neighbor| rank[neighbor.node as usize]);
     }
 
     // adj.adj.enumerate().sort_by_key(|(i, v)| rank[*i]);
@@ -77,7 +80,10 @@ pub fn degeneracy_ordering<W>(adj: &AdjList<W>) -> (Vec<usize>, Vec<usize>, usiz
     }
 
     // 1. Calculate degrees and find max degree
-    let mut deg: Vec<usize> = adj.adj.iter().map(|neighbors| neighbors.len()).collect();
+    let mut deg: Vec<usize> = adj
+        .iter_neighbors()
+        .map(|neighbors| neighbors.len())
+        .collect();
     let max_deg = *deg.iter().max().unwrap_or(&0);
 
     // 2. Create bins to count how many nodes have each degree
@@ -110,8 +116,8 @@ pub fn degeneracy_ordering<W>(adj: &AdjList<W>) -> (Vec<usize>, Vec<usize>, usiz
         let v = order[i];
         k = std::cmp::max(k, deg[v]);
 
-        for &(u_node, ref _w) in &adj.adj[v] {
-            let u = u_node as usize;
+        for neighbor in &adj[v] {
+            let u = neighbor.node as usize;
             if pos[u] > i {
                 // Only look at neighbors still "in the graph"
                 let u_deg = deg[u];

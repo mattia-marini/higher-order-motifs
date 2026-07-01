@@ -1,9 +1,9 @@
 #![allow(unused)]
-pub mod graph;
 pub mod loader;
 pub mod misc;
 pub mod motifs;
 pub mod triangle;
+pub mod types;
 pub mod util;
 
 #[cfg(feature = "bindings")]

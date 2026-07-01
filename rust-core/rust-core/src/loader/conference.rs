@@ -8,10 +8,11 @@ use std::{
 use hashbrown::HashMap;
 use seq_macro::seq;
 
+use crate::types::{
+    AdjList, Hx, Hypergraph, NodeId, NodeWeight, Undirected, UnweightedHx, UnweightedHypergraph,
+    WeightedHx, WeightedHypergraph,
+};
 use crate::{
-    graph::{
-        AdjList, Hx, Hypergraph, NodeId, NodeWeight, UnweightedHypergraph, WeightedHypergraph,
-    },
     loader::{common::Loader, error::LoaderError},
     misc::find_cliques,
 };
@@ -53,14 +54,14 @@ impl Loader for ConferenceStdUnweightedLoader {
 
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
-                // .iter()
-                // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
-                // .collect(),
-            );
-
-            adj_list.make_undirected();
+            let (mut adj_list, original_index, compressed_index) =
+                AdjList::<(), Undirected>::from_edges_mapped(
+                    edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+                    // .iter()
+                    // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
+                    // .collect(),
+                );
+            adj_list.remove_multiedges();
 
             let mut cliques = find_cliques(&adj_list);
             cliques = cliques
@@ -130,11 +131,10 @@ impl Loader for ConferenceStdWeightedLoader {
 
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
-            let (mut adj_list, original_index, compressed_index) = AdjList::from_edges_mapped(
-                edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
-            );
-
-            adj_list.make_undirected();
+            let (mut adj_list, original_index, compressed_index) =
+                AdjList::<(), Undirected>::from_edges_mapped(
+                    edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
+                );
 
             let mut cliques = find_cliques(&adj_list);
             cliques = cliques
