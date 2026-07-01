@@ -8,6 +8,7 @@ use rkyv::{Archive, Archived, Deserialize, Serialize};
 use super::error::GraphError;
 
 pub type NodeId = u32;
+pub type EdgeId = u32;
 pub type NodeWeight = f32;
 
 #[derive(Archive, Deserialize, Serialize, Debug, Clone)]

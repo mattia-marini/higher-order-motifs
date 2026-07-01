@@ -5,111 +5,37 @@ use rust_core_macros::hoist_mod;
 use std::cmp::max;
 use std::hash::Hash;
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::ops::{Deref, DerefMut, Index, IndexMut, Range, RangeBounds};
 
 use duplicate::duplicate_item;
 use rkyv::{Archive, Deserialize, Serialize};
 
-use crate::graph::common::{Directed, Directionality, Neighbor, Undirected};
+use crate::graph::base::incidence::{ListNeighbor, SetNeighbor};
+use crate::graph::base::{AdjBase, Directed, Directionality, Neighbor, Undirected};
 use crate::graph::serialize::DumpCacheToFile;
 use crate::graph::{EdgeId, NodeWeight};
 
 use crate::graph::hyperedge::NodeId;
 
-pub trait CommonIncList<W> {
-    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
-    where
-        W: Clone;
-    fn remove_edges_between(&mut self, u: NodeId, v: NodeId);
-}
-
+/// A incidence list where each node's neighbors is stored in a Vec.
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct IncList<W, D = Undirected>
 where
     D: Directionality,
 {
-    adj: Vec<Vec<Neighbor<NodeId, EdgeId, W>>>,
+    adj: Vec<Vec<ListNeighbor<NodeId, EdgeId, W>>>,
     n: usize,
     m: usize,
 
     next_edge_id: EdgeId,
 
     _directionality_marker: PhantomData<D>,
-}
-
-#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
-pub struct IncSet<W, D = Undirected>
-where
-    D: Directionality,
-{
-    adj: Vec<HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>>,
-    n: usize,
-    m: usize,
-
-    next_edge_id: EdgeId,
-
-    _directionality_marker: PhantomData<D>,
-}
-
-impl<W, D> Index<usize> for IncList<W, D>
-where
-    D: Directionality,
-{
-    type Output = Vec<Neighbor<NodeId, EdgeId, W>>;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.adj[index]
-    }
-}
-
-impl<W, D> IndexMut<usize> for IncList<W, D>
-where
-    D: Directionality,
-{
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.adj[index]
-    }
-}
-
-impl<W, D> Index<NodeId> for IncList<W, D>
-where
-    D: Directionality,
-{
-    type Output = Vec<Neighbor<NodeId, EdgeId, W>>;
-
-    fn index(&self, index: NodeId) -> &Self::Output {
-        &self.adj[index as usize]
-    }
-}
-
-impl<W, D> IndexMut<NodeId> for IncList<W, D>
-where
-    D: Directionality,
-{
-    fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
-        &mut self.adj[index as usize]
-    }
-}
-
-impl<W, D> Default for IncList<W, D>
-where
-    D: Directionality,
-{
-    fn default() -> Self {
-        Self {
-            adj: Vec::new(),
-            n: 0,
-            m: 0,
-            next_edge_id: 0,
-            _directionality_marker: PhantomData,
-        }
-    }
 }
 
 impl<W, D> IncList<W, D>
 where
     D: Directionality,
-    Self: CommonIncList<W>,
+    Self: AdjBase<W>,
 {
     pub fn new() -> Self {
         Self::default()
@@ -292,7 +218,7 @@ where
 
         for u in 0..n {
             for neighbor in self.adj[u].drain(..) {
-                rv[neighbor.node as usize].push(Neighbor::new(
+                rv[neighbor.node as usize].push(ListNeighbor::new(
                     u as NodeId,
                     neighbor.weight,
                     neighbor.edge,
@@ -302,20 +228,23 @@ where
         self.adj = rv;
     }
 
-    pub fn iter_neighbors(&self) -> impl Iterator<Item = &Vec<Neighbor<NodeId, EdgeId, W>>> + '_ {
+    pub fn iter_neighbors(
+        &self,
+    ) -> impl Iterator<Item = &Vec<ListNeighbor<NodeId, EdgeId, W>>> + '_ {
         self.adj.iter()
     }
 
     pub fn iter_neighbors_mut(
         &mut self,
-    ) -> impl Iterator<Item = &mut Vec<Neighbor<NodeId, EdgeId, W>>> + '_ {
+    ) -> impl Iterator<Item = &mut Vec<ListNeighbor<NodeId, EdgeId, W>>> + '_ {
         self.adj.iter_mut()
     }
 
     pub fn drain_neighbors(
         &mut self,
-    ) -> impl Iterator<Item = Vec<Neighbor<NodeId, EdgeId, W>>> + '_ {
-        self.adj.drain(..)
+        range: impl RangeBounds<usize>,
+    ) -> impl Iterator<Item = Vec<ListNeighbor<NodeId, EdgeId, W>>> + '_ {
+        self.adj.drain(range)
     }
 
     pub fn compact_edge_ids(&mut self) {
@@ -339,14 +268,14 @@ where
     }
 }
 
-impl<W> CommonIncList<W> for IncList<W, Undirected> {
+impl<W> AdjBase<W> for IncList<W, Undirected> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
     where
         W: Clone,
     {
-        self.adj[u as usize].push(Neighbor::new(v, w.clone(), self.next_edge_id));
-        self.adj[v as usize].push(Neighbor::new(u, w, self.next_edge_id));
+        self.adj[u as usize].push(ListNeighbor::new(v, w.clone(), self.next_edge_id));
+        self.adj[v as usize].push(ListNeighbor::new(u, w, self.next_edge_id));
         self.next_edge_id += 1;
         self.m += 1;
     }
@@ -389,7 +318,7 @@ impl<W> IncList<W, Directed> {
     {
         let mut rv = IncList::<W, Undirected>::with_nodes(self.n());
         let mut next_edge_id = 0;
-        for (x, neighbors) in self.drain_neighbors().enumerate() {
+        for (x, neighbors) in self.drain_neighbors(..).enumerate() {
             rv.adj[x].reserve(neighbors.len()); // Does not reserve all required space
             // bu it should be enough to avoid too many reallocations
 
@@ -406,10 +335,10 @@ impl<W> IncList<W, Directed> {
     }
 }
 
-impl<W> CommonIncList<W> for IncList<W, Directed> {
+impl<W> AdjBase<W> for IncList<W, Directed> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W) {
-        self.adj[u as usize].push(Neighbor::new(v, w, self.next_edge_id));
+        self.adj[u as usize].push(ListNeighbor::new(v, w, self.next_edge_id));
         self.next_edge_id += 1;
         self.m += 1;
     }
@@ -420,22 +349,18 @@ impl<W> CommonIncList<W> for IncList<W, Directed> {
     }
 }
 
-// ============================================================================
-// IncSet implementations – adjacency stored as HashMap (per node)
-// ============================================================================
-
-impl<W, D> Index<usize> for IncSet<W, D>
+impl<W, D> Index<usize> for IncList<W, D>
 where
     D: Directionality,
 {
-    type Output = HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>;
+    type Output = Vec<ListNeighbor<NodeId, EdgeId, W>>;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.adj[index]
     }
 }
 
-impl<W, D> IndexMut<usize> for IncSet<W, D>
+impl<W, D> IndexMut<usize> for IncList<W, D>
 where
     D: Directionality,
 {
@@ -444,18 +369,18 @@ where
     }
 }
 
-impl<W, D> Index<NodeId> for IncSet<W, D>
+impl<W, D> Index<NodeId> for IncList<W, D>
 where
     D: Directionality,
 {
-    type Output = HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>;
+    type Output = Vec<ListNeighbor<NodeId, EdgeId, W>>;
 
     fn index(&self, index: NodeId) -> &Self::Output {
         &self.adj[index as usize]
     }
 }
 
-impl<W, D> IndexMut<NodeId> for IncSet<W, D>
+impl<W, D> IndexMut<NodeId> for IncList<W, D>
 where
     D: Directionality,
 {
@@ -464,7 +389,7 @@ where
     }
 }
 
-impl<W, D> Default for IncSet<W, D>
+impl<W, D> Default for IncList<W, D>
 where
     D: Directionality,
 {
@@ -479,10 +404,25 @@ where
     }
 }
 
+/// A incidence list where each node's neighbors is stored in a HashMap.
+#[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
+pub struct IncSet<W, D = Undirected>
+where
+    D: Directionality,
+{
+    adj: Vec<HashMap<NodeId, SetNeighbor<EdgeId, W>, FixedState>>,
+    n: usize,
+    m: usize,
+
+    next_edge_id: EdgeId,
+
+    _directionality_marker: PhantomData<D>,
+}
+
 impl<W, D> IncSet<W, D>
 where
     D: Directionality,
-    Self: CommonIncList<W>,
+    Self: AdjBase<W>,
 {
     pub fn new() -> Self {
         Self::default()
@@ -562,7 +502,10 @@ where
             return Self::new();
         }
 
-        let n = (edges.iter().fold(0, |acc, (u, v, _w)| max(acc, max(*u, *v))) + 1) as usize;
+        let n = (edges
+            .iter()
+            .fold(0, |acc, (u, v, _w)| max(acc, max(*u, *v)))
+            + 1) as usize;
 
         let mut rv = Self::with_nodes(n);
 
@@ -598,27 +541,23 @@ where
         0
     }
 
-    /// No‑op because the adjacency is already stored in a set (unordered).
-    pub fn sort_neighbors(&mut self) {
-        // Nothing to do.
-    }
-
     pub fn iter_neighbors(
         &self,
-    ) -> impl Iterator<Item = &HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>> + '_ {
+    ) -> impl Iterator<Item = &HashMap<NodeId, SetNeighbor<EdgeId, W>, FixedState>> + '_ {
         self.adj.iter()
     }
 
     pub fn iter_neighbors_mut(
         &mut self,
-    ) -> impl Iterator<Item = &mut HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>> + '_ {
+    ) -> impl Iterator<Item = &mut HashMap<NodeId, SetNeighbor<EdgeId, W>, FixedState>> + '_ {
         self.adj.iter_mut()
     }
 
     pub fn drain_neighbors(
         &mut self,
-    ) -> impl Iterator<Item = HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>> + '_ {
-        self.adj.drain(..)
+        range: impl RangeBounds<usize>,
+    ) -> impl Iterator<Item = HashMap<NodeId, SetNeighbor<EdgeId, W>, FixedState>> + '_ {
+        self.adj.drain(range)
     }
 
     pub fn compact_edge_ids(&mut self) {
@@ -632,14 +571,14 @@ where
     }
 }
 
-impl<W> CommonIncList<W> for IncSet<W, Undirected> {
+impl<W> AdjBase<W> for IncSet<W, Undirected> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
     where
         W: Clone,
     {
-        self.adj[u as usize].insert(v, Neighbor::new((), w.clone(), self.next_edge_id));
-        self.adj[v as usize].insert(u, Neighbor::new((), w, self.next_edge_id));
+        self.adj[u as usize].insert(v, SetNeighbor::new(w.clone(), self.next_edge_id));
+        self.adj[v as usize].insert(u, SetNeighbor::new(w, self.next_edge_id));
         self.next_edge_id += 1;
         self.m += 1;
     }
@@ -670,13 +609,13 @@ impl<W> IncSet<W, Undirected> {
     }
 }
 
-impl<W> CommonIncList<W> for IncSet<W, Directed> {
+impl<W> AdjBase<W> for IncSet<W, Directed> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
     where
         W: Clone,
     {
-        self.adj[u as usize].insert(v, Neighbor::new((), w, self.next_edge_id));
+        self.adj[u as usize].insert(v, SetNeighbor::new(w, self.next_edge_id));
         self.next_edge_id += 1;
         self.m += 1;
     }
@@ -694,7 +633,7 @@ impl<W> IncSet<W, Directed> {
         W: Clone,
     {
         let mut rv = IncSet::<W, Undirected>::with_nodes(self.n());
-        for (x, neighbors) in self.drain_neighbors().enumerate() {
+        for (x, neighbors) in self.drain_neighbors(..).enumerate() {
             for (v, neighbor) in neighbors.into_iter() {
                 rv.add_edge(x as NodeId, v, neighbor.weight);
             }
@@ -706,9 +645,62 @@ impl<W> IncSet<W, Directed> {
     }
 }
 
-// ----------------------------------------------------------------------------
-// Python bindings (only when the "bindings" feature is enabled)
-// ----------------------------------------------------------------------------
+impl<W, D> Index<usize> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, SetNeighbor<EdgeId, W>, FixedState>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.adj[index]
+    }
+}
+
+impl<W, D> IndexMut<usize> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.adj[index]
+    }
+}
+
+impl<W, D> Index<NodeId> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, SetNeighbor<EdgeId, W>, FixedState>;
+
+    fn index(&self, index: NodeId) -> &Self::Output {
+        &self.adj[index as usize]
+    }
+}
+
+impl<W, D> IndexMut<NodeId> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
+        &mut self.adj[index as usize]
+    }
+}
+
+impl<W, D> Default for IncSet<W, D>
+where
+    D: Directionality,
+{
+    fn default() -> Self {
+        Self {
+            adj: Vec::new(),
+            n: 0,
+            m: 0,
+            next_edge_id: 0,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+/*
 #[cfg(feature = "bindings")]
 #[hoist_mod]
 mod bindings {
@@ -947,3 +939,4 @@ mod bindings {
         }
     }
 }
+*/

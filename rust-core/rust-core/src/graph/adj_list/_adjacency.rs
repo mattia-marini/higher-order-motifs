@@ -15,7 +15,7 @@ use super::hyperedge::NodeId;
 
 #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct AdjList<W> {
-    pub adj: Vec<Vec<(NodeId, W)>>,
+    adj: Vec<Vec<(NodeId, W)>>,
     n: usize,
     m: usize,
 }
@@ -324,7 +324,7 @@ impl<W> AdjList<W> {
         self.remove_multiedges();
     }
 
-    /// Efficiently sorts each adjacency list in-place.
+    /// Efficiently sorts each adjacency list.
     /// Time Complexity: O(n + m)
     /// Space Complexity: O(n + m)
     pub fn sort_neighbors(&mut self)

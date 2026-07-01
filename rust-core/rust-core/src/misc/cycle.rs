@@ -31,8 +31,6 @@ fn count_c4_base<W>(adj: &AdjList<W>, order: &[NodeId]) -> usize {
     let mut c_4_count = 0;
     let mut l = vec![0; adj.n()];
 
-    println!("n_less_count: {:?}", n_less_count);
-
     for i in 0..adj.n() {
         let x = order[i] as usize;
         for j in 0..n_less_count[x] {

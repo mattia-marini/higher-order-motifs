@@ -1,15 +1,16 @@
 pub mod adj_list;
 pub mod edge_collection;
 pub mod error;
-pub mod hypergraph;
-pub mod serialize;
 pub mod hyperedge;
+pub mod hypergraph;
+pub mod inc_list;
+pub mod serialize;
 
 pub use adj_list::*;
 pub use edge_collection::*;
 pub use error::*;
-pub use hypergraph::*;
 pub use hyperedge::*;
+pub use hypergraph::*;
 
 #[cfg(feature = "bindings")]
 #[cfg_attr(feature = "bindings", pyo3::pymodule(submodule))]
