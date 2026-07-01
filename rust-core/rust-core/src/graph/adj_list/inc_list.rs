@@ -420,6 +420,295 @@ impl<W> CommonIncList<W> for IncList<W, Directed> {
     }
 }
 
+// ============================================================================
+// IncSet implementations – adjacency stored as HashMap (per node)
+// ============================================================================
+
+impl<W, D> Index<usize> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.adj[index]
+    }
+}
+
+impl<W, D> IndexMut<usize> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.adj[index]
+    }
+}
+
+impl<W, D> Index<NodeId> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>;
+
+    fn index(&self, index: NodeId) -> &Self::Output {
+        &self.adj[index as usize]
+    }
+}
+
+impl<W, D> IndexMut<NodeId> for IncSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
+        &mut self.adj[index as usize]
+    }
+}
+
+impl<W, D> Default for IncSet<W, D>
+where
+    D: Directionality,
+{
+    fn default() -> Self {
+        Self {
+            adj: Vec::new(),
+            n: 0,
+            m: 0,
+            next_edge_id: 0,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+impl<W, D> IncSet<W, D>
+where
+    D: Directionality,
+    Self: CommonIncList<W>,
+{
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_nodes(n: usize) -> Self {
+        Self {
+            adj: (0..n)
+                .map(|_| HashMap::with_hasher(FixedState::default()))
+                .collect(),
+            n,
+            m: 0,
+            next_edge_id: 0,
+            _directionality_marker: PhantomData,
+        }
+    }
+
+    pub fn from_edges_mapped(
+        edges: Vec<(NodeId, NodeId, W)>,
+    ) -> (
+        IncSet<W, D>,
+        Vec<NodeId>,
+        HashMap<NodeId, NodeId, FixedState>,
+    )
+    where
+        W: Clone,
+    {
+        if edges.is_empty() {
+            return (
+                Self::new(),
+                Vec::new(),
+                HashMap::with_hasher(FixedState::default()),
+            );
+        }
+
+        let mut compressed_index: HashMap<NodeId, NodeId, FixedState> =
+            HashMap::with_hasher(FixedState::default());
+        let mut curr_number = 0;
+
+        for (u, v, _w) in edges.iter() {
+            if let Entry::Vacant(e) = compressed_index.entry(*u) {
+                e.insert(curr_number);
+                curr_number += 1;
+            }
+            if let Entry::Vacant(e) = compressed_index.entry(*v) {
+                e.insert(curr_number);
+                curr_number += 1;
+            }
+        }
+
+        let n = curr_number as usize;
+
+        let mut rv = Self::with_nodes(n);
+
+        for (u, v, w) in edges.iter() {
+            let u_idx = compressed_index[u];
+            let v_idx = compressed_index[v];
+            rv.add_edge(u_idx, v_idx, w.clone());
+        }
+
+        rv.m = edges.len();
+
+        let mut original_index = Vec::with_capacity(n);
+        original_index.resize(n, 0);
+        for (node, &compressed) in compressed_index.iter() {
+            original_index[compressed as usize] = *node;
+        }
+
+        (rv, original_index, compressed_index)
+    }
+
+    pub fn from_edges_unmapped(edges: Vec<(NodeId, NodeId, W)>) -> Self
+    where
+        W: Clone,
+    {
+        if edges.is_empty() {
+            return Self::new();
+        }
+
+        let n = (edges.iter().fold(0, |acc, (u, v, _w)| max(acc, max(*u, *v))) + 1) as usize;
+
+        let mut rv = Self::with_nodes(n);
+
+        for (u, v, w) in edges.iter() {
+            rv.add_edge(*u, *v, w.clone());
+        }
+
+        rv.m = edges.len();
+        rv
+    }
+
+    pub fn n(&self) -> usize {
+        self.n
+    }
+
+    pub fn m(&self) -> usize {
+        self.m
+    }
+
+    pub fn remove_self_loops(&mut self) -> usize {
+        let mut removed = 0;
+        for (x, neighbors) in self.adj.iter_mut().enumerate() {
+            if neighbors.remove(&(x as NodeId)).is_some() {
+                removed += 1;
+            }
+        }
+        self.m -= removed;
+        removed
+    }
+
+    pub fn remove_multiedges(&mut self) -> usize {
+        // The underlying HashMap already prevents duplicate edges.
+        0
+    }
+
+    /// No‑op because the adjacency is already stored in a set (unordered).
+    pub fn sort_neighbors(&mut self) {
+        // Nothing to do.
+    }
+
+    pub fn iter_neighbors(
+        &self,
+    ) -> impl Iterator<Item = &HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>> + '_ {
+        self.adj.iter()
+    }
+
+    pub fn iter_neighbors_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>> + '_ {
+        self.adj.iter_mut()
+    }
+
+    pub fn drain_neighbors(
+        &mut self,
+    ) -> impl Iterator<Item = HashMap<NodeId, Neighbor<(), EdgeId, W>, FixedState>> + '_ {
+        self.adj.drain(..)
+    }
+
+    pub fn compact_edge_ids(&mut self) {
+        self.next_edge_id = 0;
+        for neighbors in self.adj.iter_mut() {
+            for (_v, neighbor) in neighbors.iter_mut() {
+                neighbor.edge = self.next_edge_id;
+                self.next_edge_id += 1;
+            }
+        }
+    }
+}
+
+impl<W> CommonIncList<W> for IncSet<W, Undirected> {
+    #[inline(always)]
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone,
+    {
+        self.adj[u as usize].insert(v, Neighbor::new((), w.clone(), self.next_edge_id));
+        self.adj[v as usize].insert(u, Neighbor::new((), w, self.next_edge_id));
+        self.next_edge_id += 1;
+        self.m += 1;
+    }
+
+    #[inline(always)]
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].remove(&v);
+        self.adj[v as usize].remove(&u);
+    }
+}
+
+impl<W> IncSet<W, Undirected> {
+    /// Convert from undirected to directed by reassigning all edge IDs.
+    pub fn into_directed(mut self) -> IncSet<W, Directed> {
+        for neighbors in self.adj.iter_mut() {
+            for (_v, neighbor) in neighbors.iter_mut() {
+                neighbor.edge = self.next_edge_id;
+                self.next_edge_id += 1;
+            }
+        }
+        IncSet {
+            adj: self.adj,
+            n: self.n,
+            m: self.m,
+            next_edge_id: self.next_edge_id,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+impl<W> CommonIncList<W> for IncSet<W, Directed> {
+    #[inline(always)]
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone,
+    {
+        self.adj[u as usize].insert(v, Neighbor::new((), w, self.next_edge_id));
+        self.next_edge_id += 1;
+        self.m += 1;
+    }
+
+    #[inline(always)]
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].remove(&v);
+    }
+}
+
+impl<W> IncSet<W, Directed> {
+    /// Convert from directed to undirected by adding the reverse edges.
+    pub fn into_undirected(mut self, allow_multiedges: bool) -> IncSet<W, Undirected>
+    where
+        W: Clone,
+    {
+        let mut rv = IncSet::<W, Undirected>::with_nodes(self.n());
+        for (x, neighbors) in self.drain_neighbors().enumerate() {
+            for (v, neighbor) in neighbors.into_iter() {
+                rv.add_edge(x as NodeId, v, neighbor.weight);
+            }
+        }
+        if !allow_multiedges {
+            rv.remove_multiedges();
+        }
+        rv
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Python bindings (only when the "bindings" feature is enabled)
+// ----------------------------------------------------------------------------
 #[cfg(feature = "bindings")]
 #[hoist_mod]
 mod bindings {
@@ -539,6 +828,120 @@ mod bindings {
     }
 
     impl DerefMut for WeightedAdjList {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // AdjSet bindings (same functionality, HashMap‑backed)
+    // ------------------------------------------------------------------------
+
+    #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
+    #[gen_stub_pyclass(module = "rust_core._core.graph")]
+    #[pyclass(from_py_object)]
+    pub struct UnweightedAdjSet(pub IncSet<()>);
+
+    #[derive(Archive, Deserialize, Serialize, Debug, PartialEq, Clone)]
+    #[gen_stub_pyclass(module = "rust_core._core.graph")]
+    #[pyclass(from_py_object)]
+    pub struct WeightedAdjSet(pub IncSet<NodeWeight>);
+
+    #[duplicate_item(
+    adj_type            weight_type  tuple_edge_type;
+    [UnweightedAdjSet] [()]         [(NodeId, NodeId)];
+    [WeightedAdjSet]   [NodeWeight] [(NodeId, NodeId, NodeWeight)];
+)]
+    #[gen_stub_pymethods(module = "rust_core._core.graph")]
+    #[pymethods]
+    impl adj_type {
+        #[new]
+        pub fn new() -> Self {
+            Self(IncSet::new())
+        }
+
+        #[staticmethod]
+        pub fn with_nodes(n: usize) -> Self {
+            Self(IncSet::with_nodes(n))
+        }
+
+        #[staticmethod]
+        pub fn from_edges_mapped(
+            edges: Vec<tuple_edge_type>,
+        ) -> (adj_type, Vec<NodeId>, HashMap<NodeId, NodeId, FixedState>) {
+            let edges = Self::normalize_edge_list(edges);
+            let (adj, m1, m2) = IncSet::<weight_type>::from_edges_mapped(edges);
+            (Self(adj), m1, m2)
+        }
+
+        #[staticmethod]
+        pub fn from_edges_unmapped(edges: Vec<tuple_edge_type>) -> Self {
+            let edges = Self::normalize_edge_list(edges);
+            Self(IncSet::from_edges_unmapped(edges))
+        }
+
+        pub fn remove_self_loops(&mut self) -> usize {
+            self.0.remove_self_loops()
+        }
+
+        pub fn remove_multiedges(&mut self) -> usize {
+            self.0.remove_multiedges()
+        }
+
+        /// No‑op for IncSet because the underlying HashMap already makes
+        /// multi‑edges impossible, and ordering is irrelevant.
+        pub fn sort_neighbors(&mut self) {
+            self.0.sort_neighbors()
+        }
+    }
+
+    impl UnweightedAdjSet {
+        pub(crate) fn normalize_edge_list(
+            edges: Vec<(NodeId, NodeId)>,
+        ) -> Vec<(NodeId, NodeId, ())> {
+            edges.into_iter().map(|(u, v)| (u, v, ())).collect()
+        }
+    }
+
+    impl WeightedAdjSet {
+        pub(crate) fn normalize_edge_list(
+            edges: Vec<(NodeId, NodeId, NodeWeight)>,
+        ) -> Vec<(NodeId, NodeId, NodeWeight)> {
+            edges
+        }
+    }
+
+    #[derive(FromPyObject)]
+    pub enum PyAdjSet<'py> {
+        Weighted(PyRef<'py, WeightedAdjSet>),
+        Unweighted(PyRef<'py, UnweightedAdjSet>),
+    }
+
+    impl_stub_type!(PyAdjSet<'_> = WeightedAdjSet | UnweightedAdjSet);
+
+    impl Deref for UnweightedAdjSet {
+        type Target = IncSet<()>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for UnweightedAdjSet {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    impl Deref for WeightedAdjSet {
+        type Target = IncSet<NodeWeight>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for WeightedAdjSet {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
         }
