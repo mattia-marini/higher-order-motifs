@@ -16,11 +16,11 @@ pub mod motifs {
     use hashbrown::HashMap;
 
     use crate::{
-        graph::{PyHypergraph, UnweightedHypergraph, WeightedHypergraph},
         motifs::{
             fingerprint::{Fingerprint3, Fingerprint4},
             types::MotifStats,
         },
+        types::PyHypergraph,
     };
     use pyo3::pyfunction;
     use pyo3_stub_gen::{derive::gen_stub_pyfunction, reexport_module_members};

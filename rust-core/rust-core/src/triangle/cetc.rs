@@ -11,23 +11,23 @@ pub mod cetc {
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
     use pyo3_stub_gen::reexport_module_members;
 
-    use crate::graph::{AdjList, PyAdjList};
+    use crate::types::adj_list::PyUndirectedAdjList;
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.cetc")]
-    pub fn cetc(adj: PyAdjList) -> usize {
+    pub fn cetc(mut adj: PyUndirectedAdjList) -> usize {
         match adj {
-            PyAdjList::Weighted(g) => super::cetc(&mut g.clone()),
-            PyAdjList::Unweighted(g) => super::cetc(&mut g.clone()),
+            PyUndirectedAdjList::Weighted(g) => super::cetc(&g),
+            PyUndirectedAdjList::Unweighted(g) => super::cetc(&g),
         }
     }
 
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.cetc")]
     #[pyfunction]
-    pub fn cetc_s(adj: PyAdjList) -> usize {
+    pub fn cetc_s(adj: PyUndirectedAdjList) -> usize {
         match adj {
-            PyAdjList::Weighted(g) => super::cetc_s(&g),
-            PyAdjList::Unweighted(g) => super::cetc_s(&g),
+            PyUndirectedAdjList::Weighted(g) => super::cetc(&g),
+            PyUndirectedAdjList::Unweighted(g) => super::cetc(&g),
         }
     }
 
@@ -35,7 +35,7 @@ pub mod cetc {
 }
 
 /// Computes intersection of two sorted vectors and returns the common elements.
-pub fn cetc<W, I: Incidence>(adj: &mut AdjList<W, Undirected, I>) -> usize
+pub fn cetc<W, I: Incidence>(adj: &AdjList<W, Undirected, I>) -> usize
 where
     W: Clone,
 {
@@ -63,7 +63,7 @@ where
     count
 }
 
-pub fn cetc_s<W, I: Incidence>(adj: &mut AdjList<W, Undirected, I>) -> usize
+pub fn cetc_s<W, I: Incidence>(adj: &AdjList<W, Undirected, I>) -> usize
 where
     W: Clone,
 {

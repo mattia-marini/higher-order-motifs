@@ -365,14 +365,14 @@ impl<T, W> Hypergraph<T, W> {
 #[cfg_attr(
     feature = "bindings",
     pyclass(skip_from_py_object),
-    gen_stub_pyclass(module = "rust_core._core.graph")
+    gen_stub_pyclass(module = "rust_core._core.hypergraph")
 )]
 pub struct UnweightedHypergraph(pub Hypergraph<NodeId, ()>);
 
 #[cfg_attr(
     feature = "bindings",
     pyclass(skip_from_py_object),
-    gen_stub_pyclass(module = "rust_core._core.graph")
+    gen_stub_pyclass(module = "rust_core._core.hypergraph")
 )]
 pub struct WeightedHypergraph(pub Hypergraph<NodeId, NodeWeight>);
 
@@ -434,7 +434,7 @@ mod bindings {
         [UnweightedHypergraph]  [UnweightedHx];
         [WeightedHypergraph]    [WeightedHx];
     )]
-    #[gen_stub_pymethods(module = "rust_core._core.graph")]
+    #[gen_stub_pymethods(module = "rust_core._core.hypergraph")]
     #[pymethods]
     impl hg_type {
         #[new]
@@ -567,7 +567,7 @@ mod bindings {
     #[cfg_attr(
         feature = "bindings",
         pymethods,
-        gen_stub_pymethods(module = "rust_core._core.graph")
+        gen_stub_pymethods(module = "rust_core._core.hypergraph")
     )]
     impl UnweightedHypergraph {
         fn insert_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
@@ -606,7 +606,7 @@ mod bindings {
     #[cfg_attr(
         feature = "bindings",
         pymethods,
-        gen_stub_pymethods(module = "rust_core._core.graph")
+        gen_stub_pymethods(module = "rust_core._core.hypergraph")
     )]
     impl WeightedHypergraph {
         fn insert_hx(&mut self, edge: Bound<'_, PyTuple>, weight: NodeWeight) -> PyResult<bool> {

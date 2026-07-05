@@ -9,27 +9,28 @@ use crate::{
 #[cfg(feature = "bindings")]
 #[pyo3::pymodule]
 pub mod kclist {
-    use crate::graph::{AdjList, PyAdjList};
     use pyo3::pyfunction;
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
     use pyo3_stub_gen::reexport_module_members;
+
+    use crate::types::adj_list::{PyAdjList, PyDirectedAdjList, PyUndirectedAdjList};
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.kclist")]
     pub fn kclist(adj: PyAdjList) -> usize {
         match adj {
-            PyAdjList::Weighted(g) => super::kclist(&g),
-            PyAdjList::Unweighted(g) => super::kclist(&g),
+            PyAdjList::Undirected(g) => match g {
+                PyUndirectedAdjList::Weighted(g) => super::kclist(&g),
+                PyUndirectedAdjList::Unweighted(g) => super::kclist(&g),
+            },
+            PyAdjList::Directed(g) => match g {
+                PyDirectedAdjList::Weighted(g) => super::kclist(&g),
+                PyDirectedAdjList::Unweighted(g) => super::kclist(&g),
+            },
         }
     }
 
     reexport_module_members!("rust_core.triangle.kclist" from "rust_core._core.triangle.kclist");
-
-    // #[pyfunction]
-    // #[gen_stub_pyfunction(module = "rust_core._core.triangle.kclist")]
-    // pub fn kclist_py(adj: Bound<'_, PyList>) -> PyResult<usize> {
-    //     super::kclist_py(adj)
-    // }
 }
 
 /// Counts the number of triangles in the graph using the Chiba-Nishizeki algorithm.

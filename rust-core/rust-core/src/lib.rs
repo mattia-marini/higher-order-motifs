@@ -7,7 +7,7 @@ pub mod types;
 pub mod util;
 
 #[cfg(feature = "bindings")]
-#[cfg_attr(feature = "bindings", pyo3::pymodule)]
+#[pyo3::pymodule]
 pub mod _core {
     use crate::util::submodules_initializer::PyModuleSubmoduleExt;
     use pyo3::prelude::*;
@@ -20,7 +20,10 @@ pub mod _core {
     use super::motifs::motifs;
 
     #[pymodule_export]
-    use super::graph::graph;
+    use super::types::bindings::graph;
+
+    #[pymodule_export]
+    use super::types::bindings::hypergraph;
 
     #[pymodule_export]
     use super::loader::loader;

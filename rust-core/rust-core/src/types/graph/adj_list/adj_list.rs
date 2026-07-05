@@ -1,8 +1,9 @@
+use rust_core_macros::hoist_mod;
 use std::{
     cmp::max,
     fmt::{Debug, Display, write},
     marker::PhantomData,
-    ops::{Index, IndexMut, RangeBounds},
+    ops::{Deref, Index, IndexMut, RangeBounds},
 };
 
 use foldhash::fast::FixedState;
@@ -11,9 +12,13 @@ use rkyv::{Deserialize, Serialize};
 
 use super::common::{Directed, NodeId, Undirected, WithIncidence};
 use super::traits::{
-    AdjConfig, Direction, DirectionalInsert, EdgeIdTrait, Incidence, NeighborContainer, NeighborLike,
+    AdjConfig, Direction, DirectionalInsert, EdgeIdTrait, Incidence, NeighborContainer,
+    NeighborLike,
 };
-use crate::{check_bounds_debug, types::adj_list::common::Neighbor};
+use crate::{
+    check_bounds_debug,
+    types::{NodeWeight, adj_list::common::Neighbor},
+};
 
 #[derive(Clone)]
 pub struct AdjListBase<C: AdjConfig> {
@@ -368,4 +373,100 @@ impl<W, D: Direction, I: Incidence> AdjList<W, D, I> {
             self[u].sort_unstable();
         }
     }
+}
+
+#[cfg(feature = "bindings")]
+use pyo3::prelude::*;
+
+#[cfg(feature = "bindings")]
+use pyo3_stub_gen::{derive::gen_stub_pyclass, impl_stub_type};
+
+macro_rules! define_py_wrapper {
+    ($name: ident, $wrapped_type: ty) => {
+        paste::paste! {
+            #[cfg_attr(
+                feature = "bindings",
+                gen_stub_pyclass(module = "rust_core._core.graph"),
+                pyclass(skip_from_py_object, name = "Py" $name)
+            )]
+            pub struct $name($wrapped_type);
+
+            impl std::ops::Deref for $name {
+                type Target = $wrapped_type;
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
+            }
+
+            impl std::ops::DerefMut for $name {
+                fn deref_mut(&mut self) -> &mut Self::Target {
+                    &mut self.0
+                }
+            }
+        }
+    };
+}
+
+define_py_wrapper!(UnweightedUndirectedAdjList, AdjList<(), Undirected, WithIncidence>);
+define_py_wrapper!(WeightedUndirectedAdjList, AdjList<NodeWeight, Undirected, WithIncidence>);
+
+define_py_wrapper!(UnweightedDirectedAdjList, AdjList<(), Directed, WithIncidence>);
+define_py_wrapper!(WeightedDirectedAdjList, AdjList<NodeWeight, Directed, WithIncidence>);
+
+define_py_wrapper!(UnweightedUndirectedAdjSet, AdjList<(), Undirected, WithIncidence>);
+define_py_wrapper!(WeightedUndirectedAdjSet, AdjList<NodeWeight, Undirected, WithIncidence>);
+
+define_py_wrapper!(UnweightedDirectedAdjSet, AdjList<(), Directed, WithIncidence>);
+define_py_wrapper!(WeightedDirectedAdjSet, AdjList<NodeWeight, Directed, WithIncidence>);
+
+#[cfg(feature = "bindings")]
+#[hoist_mod]
+pub mod bindings {
+
+    #[derive(FromPyObject)]
+    pub enum PyUndirectedAdjList<'py> {
+        Weighted(PyRef<'py, UnweightedUndirectedAdjList>),
+        Unweighted(PyRef<'py, WeightedUndirectedAdjList>),
+    }
+
+    #[derive(FromPyObject)]
+    pub enum PyDirectedAdjList<'py> {
+        Weighted(PyRef<'py, UnweightedDirectedAdjList>),
+        Unweighted(PyRef<'py, WeightedDirectedAdjList>),
+    }
+
+    #[cfg(feature = "bindings")]
+    #[derive(FromPyObject)]
+    pub enum PyUndirectedAdjSet<'py> {
+        Weighted(PyRef<'py, UnweightedUndirectedAdjSet>),
+        Unweighted(PyRef<'py, WeightedUndirectedAdjSet>),
+    }
+
+    #[cfg(feature = "bindings")]
+    #[derive(FromPyObject)]
+    pub enum PyDirectedAdjSet<'py> {
+        Weighted(PyRef<'py, UnweightedDirectedAdjSet>),
+        Unweighted(PyRef<'py, WeightedDirectedAdjSet>),
+    }
+
+    #[derive(FromPyObject)]
+    pub enum PyAdjList<'py> {
+        Undirected(PyUndirectedAdjList<'py>),
+        Directed(PyDirectedAdjList<'py>),
+    }
+
+    #[derive(FromPyObject)]
+    pub enum PyAdjSet<'py> {
+        Undirected(PyUndirectedAdjSet<'py>),
+        Directed(PyDirectedAdjSet<'py>),
+    }
+
+    impl_stub_type!(PyUndirectedAdjList<'_> = UnweightedUndirectedAdjList | WeightedUndirectedAdjList);
+    impl_stub_type!(PyDirectedAdjList<'_> = UnweightedDirectedAdjList | WeightedDirectedAdjList);
+
+    impl_stub_type!(PyUndirectedAdjSet<'_> = UnweightedUndirectedAdjSet | WeightedUndirectedAdjSet);
+    impl_stub_type!(PyDirectedAdjSet<'_> = UnweightedDirectedAdjSet | WeightedDirectedAdjSet);
+
+    impl_stub_type!(PyAdjList<'_> = PyUndirectedAdjList | PyDirectedAdjList);
+    impl_stub_type!(PyAdjSet<'_> = PyUndirectedAdjSet | PyDirectedAdjSet);
 }

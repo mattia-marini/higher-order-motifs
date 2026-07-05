@@ -11,35 +11,36 @@ use crate::types::adj_list::traits::Incidence;
 #[cfg(feature = "bindings")]
 #[pyo3::pymodule(submodule)]
 pub mod forward {
-    use crate::graph::{AdjList, PyAdjList};
     use pyo3::prelude::*;
     use pyo3_stub_gen::derive::gen_stub_pyfunction;
     use pyo3_stub_gen::reexport_module_members;
 
+    use crate::types::adj_list::{PyAdjList, PyUndirectedAdjList};
+
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
-    pub fn forward(adj: PyAdjList, sort_degrees: bool) -> usize {
+    pub fn forward(adj: PyUndirectedAdjList, sort_degrees: bool) -> usize {
         match adj {
-            PyAdjList::Unweighted(g) => super::forward(&g, sort_degrees),
-            PyAdjList::Weighted(g) => super::forward(&g, sort_degrees),
+            PyUndirectedAdjList::Weighted(g) => super::forward(&g, sort_degrees),
+            PyUndirectedAdjList::Unweighted(g) => super::forward(&g, sort_degrees),
         }
     }
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
-    pub fn forward_hashed(adj: PyAdjList, sort_degrees: bool) -> usize {
+    pub fn forward_hashed(adj: PyUndirectedAdjList, sort_degrees: bool) -> usize {
         match adj {
-            PyAdjList::Unweighted(g) => super::forward_hashed(&g, sort_degrees),
-            PyAdjList::Weighted(g) => super::forward_hashed(&g, sort_degrees),
+            PyUndirectedAdjList::Weighted(g) => super::forward(&g, sort_degrees),
+            PyUndirectedAdjList::Unweighted(g) => super::forward(&g, sort_degrees),
         }
     }
 
     #[pyfunction]
     #[gen_stub_pyfunction(module = "rust_core._core.triangle.forward")]
-    pub fn forward_hbs(adj: PyAdjList, sort_degrees: bool) -> usize {
+    pub fn forward_hbs(adj: PyUndirectedAdjList, sort_degrees: bool) -> usize {
         match adj {
-            PyAdjList::Unweighted(g) => super::forward_hbs(&g, sort_degrees),
-            PyAdjList::Weighted(g) => super::forward_hbs(&g, sort_degrees),
+            PyUndirectedAdjList::Weighted(g) => super::forward(&g, sort_degrees),
+            PyUndirectedAdjList::Unweighted(g) => super::forward(&g, sort_degrees),
         }
     }
 

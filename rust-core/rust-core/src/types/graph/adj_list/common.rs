@@ -2,7 +2,7 @@ use foldhash::fast::FixedState;
 use hashbrown::HashMap;
 
 use super::traits::{
-    AdjConfig, Direction, EdgeIdTrait , Incidence, NeighborContainer, NeighborLike,
+    AdjConfig, Direction, EdgeIdTrait, Incidence, NeighborContainer, NeighborLike,
 };
 
 #[macro_export]
