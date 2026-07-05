@@ -9,8 +9,9 @@ use hashbrown::HashMap;
 use seq_macro::seq;
 
 use crate::types::{
-    AdjList, Hx, Hypergraph, NodeId, NodeWeight, Undirected, UnweightedHx, UnweightedHypergraph,
-    WeightedHx, WeightedHypergraph,
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
+    adj_list::{AdjList, Undirected, WithoutIncidence},
 };
 use crate::{loader::common::Loader, loader::error::LoaderError, misc::find_cliques};
 
@@ -50,7 +51,7 @@ impl Loader for PrimarySchoolStdUnweightedLoader {
 
         for (_t, edge_list) in edges.into_iter() {
             let (mut adj_list, original_index, _compressed_index) =
-                AdjList::<(), Undirected>::from_edges_mapped(
+                AdjList::<(), Undirected, WithoutIncidence>::from_edges_mapped(
                     edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
                 );
             adj_list.remove_self_loops();
@@ -124,7 +125,7 @@ impl Loader for PrimarySchoolStdWeightedLoader {
 
         for (_t, edge_list) in edges.into_iter() {
             let (mut adj_list, original_index, _compressed_index) =
-                AdjList::<(), Undirected>::from_edges_mapped(
+                AdjList::<(), Undirected, WithoutIncidence>::from_edges_mapped(
                     edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
                 );
 
