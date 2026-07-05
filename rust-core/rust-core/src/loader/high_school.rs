@@ -9,8 +9,8 @@ use hashbrown::HashMap;
 use seq_macro::seq;
 
 use crate::types::{
-    AdjList, Hx, Hypergraph, NodeId, NodeWeight, Undirected, UnweightedHx, UnweightedHypergraph,
-    WeightedHx, WeightedHypergraph,
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
 };
 use crate::{loader::common::Loader, loader::error::LoaderError, misc::find_cliques};
 
