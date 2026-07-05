@@ -1,7 +1,10 @@
 use crate::triangle::cbs::hcbs::HCBSGraph;
 
 use crate::misc::{count_common_neighbors_sorted_list, degree_ordering};
-use crate::types::{AdjList, NodeId};
+use crate::types::NodeId;
+use crate::types::adj_list::AdjList;
+use crate::types::adj_list::common::Undirected;
+use crate::types::adj_list::traits::Incidence;
 
 /// Computes the degree ordering: (order, position)
 
@@ -45,7 +48,7 @@ pub mod forward {
 
 /// Forward algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
 /// the natural order (u < v). Common neighbors are counted with the sorted list strategy
-pub fn forward<W: Clone>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
+pub fn forward<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, sort_degrees: bool) -> usize {
     let n = adj.n();
     let mut a = vec![Vec::new(); n];
     for i in 0..n {
@@ -62,7 +65,7 @@ pub fn forward<W: Clone>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
             for neighbor in &adj[u] {
                 // Using Index trait
                 let v = neighbor.node as usize;
-                let w = neighbor.weight.clone();
+                // let w = neighbor.weight.clone();
                 if i < pos[v] as usize {
                     // a[u] works if u is usize. If u is NodeId, use u as usize
                     count += count_common_neighbors_sorted_list(&a[u as usize], &a[v]);
@@ -75,7 +78,7 @@ pub fn forward<W: Clone>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
             for neighbor in &adj[u] {
                 // &(v_node, ref w)
                 let v = neighbor.node as usize;
-                let w = neighbor.weight.clone();
+                // let w = neighbor.weight.clone();
                 if u < v {
                     count += count_common_neighbors_sorted_list(&a[u], &a[v]);
                     a[v].push((u as NodeId, ()));
@@ -88,7 +91,10 @@ pub fn forward<W: Clone>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
 
 /// Compact forward/forward hashed algorithm for triangle counting. If sort_degrees is true, a degree ordering is computed, otherwise edges are processed in
 /// the natural order (u < v). Common neighbors are counted with the hash map strategy
-pub fn forward_hashed<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
+pub fn forward_hashed<W, I: Incidence>(
+    adj: &AdjList<W, Undirected, I>,
+    sort_degrees: bool,
+) -> usize {
     let n = adj.n();
     let mut a = vec![Vec::new(); n];
     let mut mark = vec![0usize; n];
@@ -129,7 +135,7 @@ pub fn forward_hashed<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
     count
 }
 
-pub fn forward_hbs<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
+pub fn forward_hbs<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, sort_degrees: bool) -> usize {
     let n = adj.n();
     let mut a = HCBSGraph::<u128>::with_nodes(n);
 
@@ -169,9 +175,13 @@ pub fn forward_hbs<W>(adj: &AdjList<W>, sort_degrees: bool) -> usize {
     count
 }
 
-pub fn forward_hashed_cloj<W, F>(adj: &AdjList<W>, sort_degrees: bool, mut cloj: F)
-where
+pub fn forward_hashed_cloj<W, I, F>(
+    adj: &AdjList<W, Undirected, I>,
+    sort_degrees: bool,
+    mut cloj: F,
+) where
     F: FnMut(NodeId, NodeId, NodeId),
+    I: Incidence,
 {
     let n = adj.n();
     let mut a = vec![Vec::new(); n];

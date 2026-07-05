@@ -1,4 +1,4 @@
-use crate::graph::{Hypergraph, NodeId, NodeWeight};
+use crate::types::{Hypergraph, NodeId, NodeWeight};
 
 pub fn unweighted_3(hg: &Hypergraph<NodeId, ()>) {}
 

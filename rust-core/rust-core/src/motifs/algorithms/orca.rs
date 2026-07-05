@@ -2,13 +2,20 @@ use super::const_graphlets::*;
 use foldhash::fast::FixedState;
 
 use crate::{
-    graph::{AdjList, Hypergraph, HypergraphAccessor, NodeId, NodeWeight},
     misc::common_neighbors_sorted_list_3_cloj,
     motifs::{
         compressed_motif::{CompactMotif, CompactMotif3},
         compressed_node_set::CompressedNodeSet,
         fingerprint::{Fingerprint3, Fingerprint4},
         types::MotifStats,
+    },
+    types::{
+        EdgeId, NodeId, NodeWeight,
+        adj_list::{
+            AdjList, AdjSet, Undirected, WithIncidence, WithoutIncidence, common::Neighbor,
+            traits::NeighborContainer,
+        },
+        hypergraph::{Hypergraph, HypergraphAccessor},
     },
 };
 
@@ -64,22 +71,26 @@ pub fn unweighted_3(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint3, MotifS
         .map(|e| (e.nodes[0], e.nodes[1], ()))
         .collect();
 
-    let (mut adj, direct_map, inverse_map) = AdjList::from_edges_mapped(edges_2);
-    adj.make_undirected();
+    // Undirected by design
+    let (mut adj, direct_map, inverse_map) =
+        AdjList::<(), Undirected, WithIncidence>::from_edges_mapped(edges_2);
+    let adj_hash: AdjSet<(), Undirected, WithoutIncidence> = adj.clone().into();
 
-    let mut adj_hash: Vec<HashMap<NodeId, (), FixedState>> = adj
-        .adj
-        .iter()
-        .cloned()
-        .map(|neighboors| neighboors.into_iter().collect())
-        .collect();
+    // adj.make_undirected();
+
+    // let mut adj_hash: Vec<HashMap<NodeId, (), FixedState>> = adj
+    //     .adj
+    //     .iter()
+    //     .cloned()
+    //     .map(|neighboors| neighboors.into_iter().collect())
+    //     .collect();
 
     forward_hashed_cloj(&adj, false, |a, b, c| {
         triangles.count += 1;
     });
 
     let mut tot_2_edges_motifs_count = 0;
-    for neighboors in &adj.adj {
+    for neighboors in adj.iter_neighbors() {
         tot_2_edges_motifs_count += neighboors.len() * (neighboors.len() - 1) / 2;
     }
     straight_paths.count = tot_2_edges_motifs_count - 3 * triangles.count;
@@ -158,20 +169,14 @@ pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, 
         .map(|e| (e.nodes[0], e.nodes[1], e.weight))
         .collect();
 
-    let (mut adj, direct_map, inverse_map) = AdjList::from_edges_mapped(edges_2);
-    adj.make_undirected();
-
-    let mut adj_hash: Vec<HashMap<NodeId, NodeWeight, FixedState>> = adj
-        .adj
-        .iter()
-        .cloned()
-        .map(|neighboors| neighboors.into_iter().collect())
-        .collect();
+    let (mut adj, direct_map, inverse_map) =
+        AdjList::<NodeWeight, Undirected, WithIncidence>::from_edges_mapped(edges_2);
+    let adj_hash: AdjSet<NodeWeight, Undirected, WithoutIncidence> = adj.clone().into();
 
     // Computing the sum of products of all possible 3 pairs of incident pairs for each vertex using
     // Newtoon sum O(n + e)
-    let mut s1: Vec<f64> = vec![0.0; adj.adj.len()];
-    let mut s2: Vec<f64> = vec![0.0; adj.adj.len()];
+    let mut s1: Vec<f64> = vec![0.0; adj.n()];
+    let mut s2: Vec<f64> = vec![0.0; adj.n()];
     // let mut s3: Vec<f64> = vec![0.0; adj.adj.len()];
 
     for edge in hg.edges::<2>().iter() {
@@ -184,7 +189,7 @@ pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, 
 
     straight_paths.mean_intensity = {
         let mut tot_2_intensity = 0.0;
-        for i in 0..adj.adj.len() {
+        for i in 0..adj.n() {
             tot_2_intensity += (s1[i] * s1[i] - s2[i]) as f64 / 2.0;
         }
         tot_2_intensity
@@ -192,16 +197,16 @@ pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, 
 
     straight_paths.count = {
         let mut tot_2_count = 0;
-        for neighboors in &adj.adj {
+        for neighboors in adj.iter_neighbors() {
             tot_2_count += neighboors.len() * (neighboors.len() - 1) / 2;
         }
         tot_2_count
     };
 
     forward_hashed_cloj(&adj, false, |a, b, c| {
-        let w_ab = *adj_hash[a as usize].get(&b).unwrap() as f64;
-        let w_ac = *adj_hash[a as usize].get(&c).unwrap() as f64;
-        let w_bc = *adj_hash[b as usize].get(&c).unwrap() as f64;
+        let w_ab = adj_hash[a].get(&b).unwrap().0 as f64;
+        let w_ac = adj_hash[a].get(&c).unwrap().0 as f64;
+        let w_bc = adj_hash[b].get(&c).unwrap().0 as f64;
 
         triangles.count += 1;
         straight_paths.count -= 3;
@@ -229,7 +234,7 @@ pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, 
             && adj_hash[*a as usize].contains_key(b)
         {
             inner_edges[inner_count] = CompressedNodeSet::from_array([0, 1]);
-            inner_weights[inner_count] = *adj_hash[*a as usize].get(b).unwrap() as f64;
+            inner_weights[inner_count] = adj_hash[*a].get(b).unwrap().0 as f64;
 
             inner_inensity *= inner_weights[inner_count];
             inner_count += 1;
@@ -238,7 +243,7 @@ pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, 
             && adj_hash[*a as usize].contains_key(c)
         {
             inner_edges[inner_count] = CompressedNodeSet::from_array([0, 2]);
-            inner_weights[inner_count] = *adj_hash[*a as usize].get(c).unwrap() as f64;
+            inner_weights[inner_count] = adj_hash[*a].get(c).unwrap().0 as f64;
 
             inner_inensity *= inner_weights[inner_count];
             inner_count += 1;
@@ -247,7 +252,7 @@ pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, 
             && adj_hash[*b as usize].contains_key(c)
         {
             inner_edges[inner_count] = CompressedNodeSet::from_array([1, 2]);
-            inner_weights[inner_count] = *adj_hash[*b as usize].get(c).unwrap() as f64;
+            inner_weights[inner_count] = adj_hash[*b].get(c).unwrap().0 as f64;
 
             inner_inensity *= inner_weights[inner_count];
             inner_count += 1;
@@ -301,8 +306,9 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
         .map(|e| (e.nodes[0], e.nodes[1], ()))
         .collect();
 
-    let (mut adj, _direct_map, inverse_map) = AdjList::incidence_from_edges_mapped(edges_2);
-    adj.make_undirected();
+    let (mut adj, direct_map, inverse_map) =
+        AdjList::<(), Undirected, WithIncidence>::from_edges_mapped(edges_2);
+    let adj_hash: AdjSet<(), Undirected, WithIncidence> = adj.clone().into();
     adj.sort_neighbors();
 
     // let mut inc_list = adj.clone();
@@ -312,12 +318,12 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
 
     // Create hash-based adjacency for O(1) edge lookups
     // adj_hash[i] = HashMap<(neighbor_node_id, edge_id)>
-    let mut adj_hash: Vec<HashMap<NodeId, NodeId, FixedState>> = adj
-        .adj
-        .iter()
-        .cloned()
-        .map(|neighbors| neighbors.into_iter().map(|e| (e.0, e.1.0)).collect())
-        .collect();
+    // let mut adj_hash: Vec<HashMap<NodeId, NodeId, FixedState>> = adj
+    //     .adj
+    //     .iter()
+    //     .cloned()
+    //     .map(|neighbors| neighbors.into_iter().map(|e| (e.0, e.1.0)).collect())
+    //     .collect();
 
     // Initialize motif stats
     let mut four_clique = MotifStats::new();
@@ -340,18 +346,20 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
     let mut triangles = Vec::new();
     forward_hashed_cloj(&adj, false, |a, b, c| {
         triangles.push((a, b, c));
-        let upper_bound = a.min(b).min(c);
-        let edge_ab = adj_hash[a as usize][&b] as usize;
-        let edge_ac = adj_hash[a as usize][&c] as usize;
-        let edge_bc = adj_hash[b as usize][&c] as usize;
+
+        let edge_ab = adj_hash[a][&b].1 as usize;
+        let edge_ac = adj_hash[a][&c].1 as usize;
+        let edge_bc = adj_hash[b][&c].1 as usize;
 
         tri[edge_ab] += 1;
         tri[edge_ac] += 1;
         tri[edge_bc] += 1;
 
+        let upper_bound = Neighbor::new(a.min(b).min(c), (), edge_ab as EdgeId);
+
         // 4-clique counting
         common_neighbors_sorted_list_3_cloj(&adj[a], &adj[b], &adj[c], upper_bound, |i, j, k| {
-            let common = adj[a][i].0;
+            let common = adj[a][i].node;
 
             orbit[a as usize][14] += 1.0;
             orbit[b as usize][14] += 1.0;
@@ -367,8 +375,9 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
         // and triangles).
         // let (mut sum_p_ab, mut sum_p_ba) = (0, 0);
 
-        for &(b, (edge_ab, _)) in &adj.adj[a] {
-            let (b, edge_ab) = (b as usize, edge_ab as usize);
+        // for &(b, (edge_ab, _)) in adj[a].iter_neighbors() {
+        for n in adj[a].iter_neighbors() {
+            let (b, edge_ab) = (*n.node as usize, *n.edge as usize);
             let deg_b = adj[b].len();
             let (p_ab, p_ba) = (deg_b - 1 - tri[edge_ab], deg_a - 1 - tri[edge_ab]);
 
@@ -389,9 +398,9 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
 
     // Triangle base
     for (a, b, c) in triangles {
-        let edge_ab = adj_hash[a as usize][&b] as usize;
-        let edge_ac = adj_hash[a as usize][&c] as usize;
-        let edge_bc = adj_hash[b as usize][&c] as usize;
+        let edge_ab = adj_hash[a][&b].1 as usize;
+        let edge_ac = adj_hash[a][&c].1 as usize;
+        let edge_bc = adj_hash[b][&c].1 as usize;
 
         let deg_a = adj[a].len();
         let deg_b = adj[b].len();

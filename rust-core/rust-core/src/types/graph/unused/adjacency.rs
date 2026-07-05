@@ -10,7 +10,10 @@ use std::ops::{Deref, DerefMut, Index, IndexMut, Range, RangeBounds};
 use duplicate::duplicate_item;
 use rkyv::{Archive, Deserialize, Serialize};
 
-use super::base::{AdjacencyBase, AdjacencyList, AdjacencySet, Directed, Directionality, DirectionalityDependent, Undirected};
+use super::base::{
+    AdjacencyBase, AdjacencyList, AdjacencySet, Directed, Directionality, DirectionalityDependent,
+    Undirected,
+};
 use crate::misc::serialize::DumpCacheToFile;
 use crate::types::{EdgeId, NodeId, NodeWeight};
 
@@ -65,10 +68,7 @@ where
     _directionality_marker: PhantomData<D>,
 }
 
-// -----------------------------------------------------------------------
 // Index / IndexMut implementations (shared by both structs)
-// -----------------------------------------------------------------------
-
 impl<W, D> Index<usize> for AdjList<W, D>
 where
     D: Directionality,
@@ -123,10 +123,61 @@ where
     }
 }
 
-// -----------------------------------------------------------------------
-// DirectionalityDependent implementations for AdjList
-// -----------------------------------------------------------------------
+impl<W, D> Index<usize> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, W, FixedState>;
 
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.adj[index]
+    }
+}
+
+impl<W, D> IndexMut<usize> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.adj[index]
+    }
+}
+
+impl<W, D> Index<NodeId> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    type Output = HashMap<NodeId, W, FixedState>;
+
+    fn index(&self, index: NodeId) -> &Self::Output {
+        &self.adj[index as usize]
+    }
+}
+
+impl<W, D> IndexMut<NodeId> for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
+        &mut self.adj[index as usize]
+    }
+}
+
+impl<W, D> Default for AdjSet<W, D>
+where
+    D: Directionality,
+{
+    fn default() -> Self {
+        Self {
+            adj: Vec::new(),
+            n: 0,
+            m: 0,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+// Directionality dependent implementations for AdjList and AdjSet
 impl<W> DirectionalityDependent<W> for AdjList<W, Undirected> {
     #[inline(always)]
     fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
@@ -161,13 +212,45 @@ impl<W> DirectionalityDependent<W> for AdjList<W, Directed> {
     }
 }
 
-// -----------------------------------------------------------------------
-// AdjacencyBase implementation for AdjList
-// -----------------------------------------------------------------------
+impl<W> DirectionalityDependent<W> for AdjSet<W, Undirected> {
+    #[inline(always)]
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone,
+    {
+        self.adj[u as usize].insert(v, w.clone());
+        self.adj[v as usize].insert(u, w);
+        self.m += 1;
+    }
 
+    #[inline(always)]
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].remove(&v);
+        self.adj[v as usize].remove(&u);
+    }
+}
+
+impl<W> DirectionalityDependent<W> for AdjSet<W, Directed> {
+    #[inline(always)]
+    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
+    where
+        W: Clone,
+    {
+        self.adj[u as usize].insert(v, w);
+        self.m += 1;
+    }
+
+    #[inline(always)]
+    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
+        self.adj[u as usize].remove(&v);
+    }
+}
+
+// AdjacencyBase implementation for AdjList and AdjSet
 impl<W, D> AdjacencyBase<W> for AdjList<W, D>
 where
     D: Directionality,
+    Self: DirectionalityDependent<W>,
 {
     type NeighborContainer = Vec<ListNeighbor<NodeId, W>>;
 
@@ -336,194 +419,10 @@ where
     }
 }
 
-// -----------------------------------------------------------------------
-// AdjacencyList implementation for AdjList
-// -----------------------------------------------------------------------
-
-impl<W, D> AdjacencyList<W> for AdjList<W, D>
-where
-    D: Directionality,
-    W: Clone,
-{
-    fn sort_neighbors(&mut self) {
-        let n = self.n();
-        let mut rv = vec![Vec::new(); n];
-
-        for u in 0..n {
-            rv[u].reserve(self[u].len());
-        }
-
-        for u in 0..n {
-            for neighbor in self.adj[u].drain(..) {
-                rv[neighbor.node as usize].push(ListNeighbor::new(u as NodeId, neighbor.weight));
-            }
-        }
-        self.adj = rv;
-    }
-
-    fn remove_multiedges(&mut self) -> usize {
-        let mut removed = 0;
-        let mut present = HashSet::new();
-
-        for neighbors in self.adj.iter_mut() {
-            present.clear();
-            neighbors.retain(|neighbor| {
-                if !present.insert(neighbor.node) {
-                    removed += 1;
-                    false
-                } else {
-                    true
-                }
-            });
-        }
-        self.m -= removed;
-        removed
-    }
-}
-
-// -----------------------------------------------------------------------
-// Inherent methods for AdjList (conversions)
-// -----------------------------------------------------------------------
-
-impl<W> AdjList<W, Undirected> {
-    pub fn into_directed(mut self) -> AdjList<W, Directed> {
-        AdjList {
-            adj: self.adj,
-            n: self.n,
-            m: self.m,
-            _directionality_marker: PhantomData,
-        }
-    }
-}
-
-impl<W> AdjList<W, Directed> {
-    /// Makes the directed graph undirected by adding an edge (v,u) for each edge (u,v). If
-    /// `allow_multiedges` is set to `false`, it will remove any multiedges that may arise from this
-    /// operation.
-    pub fn into_undirected(mut self, allow_multiedges: bool) -> AdjList<W, Undirected>
-    where
-        W: Clone,
-    {
-        let mut rv = AdjList::<W, Undirected>::with_nodes(self.n());
-        for (x, neighbors) in self.drain_neighbors(..).enumerate() {
-            rv.adj[x].reserve(neighbors.len());
-
-            for neighbor in neighbors.into_iter() {
-                rv.add_edge(x as NodeId, neighbor.node, neighbor.weight);
-            }
-        }
-
-        if !allow_multiedges {
-            rv.remove_multiedges();
-        }
-
-        rv
-    }
-}
-
-// ========================================================================
-// AdjSet implementations
-// ========================================================================
-
-impl<W, D> Index<usize> for AdjSet<W, D>
-where
-    D: Directionality,
-{
-    type Output = HashMap<NodeId, W, FixedState>;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.adj[index]
-    }
-}
-
-impl<W, D> IndexMut<usize> for AdjSet<W, D>
-where
-    D: Directionality,
-{
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.adj[index]
-    }
-}
-
-impl<W, D> Index<NodeId> for AdjSet<W, D>
-where
-    D: Directionality,
-{
-    type Output = HashMap<NodeId, W, FixedState>;
-
-    fn index(&self, index: NodeId) -> &Self::Output {
-        &self.adj[index as usize]
-    }
-}
-
-impl<W, D> IndexMut<NodeId> for AdjSet<W, D>
-where
-    D: Directionality,
-{
-    fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
-        &mut self.adj[index as usize]
-    }
-}
-
-impl<W, D> Default for AdjSet<W, D>
-where
-    D: Directionality,
-{
-    fn default() -> Self {
-        Self {
-            adj: Vec::new(),
-            n: 0,
-            m: 0,
-            _directionality_marker: PhantomData,
-        }
-    }
-}
-
-// -----------------------------------------------------------------------
-// DirectionalityDependent implementations for AdjSet
-// -----------------------------------------------------------------------
-
-impl<W> DirectionalityDependent<W> for AdjSet<W, Undirected> {
-    #[inline(always)]
-    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
-    where
-        W: Clone,
-    {
-        self.adj[u as usize].insert(v, w.clone());
-        self.adj[v as usize].insert(u, w);
-        self.m += 1;
-    }
-
-    #[inline(always)]
-    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
-        self.adj[u as usize].remove(&v);
-        self.adj[v as usize].remove(&u);
-    }
-}
-
-impl<W> DirectionalityDependent<W> for AdjSet<W, Directed> {
-    #[inline(always)]
-    fn add_edge(&mut self, u: NodeId, v: NodeId, w: W)
-    where
-        W: Clone,
-    {
-        self.adj[u as usize].insert(v, w);
-        self.m += 1;
-    }
-
-    #[inline(always)]
-    fn remove_edges_between(&mut self, u: NodeId, v: NodeId) {
-        self.adj[u as usize].remove(&v);
-    }
-}
-
-// -----------------------------------------------------------------------
-// AdjacencyBase implementation for AdjSet
-// -----------------------------------------------------------------------
-
 impl<W, D> AdjacencyBase<W> for AdjSet<W, D>
 where
     D: Directionality,
+    Self: DirectionalityDependent<W>,
 {
     type NeighborContainer = HashMap<NodeId, W, FixedState>;
 
@@ -662,15 +561,94 @@ where
     }
 }
 
-// -----------------------------------------------------------------------
-// AdjacencySet implementation for AdjSet (marker)
-// -----------------------------------------------------------------------
+// List/Set methods
+impl<W, D> AdjacencyList<W> for AdjList<W, D>
+where
+    D: Directionality,
+    W: Clone,
+    Self: DirectionalityDependent<W>,
+{
+    fn sort_neighbors(&mut self) {
+        let n = self.n();
+        let mut rv = vec![Vec::new(); n];
 
-impl<W, D> AdjacencySet<W> for AdjSet<W, D> where D: Directionality {}
+        for u in 0..n {
+            rv[u].reserve(self[u].len());
+        }
 
-// -----------------------------------------------------------------------
-// Inherent methods for AdjSet (conversions, remove_multiedges, sort_neighbors)
-// -----------------------------------------------------------------------
+        for u in 0..n {
+            for neighbor in self.adj[u].drain(..) {
+                rv[neighbor.node as usize].push(ListNeighbor::new(u as NodeId, neighbor.weight));
+            }
+        }
+        self.adj = rv;
+    }
+
+    fn remove_multiedges(&mut self) -> usize {
+        let mut removed = 0;
+        let mut present = HashSet::new();
+
+        for neighbors in self.adj.iter_mut() {
+            present.clear();
+            neighbors.retain(|neighbor| {
+                if !present.insert(neighbor.node) {
+                    removed += 1;
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+        self.m -= removed;
+        removed
+    }
+}
+
+impl<W, D> AdjacencySet<W> for AdjSet<W, D>
+where
+    W: Clone,
+    D: Directionality,
+    Self: DirectionalityDependent<W>,
+{
+}
+
+// Inherent methods
+
+impl<W> AdjList<W, Undirected> {
+    pub fn into_directed(mut self) -> AdjList<W, Directed> {
+        AdjList {
+            adj: self.adj,
+            n: self.n,
+            m: self.m,
+            _directionality_marker: PhantomData,
+        }
+    }
+}
+
+impl<W> AdjList<W, Directed> {
+    /// Makes the directed graph undirected by adding an edge (v,u) for each edge (u,v). If
+    /// `allow_multiedges` is set to `false`, it will remove any multiedges that may arise from this
+    /// operation.
+    pub fn into_undirected(mut self, allow_multiedges: bool) -> AdjList<W, Undirected>
+    where
+        W: Clone,
+    {
+        let mut rv = AdjList::<W, Undirected>::with_nodes(self.n());
+        for (x, neighbors) in self.drain_neighbors(..).enumerate() {
+            rv.adj[x].reserve(neighbors.len());
+
+            for neighbor in neighbors.into_iter() {
+                rv.add_edge(x as NodeId, neighbor.node, neighbor.weight);
+            }
+        }
+
+        if !allow_multiedges {
+            rv.remove_multiedges();
+        }
+
+        rv
+    }
+}
 
 impl<W> AdjSet<W, Undirected> {
     pub fn into_directed(mut self) -> AdjSet<W, Directed> {
@@ -699,24 +677,7 @@ impl<W> AdjSet<W, Directed> {
     }
 }
 
-impl<W, D> AdjSet<W, D>
-where
-    D: Directionality,
-{
-    /// No‑op for AdjSet because the underlying HashMap already makes
-    /// multi‑edges impossible.
-    pub fn remove_multiedges(&mut self) -> usize {
-        0
-    }
-
-    /// No‑op for AdjSet because ordering is irrelevant.
-    pub fn sort_neighbors(&mut self) {}
-}
-
-// ========================================================================
-// Python bindings (unchanged except for using the new trait infrastructure)
-// ========================================================================
-
+// Python bindings
 #[cfg(feature = "bindings")]
 #[hoist_mod]
 mod bindings {

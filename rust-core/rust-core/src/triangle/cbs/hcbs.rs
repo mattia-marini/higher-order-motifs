@@ -9,7 +9,7 @@ use std::{
 
 use num_traits::PrimInt;
 
-use crate::graph::hyperedge::NodeId;
+use crate::types::NodeId;
 
 #[derive(Clone)]
 pub struct HCBS<T> {

@@ -3,14 +3,17 @@ use std::hash::Hash;
 
 use crate::{
     misc::neighbors_sorted_list_cloj,
-    types::{AdjList, NodeId, Undirected},
+    types::{
+        NodeId,
+        adj_list::{AdjList, common::Undirected, traits::Incidence},
+    },
 };
 
 /// Returns all maximal cliques in the undirected graph.
 ///
 /// This is an iterative implementation of the Bron-Kerbosch algorithm with pivoting,
 /// translating the provided Python implementation to avoid recursion depth limits.
-pub fn find_cliques<W>(adj: &AdjList<W, Undirected>) -> Vec<Vec<NodeId>> {
+pub fn find_cliques<W, I: Incidence>(adj: &AdjList<W, Undirected, I>) -> Vec<Vec<NodeId>> {
     let mut cliques = Vec::new();
 
     if adj.n() == 0 {

@@ -15,8 +15,6 @@ use std::path::Path;
 use std::{error::Error, io::Write};
 
 use crate::misc::error::SerializationError;
-use crate::types::graph::adjacency::{AdjList, AdjSet, ArchivedAdjList, ArchivedAdjSet};
-use crate::types::graph::incidence::{ArchivedIncList, ArchivedIncSet, IncList, IncSet};
 use crate::types::hypergraph::hypergraph::{ArchivedHypergraph, Hypergraph};
 use crate::types::{ArchivedHx, UnweightedHypergraph, WeightedHypergraph};
 
@@ -117,17 +115,6 @@ where
     pub archived: &'this super::ArchivedHypergraph<T, W>,
 }
 
-#[self_referencing]
-pub struct ArchivedAdjListHandle<W>
-where
-    W: Archive + 'static,
-{
-    bytes: AlignedVec,
-    #[borrows(bytes)]
-    // #[not_covariant]
-    pub archived: &'this ArchivedAdjList<W>,
-}
-
 impl<T, W> DumpCacheToFile for Hypergraph<T, W>
 where
     T: Archive + StdSerializable + Hash + Eq,
@@ -196,67 +183,8 @@ where
     }
 }
 
-impl<W> DumpCacheToFile for AdjList<W>
-where
-    W: StdSerializable,
-{
-    fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), SerializationError> {
-        let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
-
-        let mut file = File::create(path)?;
-        file.write_all(&bytes)?;
-
-        Ok(())
-    }
-}
-
-impl<W> LoadFromCacheDeserialized for AdjList<W>
-where
-    W: StdDeserializable<W> + Archive,
-    for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
-{
-    fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, SerializationError> {
-        let mut file = File::open(path)?;
-
-        let mut bytes: AlignedVec = AlignedVec::new();
-        bytes.extend_from_reader(&mut file)?;
-
-        let archived = rkyv::access::<ArchivedAdjList<W>, rkyv::rancor::Error>(&bytes[..])?;
-        let rv = rkyv::deserialize::<AdjList<W>, rkyv::rancor::Error>(archived)?;
-
-        Ok(rv)
-    }
-}
-
-impl<W> LoadFromCacheArchived for AdjList<W>
-where
-    W: Archive + 'static,
-    for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
-{
-    type Container = ArchivedAdjListHandle<W>;
-
-    fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, SerializationError> {
-        let mut file = File::open(path)?;
-        let mut bytes = AlignedVec::new();
-        bytes.extend_from_reader(&mut file)?;
-
-        let container = ArchivedAdjListHandleTryBuilder {
-            bytes,
-            archived_builder: |bytes_ref| {
-                rkyv::access::<ArchivedAdjList<W>, rkyv::rancor::Error>(&bytes_ref[..])
-                    .map_err(|e| Box::new(e) as Box<dyn Error>)
-            },
-        }
-        .try_build()
-        .map_err(|e| SerializationError::Unknown(e.to_string()))?;
-
-        Ok(container)
-    }
-}
-
 // Delegate cache (de)serialization for the public wrapper hypergraph types so they can be
 // used directly as Loader::Output in loader implementations.
-
 impl DumpCacheToFile for UnweightedHypergraph {
     fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), SerializationError> {
         self.0.save_to_file(path)
@@ -282,3 +210,71 @@ impl LoadFromCacheDeserialized for WeightedHypergraph {
         Ok(hg.into())
     }
 }
+
+// #[self_referencing]
+// pub struct ArchivedAdjListHandle<W>
+// where
+//     W: Archive + 'static,
+// {
+//     bytes: AlignedVec,
+//     #[borrows(bytes)]
+//     // #[not_covariant]
+//     pub archived: &'this ArchivedAdjList<W>,
+// }
+// impl<W> DumpCacheToFile for AdjList<W>
+// where
+//     W: StdSerializable,
+// {
+//     fn save_to_file<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), SerializationError> {
+//         let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(self)?;
+//
+//         let mut file = File::create(path)?;
+//         file.write_all(&bytes)?;
+//
+//         Ok(())
+//     }
+// }
+//
+// impl<W> LoadFromCacheDeserialized for AdjList<W>
+// where
+//     W: StdDeserializable<W> + Archive,
+//     for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
+// {
+//     fn load_deserialized<P: AsRef<std::path::Path>>(path: P) -> Result<Self, SerializationError> {
+//         let mut file = File::open(path)?;
+//
+//         let mut bytes: AlignedVec = AlignedVec::new();
+//         bytes.extend_from_reader(&mut file)?;
+//
+//         let archived = rkyv::access::<ArchivedAdjList<W>, rkyv::rancor::Error>(&bytes[..])?;
+//         let rv = rkyv::deserialize::<AdjList<W>, rkyv::rancor::Error>(archived)?;
+//
+//         Ok(rv)
+//     }
+// }
+//
+// impl<W> LoadFromCacheArchived for AdjList<W>
+// where
+//     W: Archive + 'static,
+//     for<'a> <W as Archive>::Archived: StdCheckBytes<'a> + StdDeserializable<W>,
+// {
+//     type Container = ArchivedAdjListHandle<W>;
+//
+//     fn load_archived<P: AsRef<Path>>(path: P) -> Result<Self::Container, SerializationError> {
+//         let mut file = File::open(path)?;
+//         let mut bytes = AlignedVec::new();
+//         bytes.extend_from_reader(&mut file)?;
+//
+//         let container = ArchivedAdjListHandleTryBuilder {
+//             bytes,
+//             archived_builder: |bytes_ref| {
+//                 rkyv::access::<ArchivedAdjList<W>, rkyv::rancor::Error>(&bytes_ref[..])
+//                     .map_err(|e| Box::new(e) as Box<dyn Error>)
+//             },
+//         }
+//         .try_build()
+//         .map_err(|e| SerializationError::Unknown(e.to_string()))?;
+//
+//         Ok(container)
+//     }
+// }

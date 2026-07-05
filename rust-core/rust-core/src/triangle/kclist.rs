@@ -1,4 +1,10 @@
-use crate::{misc::degeneracy_ordering, types::AdjList};
+use crate::{
+    misc::degeneracy_ordering,
+    types::adj_list::{
+        adj_list::AdjListBase,
+        traits::{AdjConfig, NeighborContainer},
+    },
+};
 
 #[cfg(feature = "bindings")]
 #[pyo3::pymodule]
@@ -29,7 +35,7 @@ pub mod kclist {
 /// Counts the number of triangles in the graph using the Chiba-Nishizeki algorithm.
 ///
 /// Complexity: O(m * k) where k is the degeneracy.
-pub fn kclist<W>(adj: &AdjList<W>) -> usize {
+pub fn kclist<C: AdjConfig>(adj: &AdjListBase<C>) -> usize {
     let n = adj.n();
     if n < 3 {
         return 0;
@@ -42,8 +48,8 @@ pub fn kclist<W>(adj: &AdjList<W>) -> usize {
     // This creates a Directed Acyclic Graph (DAG)
     let mut out_adj: Vec<Vec<usize>> = vec![vec![]; n];
     for u in 0..n {
-        for neighbor in &adj[u] {
-            let v = neighbor.node as usize;
+        for neighbor in adj[u].iter_neighbors() {
+            let v = *neighbor.node as usize;
             if pos[u] < pos[v] {
                 out_adj[u].push(v);
             }

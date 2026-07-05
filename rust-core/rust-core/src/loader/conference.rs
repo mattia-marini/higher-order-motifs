@@ -9,8 +9,9 @@ use hashbrown::HashMap;
 use seq_macro::seq;
 
 use crate::types::{
-    AdjList, Hx, Hypergraph, NodeId, NodeWeight, Undirected, UnweightedHx, UnweightedHypergraph,
-    WeightedHx, WeightedHypergraph,
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    WeightedHypergraph,
+    adj_list::{AdjList, Undirected, WithoutIncidence},
 };
 use crate::{
     loader::{common::Loader, error::LoaderError},
@@ -55,7 +56,7 @@ impl Loader for ConferenceStdUnweightedLoader {
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
             let (mut adj_list, original_index, compressed_index) =
-                AdjList::<(), Undirected>::from_edges_mapped(
+                AdjList::<(), Undirected, WithoutIncidence>::from_edges_mapped(
                     edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
                     // .iter()
                     // .map(|(u, v)| (dir_node_map[u], dir_node_map[v]))
@@ -132,7 +133,7 @@ impl Loader for ConferenceStdWeightedLoader {
         for (t, edge_list) in edges.into_iter() {
             let len = edge_list.len();
             let (mut adj_list, original_index, compressed_index) =
-                AdjList::<(), Undirected>::from_edges_mapped(
+                AdjList::<(), Undirected, WithoutIncidence>::from_edges_mapped(
                     edge_list.into_iter().map(|(u, v)| (u, v, ())).collect(),
                 );
 

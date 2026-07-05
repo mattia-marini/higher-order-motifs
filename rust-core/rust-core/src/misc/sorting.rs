@@ -1,9 +1,19 @@
-use crate::types::{AdjList, NodeId};
+use crate::types::NodeId;
+
+use crate::types::adj_list::AdjList;
+use crate::types::adj_list::traits::{Direction, Incidence};
+use crate::types::adj_list::{
+    adj_list::AdjListBase,
+    traits::{AdjConfig, NeighborContainer},
+};
 
 /// Returns a degree ordering of the vertices, the position of each vertex in that ordering, and
 /// the maximum degree of the graph.
 /// Time Complexity: O(n)
-pub fn degree_ordering<W>(adj: &AdjList<W>, decreasing: bool) -> (Vec<NodeId>, Vec<NodeId>, usize) {
+pub fn degree_ordering<C: AdjConfig>(
+    adj: &AdjListBase<C>,
+    decreasing: bool,
+) -> (Vec<NodeId>, Vec<NodeId>, usize) {
     let n = adj.n();
     if n == 0 {
         return (Vec::new(), Vec::new(), 0);
@@ -56,8 +66,8 @@ pub fn degree_ordering<W>(adj: &AdjList<W>, decreasing: bool) -> (Vec<NodeId>, V
 /// u ≺ v if deg(u) < deg(v); if deg(u) = deg(v) the tie breaker is arbitrary
 ///
 /// Time Complexity: O(e log d), where e is the number of edges and d is the maximum degree.
-pub fn sort_by_degree<W>(
-    adj: &mut AdjList<W>,
+pub fn sort_by_degree<W, D: Direction, I: Incidence>(
+    adj: &mut AdjList<W, D, I>,
     descreasing: bool,
 ) -> (Vec<NodeId>, Vec<NodeId>, usize) {
     let (order, rank, max_deg) = degree_ordering(adj, false);
@@ -73,7 +83,7 @@ pub fn sort_by_degree<W>(
 /// Returns a degeneracy ordering of the graph, the position of each vertex,
 /// and the degeneracy (k) of the graph.
 /// Complexity: O(n + m)
-pub fn degeneracy_ordering<W>(adj: &AdjList<W>) -> (Vec<usize>, Vec<usize>, usize) {
+pub fn degeneracy_ordering<C: AdjConfig>(adj: &AdjListBase<C>) -> (Vec<usize>, Vec<usize>, usize) {
     let n = adj.n();
     if n == 0 {
         return (vec![], vec![], 0);
@@ -116,8 +126,8 @@ pub fn degeneracy_ordering<W>(adj: &AdjList<W>) -> (Vec<usize>, Vec<usize>, usiz
         let v = order[i];
         k = std::cmp::max(k, deg[v]);
 
-        for neighbor in &adj[v] {
-            let u = neighbor.node as usize;
+        for neighbor in adj[v].iter_neighbors() {
+            let u = *neighbor.node as usize;
             if pos[u] > i {
                 // Only look at neighbors still "in the graph"
                 let u_deg = deg[u];
