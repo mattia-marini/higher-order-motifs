@@ -3,8 +3,11 @@ use std::sync::LazyLock;
 
 use rust_core::loader::DatasetLoader;
 use rust_core::misc::cycle::{count_c4, intensity_c4};
-use rust_core::triangle::forward::forward_hashed;
+use rust_core::misc::hyper_degeneracy_ordering;
+use rust_core::motifs::algorithms::escape;
 use rust_core::types::adj_list::{AdjList, Undirected, WithoutIncidence};
+use rust_core::types::hyperadj_list::HyperAdjList;
+use seq_macro::seq;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     // simple_graph_count();
@@ -62,21 +65,18 @@ pub fn dblp() -> Result<(), Box<dyn Error>> {
         .unweighted()
         .load()?;
 
-    let edges = hg
-        .take_edges::<2>()
-        .into_iter()
-        .map(|e| (e.nodes[0], e.nodes[1], ()))
-        .collect::<Vec<_>>();
+    seq!(N in 3..11 {
+        hg.take_edges::<N>();
+    });
+    hg.remove_isolated_nodes();
 
-    let mut adj = AdjList::<(), Undirected, WithoutIncidence>::from_edges_mapped(edges).0;
+    let (hyperadj, _, _) = HyperAdjList::<()>::from_hypergraph_mapped(hg.0);
 
     let t = std::time::Instant::now();
-    forward_hashed(&adj, false);
+    // escape::unweighted_4(&hyperadj);
+    let (_, _, k) = hyper_degeneracy_ordering(&hyperadj);
+    println!("{k}");
     println!("dblp c3 count time: {:?}", t.elapsed());
-
-    let t = std::time::Instant::now();
-    count_c4(&mut adj);
-    println!("dblp c4 count time: {:?}", t.elapsed());
 
     Ok(())
 }

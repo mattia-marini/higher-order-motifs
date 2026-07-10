@@ -1,4 +1,5 @@
 use foldhash::fast::FixedState;
+use hashbrown::HashMap;
 use num_traits::{AsPrimitive, Zero};
 use ouroboros::self_referencing;
 use rust_core_macros::{hoist_mod, remove_attr};
@@ -6,7 +7,7 @@ use seq_macro::seq;
 use std::error::Error;
 use std::hash::Hash;
 use std::ops::{Deref, DerefMut};
-use std::{collections::HashMap, fs::File, io::Write, path::Path};
+use std::{fs::File, io::Write, path::Path};
 
 use duplicate::duplicate_item;
 use rust_core_macros::{ct_map_accessor, inherent, repeat};
@@ -365,13 +366,13 @@ impl<T, W> Hypergraph<T, W> {
 
     /// the vec is a map to new_node -> old node
     /// the hash map maps the old_node -> new_node
-    pub fn normalize_node_ids(&mut self) -> (Vec<T>, HashMap<T, T, FixedState>)
+    pub fn normalize_node_ids(&mut self) -> (Vec<T>, HashMap<T, usize, FixedState>)
     where
         T: Hash + Eq + Ord + Copy + Zero + 'static,
         usize: AsPrimitive<T>,
     {
         let mut new_to_old = vec![T::zero(); self.n];
-        let mut old_to_new: HashMap<T, T, FixedState> = HashMap::with_hasher(FixedState::default());
+        let mut old_to_new = HashMap::with_hasher(FixedState::default());
         let mut next_id = 0;
         let m = self.m;
 
@@ -381,12 +382,11 @@ impl<T, W> Hypergraph<T, W> {
             *self.edges_mut::<N>() = edges.into_iter().map(|mut edge| {
                 for n in &mut edge.nodes {
                     // Use entry API or standard match, but remember to increment next_id!
-                    *n = *old_to_new.entry(*n).or_insert_with(|| {
+                    *n = old_to_new.entry(*n).or_insert_with(|| {
                         new_to_old[next_id] = *n;
-                        let new_id = next_id.as_();
                         next_id += 1;
-                        new_id
-                    });
+                        next_id -1
+                    }).as_();
                 }
                 edge.nodes.sort_unstable();
                 edge

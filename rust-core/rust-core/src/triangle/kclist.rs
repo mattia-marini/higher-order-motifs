@@ -64,14 +64,14 @@ pub fn kclist<C: AdjConfig>(adj: &AdjListBase<C>) -> usize {
 
     for &u in &order {
         // Mark all neighbors of u
-        for &v in &out_adj[u] {
-            marks[v] = u;
+        for &v in &out_adj[u as usize] {
+            marks[v] = u as usize;
         }
 
         // Check neighbors of neighbors
-        for &v in &out_adj[u] {
+        for &v in &out_adj[u as usize] {
             for &w in &out_adj[v] {
-                if marks[w] == u {
+                if marks[w] == u as usize {
                     count += 1;
                 }
             }

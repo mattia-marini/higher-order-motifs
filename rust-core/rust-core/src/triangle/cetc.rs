@@ -1,4 +1,4 @@
-use crate::misc::{bfs, common_neighbors_sorted_list};
+use crate::misc::{bfs, common_neighbors_sorted_list, degeneracy_ordering, degree_ordering};
 use crate::triangle::forward::forward_hashed;
 use crate::types::adj_list::common::{Neighbor, Undirected};
 use crate::types::adj_list::traits::{AdjConfig, Incidence, NeighborContainer};
@@ -94,7 +94,8 @@ where
             al0[u].push(Neighbor::new(v.node, (), ()));
         }
     }
-    count += forward_hashed(&al0, false);
+    let (order, pos, degeneracy) = degeneracy_ordering(&al0);
+    count += forward_hashed(&al0, Some((&order, &pos)));
 
     for u in 0..n {
         if adj1[u].is_empty() {

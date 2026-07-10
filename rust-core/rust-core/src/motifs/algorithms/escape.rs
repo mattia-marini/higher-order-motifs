@@ -5,25 +5,23 @@ use crate::{
     misc::{
         common_neighbors_sorted_list_3_cloj,
         cycle::{count_c4, count_c4_no_sort},
-        degree_ordering, sort_by_degree,
+        degeneracy_ordering, degree_ordering, sort_by_degree,
     },
     motifs::{fingerprint::Fingerprint4, types::MotifStats},
     triangle::forward::forward_hashed_cloj,
     types::{
         EdgeId, Hypergraph, NodeId, NodeWeight,
         adj_list::{AdjList, AdjSet, Undirected, WithIncidence, common::Neighbor},
+        hyperadj_list::HyperAdjList,
     },
 };
 
-pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifStats> {
+pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats> {
     // let mut motif_stats = HashMap::new();
 
-    // Extract 2-edges (regular edges) and build adjacency list
-    let edges_2: Vec<(NodeId, NodeId, ())> = hg
-        .edges::<2>()
-        .iter()
-        .cloned()
-        .map(|e| (e.nodes[0], e.nodes[1], ()))
+    let edges_2: Vec<(NodeId, NodeId, ())> = adj
+        .iter_by_size(2)
+        .map(|(_, e)| (e.nodes[0], e.nodes[1], ()))
         .collect();
 
     let (mut adj_list, _direct_map, inverse_map) =
@@ -76,15 +74,14 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
     let mut diamond = MotifStats::new();
     let mut tailed_triangle = MotifStats::new();
 
-    let mut tri_edge = vec![0; hg.m()];
-    let mut tri_vertex = vec![0; hg.n()];
+    let mut tri_edge = vec![0; adj.m()];
+    let mut tri_vertex = vec![0; adj.n()];
 
-    // Count triangles with forward hashed in O(m^1.5)
-    // let mut triangles = Vec::new();
-
+    let (order, pos, degeneracy) = degeneracy_ordering(&adj_list);
     // Compute triangles + cliques
+    // Count triangles with forward hashed in O(m^1.5)
     // TODO: make it use degeneracy order instead of degree order
-    forward_hashed_cloj(&adj_list, false, |a, b, c| {
+    forward_hashed_cloj(&adj_list, Some((&order, &pos)), |a, b, c| {
         let upper_bound = a.min(b).min(c);
         let edge_ab = adj_set[a][&b].1 as usize;
         let edge_ac = adj_set[a][&c].1 as usize;
@@ -135,9 +132,13 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
     }
     path3.count -= 3 * triangle.count;
 
-    todo!()
+
+
+    // Hyper degeneracy to efficiently find inclusions of every edge
+
+    HashMap::new()
 }
 
-pub fn weighted_4(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint4, MotifStats> {
+pub fn weighted_4(hg: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, MotifStats> {
     todo!()
 }

@@ -17,7 +17,7 @@ use crate::types::adj_list::{
 pub fn degree_ordering<C: AdjConfig>(
     adj: &AdjListBase<C>,
     decreasing: bool,
-) -> (Vec<NodeId>, Vec<NodeId>, usize) {
+) -> (Vec<NodeId>, Vec<usize>, usize) {
     let n = adj.n();
     if n == 0 {
         return (Vec::new(), Vec::new(), 0);
@@ -50,14 +50,14 @@ pub fn degree_ordering<C: AdjConfig>(
     if decreasing {
         for v in (0..n).rev() {
             let d = deg[v];
-            pos[v] = bin_starts[d] as NodeId;
+            pos[v] = bin_starts[d];
             order[bin_starts[d]] = v as NodeId;
             bin_starts[d] += 1;
         }
     } else {
         for v in 0..n {
             let d = deg[v];
-            pos[v] = bin_starts[d] as NodeId;
+            pos[v] = bin_starts[d];
             order[bin_starts[d]] = v as NodeId;
             bin_starts[d] += 1;
         }
@@ -73,7 +73,7 @@ pub fn degree_ordering<C: AdjConfig>(
 pub fn sort_by_degree<W, D: Direction, I: Incidence>(
     adj: &mut AdjList<W, D, I>,
     descreasing: bool,
-) -> (Vec<NodeId>, Vec<NodeId>, usize) {
+) -> (Vec<NodeId>, Vec<usize>, usize) {
     let (order, rank, max_deg) = degree_ordering(adj, false);
 
     for v in 0..adj.n() {
@@ -87,7 +87,7 @@ pub fn sort_by_degree<W, D: Direction, I: Incidence>(
 /// Returns a degeneracy ordering of the graph, the position of each vertex,
 /// and the degeneracy (k) of the graph.
 /// Complexity: O(n + m)
-pub fn degeneracy_ordering<C: AdjConfig>(adj: &AdjListBase<C>) -> (Vec<usize>, Vec<usize>, usize) {
+pub fn degeneracy_ordering<C: AdjConfig>(adj: &AdjListBase<C>) -> (Vec<NodeId>, Vec<usize>, usize) {
     let n = adj.n();
     if n == 0 {
         return (vec![], vec![], 0);
@@ -120,37 +120,49 @@ pub fn degeneracy_ordering<C: AdjConfig>(adj: &AdjListBase<C>) -> (Vec<usize>, V
     let mut pos = vec![0; n];
     for v in 0..n {
         pos[v] = temp_starts[deg[v]];
-        order[pos[v]] = v;
+        order[pos[v]] = v as NodeId;
         temp_starts[deg[v]] += 1;
     }
 
     // 5. Main loop: remove node of minimum degree
     let mut k = 0;
+    macro_rules! decrease_node {
+        ($node:expr) => {{
+            unsafe {
+                let n = $node;
+                let u_deg = *deg.get_unchecked(n);
+                let u_pos = *pos.get_unchecked(n);
+
+                let first_node_pos = *bin_starts.get_unchecked(u_deg);
+                let first_node = *order.get_unchecked(first_node_pos);
+
+                if n as NodeId != first_node {
+                    // pos.swap(n, first_node);
+                    let tmp = *pos.get_unchecked(first_node as usize);
+                    *pos.get_unchecked_mut(first_node as usize) = *pos.get_unchecked(n);
+                    *pos.get_unchecked_mut(n) = tmp;
+
+                    // order.swap(u_pos, first_node_pos);
+                    let tmp = *order.get_unchecked(first_node_pos);
+                    *order.get_unchecked_mut(first_node_pos) = *order.get_unchecked(u_pos);
+                    *order.get_unchecked_mut(u_pos) = tmp;
+                }
+
+                *bin_starts.get_unchecked_mut(u_deg) += 1;
+                *deg.get_unchecked_mut(n) -= 1;
+            }
+        }};
+    }
 
     for i in 0..n {
-        let v = order[i];
+        let v = order[i] as usize;
         k = std::cmp::max(k, deg[v]);
 
         for neighbor in adj[v].iter_neighbors() {
             let u = *neighbor.node as usize;
             if pos[u] > i {
-                let mut decrease_node = |u| {
-                    let u_deg = deg[u];
-                    let u_pos = pos[u];
-
-                    let first_node_pos = bin_starts[u_deg];
-                    let first_node = order[first_node_pos];
-
-                    if u != first_node {
-                        pos.swap(u, first_node);
-                        order.swap(u_pos, first_node_pos);
-                    }
-
-                    bin_starts[u_deg] += 1;
-                    deg[u] -= 1;
-                };
-                decrease_node(u);
-                decrease_node(v);
+                decrease_node!(u);
+                decrease_node!(v);
             }
         }
     }

@@ -148,6 +148,7 @@ impl<W, I: EdgeIdTrait> NeighborContainer for Vec<Neighbor<W, I>> {
         true
     }
 
+    #[inline(always)]
     fn iter_neighbors(
         &self,
     ) -> impl Iterator<Item = NeighborRef<'_, Self::WeightType, Self::EdgeType>> {

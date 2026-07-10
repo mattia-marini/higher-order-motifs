@@ -87,6 +87,7 @@ pub trait NeighborContainer {
     /// already exist
     fn insert(&mut self, node: NodeId, weight: Self::WeightType, edge: Self::EdgeType) -> bool;
 
+    #[inline(always)]
     fn iter_neighbors(
         &self,
     ) -> impl Iterator<Item = NeighborRef<'_, Self::WeightType, Self::EdgeType>>;

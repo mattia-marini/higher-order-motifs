@@ -1,6 +1,8 @@
+use std::ops::Deref;
+
 use crate::triangle::cbs::hcbs::HCBSGraph;
 
-use crate::misc::{count_common_neighbors_sorted_list, degree_ordering};
+use crate::misc::{count_common_neighbors_sorted_list, degeneracy_ordering, degree_ordering};
 use crate::types::NodeId;
 use crate::types::adj_list::AdjList;
 use crate::types::adj_list::common::Undirected;
@@ -94,7 +96,7 @@ pub fn forward<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, sort_degrees: b
 /// the natural order (u < v). Common neighbors are counted with the hash map strategy
 pub fn forward_hashed<W, I: Incidence>(
     adj: &AdjList<W, Undirected, I>,
-    sort_degrees: bool,
+    order: Option<(&[NodeId], &[usize])>,
 ) -> usize {
     let n = adj.n();
     let mut a = vec![Vec::new(); n];
@@ -102,11 +104,11 @@ pub fn forward_hashed<W, I: Incidence>(
     let mut current = 1;
     let mut count = 0;
 
-    let (order, pos) = if sort_degrees {
-        let (o, p, _) = degree_ordering(adj, true);
-        (o, p)
-    } else {
-        ((0..n as NodeId).collect(), (0..n as NodeId).collect())
+    let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
+    let natural_pos = (0..n).collect::<Vec<_>>();
+    let (order, pos) = match order {
+        Some((o, p)) => (o, p),
+        None => (natural_order.deref(), natural_pos.deref()),
     };
 
     for i in 0..n {
@@ -176,9 +178,11 @@ pub fn forward_hbs<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, sort_degree
     count
 }
 
+/// the order parameter specifies order and position array for the nodes. A vertex degree order or
+/// degeneracy order can be used. If None, the natural order is used
 pub fn forward_hashed_cloj<W, I, F>(
     adj: &AdjList<W, Undirected, I>,
-    sort_degrees: bool,
+    order: Option<(&[NodeId], &[usize])>,
     mut cloj: F,
 ) where
     F: FnMut(NodeId, NodeId, NodeId),
@@ -189,11 +193,11 @@ pub fn forward_hashed_cloj<W, I, F>(
     let mut mark = vec![0usize; n];
     let mut current = 1;
 
-    let (order, pos) = if sort_degrees {
-        let (o, p, _) = degree_ordering(adj, true);
-        (o, p)
-    } else {
-        ((0..n as NodeId).collect(), (0..n as NodeId).collect())
+    let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
+    let natural_pos = (0..n).collect::<Vec<_>>();
+    let (order, pos) = match order {
+        Some((o, p)) => (o, p),
+        None => (natural_order.deref(), natural_pos.deref()),
     };
 
     for i in 0..n {
