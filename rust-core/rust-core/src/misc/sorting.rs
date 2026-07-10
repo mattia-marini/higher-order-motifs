@@ -1,4 +1,8 @@
-use crate::types::NodeId;
+use num_traits::{AsPrimitive, PrimInt};
+
+use crate::types::hyperadj_list::HyperAdjList;
+use crate::types::{Hx, Hypergraph, NodeId};
+use std::hash::Hash;
 
 use crate::types::adj_list::AdjList;
 use crate::types::adj_list::traits::{Direction, Incidence};
@@ -122,6 +126,7 @@ pub fn degeneracy_ordering<C: AdjConfig>(adj: &AdjListBase<C>) -> (Vec<usize>, V
 
     // 5. Main loop: remove node of minimum degree
     let mut k = 0;
+
     for i in 0..n {
         let v = order[i];
         k = std::cmp::max(k, deg[v]);
@@ -129,7 +134,89 @@ pub fn degeneracy_ordering<C: AdjConfig>(adj: &AdjListBase<C>) -> (Vec<usize>, V
         for neighbor in adj[v].iter_neighbors() {
             let u = *neighbor.node as usize;
             if pos[u] > i {
-                // Only look at neighbors still "in the graph"
+                let mut decrease_node = |u| {
+                    let u_deg = deg[u];
+                    let u_pos = pos[u];
+
+                    let first_node_pos = bin_starts[u_deg];
+                    let first_node = order[first_node_pos];
+
+                    if u != first_node {
+                        pos.swap(u, first_node);
+                        order.swap(u_pos, first_node_pos);
+                    }
+
+                    bin_starts[u_deg] += 1;
+                    deg[u] -= 1;
+                };
+                decrease_node(u);
+                decrease_node(v);
+            }
+        }
+    }
+
+    (order, pos, k)
+}
+
+/// Returns a degeneracy ordering of the hypergraph, the position of each vertex,
+/// and the degeneracy (k) of the hypergraph.
+/// Complexity: O(n + m)
+pub fn hyper_degeneracy_ordering<W>(adj: &HyperAdjList<W>) -> (Vec<usize>, Vec<usize>, usize) {
+    let n = adj.n();
+    if n == 0 {
+        return (vec![], vec![], 0);
+    }
+
+    // 1. Calculate degrees and find max degree
+    let mut deg = adj
+        .adj
+        .iter()
+        .map(|neighbors| neighbors.len())
+        .collect::<Vec<_>>();
+    let max_deg = *deg.iter().max().unwrap_or(&0);
+
+    // 2. Create bins to count how many nodes have each degree
+    let mut bin_count = vec![0; max_deg + 1];
+    for &d in &deg {
+        bin_count[d] += 1;
+    }
+
+    // 3. Find starting index for each degree bucket
+    let mut bin_starts = vec![0; max_deg + 1];
+    let mut start_pos = 0;
+    for d in 0..=max_deg {
+        bin_starts[d] = start_pos;
+        start_pos += bin_count[d];
+    }
+
+    // 4. Initial placement of nodes into 'order' and 'pos'
+    let mut temp_starts = bin_starts.clone();
+    let mut order = vec![0; n];
+    let mut pos = vec![0; n];
+    for v in 0..n {
+        pos[v] = temp_starts[deg[v]];
+        order[pos[v]] = v;
+        temp_starts[deg[v]] += 1;
+    }
+
+    let mut peeled = vec![false; adj.m()];
+    // 5. Main loop: remove node of minimum degree
+    let mut k = 0;
+    for i in 0..n {
+        let v = order[i];
+        k = std::cmp::max(k, deg[v]);
+
+        for (edge_id, edge) in adj.iter_incident_edges(v as NodeId) {
+            if peeled[edge_id as usize] {
+                continue;
+            }
+            peeled[edge_id as usize] = true;
+
+            for &n in edge.nodes {
+                // if n == v as NodeId {
+                //     continue;
+                // }
+                let u = n as usize;
                 let u_deg = deg[u];
                 let u_pos = pos[u];
 

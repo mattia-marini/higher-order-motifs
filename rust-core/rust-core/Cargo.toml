@@ -13,7 +13,7 @@ path = "src/bin/stub_gen.rs"
 required-features = ["bindings"]
 
 [features]
-default = ["bindings"]
+# default = ["bindings"]
 bindings = ["dep:pyo3", "dep:pyo3-stub-gen"]
 
 [dependencies]
@@ -22,7 +22,7 @@ pyo3-stub-gen = { workspace = true, optional = true}
 
 timed = "0.2.1"
 bit-set = "0.10"
-num-traits = "0.2"
+num-traits = {workspace=true}
 rkyv = {version = "0.8.15", features = ["hashbrown-0_17"]}
 itertools = "0.14.0"
 inherent = "1.0.13"
@@ -30,7 +30,7 @@ duplicate = "2.0.1"
 thiserror = "2.0.18"
 ouroboros = "0.18.5"
 rust-core-macros = { workspace = true }
-seq-macro = "0.3.6"
+seq-macro = { workspace = true }
 log = "0.4.29"
 csv = "1.2"
 polars = {version="0.46.0", features=["lazy", "default"]}

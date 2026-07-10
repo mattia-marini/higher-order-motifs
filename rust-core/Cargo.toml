@@ -7,13 +7,21 @@ rust-core = { path = "./rust-core" }
 rust-core-macros = { path = "./rust-core-macros" }
 rust-core-tests = { path = "./rust-core-tests" }
 
+
 hashbrown = "0.17.1"
 foldhash = "0.2.0"
 paste = "1.0.15"
 indicatif = "0.18.4"
 anyhow = "1.0.103"
+seq-macro = "0.3.6"
+num-traits = "0.2"
+rand = "0.10.2"
 
 pyo3 = {version = "0.29.0", features = ["auto-initialize", "multiple-pymethods", "hashbrown", "anyhow"]}
 
 # TODO: Remove this once pyo3-stub-gen is updated to support pyo3 0.29
 pyo3-stub-gen = { git = "https://github.com/mattia-marini/pyo3-stub-gen", branch = "pyo3-0.29", features = ["hashbrown"] }
+
+[profile.profiling]
+inherits = "release"
+debug = true

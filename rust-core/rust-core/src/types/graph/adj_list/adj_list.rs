@@ -82,7 +82,6 @@ impl<C: AdjConfig> AdjListBase<C> {
         let n = curr_number as usize;
 
         let mut rv = Self::with_nodes(n);
-        rv.m = edges.len();
 
         for (u, v, w) in edges.into_iter() {
             let u_idx = compressed_index[&u];
@@ -413,40 +412,41 @@ define_py_wrapper!(WeightedUndirectedAdjList, AdjList<NodeWeight, Undirected, Wi
 define_py_wrapper!(UnweightedDirectedAdjList, AdjList<(), Directed, WithIncidence>);
 define_py_wrapper!(WeightedDirectedAdjList, AdjList<NodeWeight, Directed, WithIncidence>);
 
-define_py_wrapper!(UnweightedUndirectedAdjSet, AdjList<(), Undirected, WithIncidence>);
-define_py_wrapper!(WeightedUndirectedAdjSet, AdjList<NodeWeight, Undirected, WithIncidence>);
+define_py_wrapper!(UnweightedUndirectedAdjSet, AdjSet<(), Undirected, WithIncidence>);
+define_py_wrapper!(WeightedUndirectedAdjSet, AdjSet<NodeWeight, Undirected, WithIncidence>);
 
-define_py_wrapper!(UnweightedDirectedAdjSet, AdjList<(), Directed, WithIncidence>);
-define_py_wrapper!(WeightedDirectedAdjSet, AdjList<NodeWeight, Directed, WithIncidence>);
+define_py_wrapper!(UnweightedDirectedAdjSet, AdjSet<(), Directed, WithIncidence>);
+define_py_wrapper!(WeightedDirectedAdjSet, AdjSet<NodeWeight, Directed, WithIncidence>);
 
 #[cfg(feature = "bindings")]
 #[hoist_mod]
 pub mod bindings {
+    use super::*;
 
     #[derive(FromPyObject)]
     pub enum PyUndirectedAdjList<'py> {
-        Weighted(PyRef<'py, UnweightedUndirectedAdjList>),
-        Unweighted(PyRef<'py, WeightedUndirectedAdjList>),
+        Weighted(PyRef<'py, WeightedUndirectedAdjList>),
+        Unweighted(PyRef<'py, UnweightedUndirectedAdjList>),
     }
 
     #[derive(FromPyObject)]
     pub enum PyDirectedAdjList<'py> {
-        Weighted(PyRef<'py, UnweightedDirectedAdjList>),
-        Unweighted(PyRef<'py, WeightedDirectedAdjList>),
+        Weighted(PyRef<'py, WeightedDirectedAdjList>),
+        Unweighted(PyRef<'py, UnweightedDirectedAdjList>),
     }
 
     #[cfg(feature = "bindings")]
     #[derive(FromPyObject)]
     pub enum PyUndirectedAdjSet<'py> {
-        Weighted(PyRef<'py, UnweightedUndirectedAdjSet>),
-        Unweighted(PyRef<'py, WeightedUndirectedAdjSet>),
+        Weighted(PyRef<'py, WeightedUndirectedAdjSet>),
+        Unweighted(PyRef<'py, UnweightedUndirectedAdjSet>),
     }
 
     #[cfg(feature = "bindings")]
     #[derive(FromPyObject)]
     pub enum PyDirectedAdjSet<'py> {
-        Weighted(PyRef<'py, UnweightedDirectedAdjSet>),
-        Unweighted(PyRef<'py, WeightedDirectedAdjSet>),
+        Weighted(PyRef<'py, WeightedDirectedAdjSet>),
+        Unweighted(PyRef<'py, UnweightedDirectedAdjSet>),
     }
 
     #[derive(FromPyObject)]
