@@ -12,7 +12,7 @@ use crate::{
     types::{
         EdgeId, Hypergraph, NodeId, NodeWeight,
         adj_list::{AdjList, AdjSet, Undirected, WithIncidence, common::Neighbor},
-        hyperadj_list::HyperAdjList,
+        hyperadj_list::{HyperAdjList, HyperAdjListBase},
     },
 };
 
@@ -131,8 +131,6 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
         }
     }
     path3.count -= 3 * triangle.count;
-
-
 
     // Hyper degeneracy to efficiently find inclusions of every edge
 

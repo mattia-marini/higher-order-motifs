@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ops::Deref;
 
 use crate::triangle::cbs::hcbs::HCBSGraph;
@@ -104,11 +105,14 @@ pub fn forward_hashed<W, I: Incidence>(
     let mut current = 1;
     let mut count = 0;
 
-    let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
-    let natural_pos = (0..n).collect::<Vec<_>>();
     let (order, pos) = match order {
-        Some((o, p)) => (o, p),
-        None => (natural_order.deref(), natural_pos.deref()),
+        Some((o, p)) => (Cow::Borrowed(o), Cow::Borrowed(p)),
+        None => {
+            let n = adj.n();
+            let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
+            let natural_pos = (0..n).collect::<Vec<_>>();
+            (Cow::Owned(natural_order), Cow::Owned(natural_pos))
+        }
     };
 
     for i in 0..n {
@@ -193,11 +197,14 @@ pub fn forward_hashed_cloj<W, I, F>(
     let mut mark = vec![0usize; n];
     let mut current = 1;
 
-    let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
-    let natural_pos = (0..n).collect::<Vec<_>>();
     let (order, pos) = match order {
-        Some((o, p)) => (o, p),
-        None => (natural_order.deref(), natural_pos.deref()),
+        Some((o, p)) => (Cow::Borrowed(o), Cow::Borrowed(p)),
+        None => {
+            let n = adj.n();
+            let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
+            let natural_pos = (0..n).collect::<Vec<_>>();
+            (Cow::Owned(natural_order), Cow::Owned(natural_pos))
+        }
     };
 
     for i in 0..n {

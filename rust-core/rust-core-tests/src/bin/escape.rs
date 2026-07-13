@@ -6,7 +6,7 @@ use rust_core::misc::cycle::{count_c4, intensity_c4};
 use rust_core::misc::hyper_degeneracy_ordering;
 use rust_core::motifs::algorithms::escape;
 use rust_core::types::adj_list::{AdjList, Undirected, WithoutIncidence};
-use rust_core::types::hyperadj_list::HyperAdjList;
+use rust_core::types::hyperadj_list::HyperAdjListBase;
 use seq_macro::seq;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -70,7 +70,7 @@ pub fn dblp() -> Result<(), Box<dyn Error>> {
     });
     hg.remove_isolated_nodes();
 
-    let (hyperadj, _, _) = HyperAdjList::<()>::from_hypergraph_mapped(hg.0);
+    let (hyperadj, _, _) = HyperAdjListBase::<()>::from_hypergraph_mapped(hg.0);
 
     let t = std::time::Instant::now();
     // escape::unweighted_4(&hyperadj);

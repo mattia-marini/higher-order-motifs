@@ -8,7 +8,7 @@ use rust_core::{
     types::{
         Hx, Hypergraph, NodeId,
         adj_list::{AdjList, Undirected, WithoutIncidence},
-        hyperadj_list::HyperAdjList,
+        hyperadj_list::HyperAdjListBase,
     },
 };
 use seq_macro::seq;
@@ -103,7 +103,7 @@ fn test_common<W: Clone>(mut hg: Hypergraph<NodeId, W>) -> Result<(), Box<dyn Er
 
     println!("");
     let time = Instant::now();
-    let adj2 = HyperAdjList::from_hypergraph_unmapped(hg.clone());
+    let adj2 = HyperAdjListBase::from_hypergraph_unmapped(hg.clone());
     println!("Created HyperAdjacencyList in {:?}", time.elapsed());
     println!("adj2: {}, {}", adj2.n(), adj2.m());
 

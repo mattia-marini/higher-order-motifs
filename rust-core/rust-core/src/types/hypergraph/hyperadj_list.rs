@@ -1,19 +1,24 @@
+use bit_set::BitSet;
 use foldhash::fast::FixedState;
 use hashbrown::{HashMap, HashSet};
 use num_traits::{AsPrimitive, Zero};
 use std::{
+    borrow::Cow,
     hash::Hash,
     ops::{Index, IndexMut},
 };
 
-use crate::types::{EdgeId, EdgeRef, HyperCSR, Hypergraph, NodeId};
+use crate::{
+    misc::Order,
+    types::{EdgeId, EdgeRef, HyperCSR, Hypergraph, NodeId},
+};
 #[derive(Clone)]
-pub struct HyperAdjList<W, C: Container> {
+pub struct HyperAdjListBase<W, C: Container> {
     pub(crate) csr: HyperCSR<W>,
     pub(crate) adj: Vec<C>,
 }
 
-impl<W, C: Container> HyperAdjList<W, C> {
+impl<W, C: Container> HyperAdjListBase<W, C> {
     pub fn new() -> Self {
         Self {
             csr: HyperCSR::new(),
@@ -113,9 +118,47 @@ impl<W, C: Container> HyperAdjList<W, C> {
     pub fn iter_all_incident_edges_mut(&mut self) -> impl Iterator<Item = &mut C> {
         self.adj.iter_mut()
     }
+
+    /// Gets the oriented adj list following a provided order of nodes; This means that an hyperedge
+    /// having nodes u,v,..., z will be incident only to u, given that u < v < ... < z
+    pub fn get_oriented(&self, order: Order) -> Self
+    where
+        C: Clone,
+        W: Clone,
+    {
+        let mut cached_min = vec![u32::MAX; self.m()];
+
+        let mut pos = order.get_pos();
+        let mut adj = self.adj.clone();
+
+        for (u, incidend_edges) in adj.iter_mut().enumerate() {
+            incidend_edges.retain_ids(|edge_id| {
+                let min = if cached_min[*edge_id as usize] == u32::MAX {
+                    let min = *self
+                        .csr
+                        .get_edge_by_id(*edge_id)
+                        .nodes
+                        .iter()
+                        .min_by_key(|n| pos[**n as usize])
+                        .unwrap();
+                    cached_min[*edge_id as usize] = min;
+                    min
+                } else {
+                    cached_min[*edge_id as usize]
+                };
+
+                u as NodeId == min
+            });
+        }
+
+        HyperAdjListBase {
+            csr: self.csr.clone(),
+            adj,
+        }
+    }
 }
 
-impl<W, C: Container> Index<usize> for HyperAdjList<W, C> {
+impl<W, C: Container> Index<usize> for HyperAdjListBase<W, C> {
     type Output = C;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -123,7 +166,7 @@ impl<W, C: Container> Index<usize> for HyperAdjList<W, C> {
     }
 }
 
-impl<W, C: Container> Index<NodeId> for HyperAdjList<W, C> {
+impl<W, C: Container> Index<NodeId> for HyperAdjListBase<W, C> {
     type Output = C;
 
     fn index(&self, index: NodeId) -> &Self::Output {
@@ -131,19 +174,19 @@ impl<W, C: Container> Index<NodeId> for HyperAdjList<W, C> {
     }
 }
 
-impl<W, C: Container> IndexMut<usize> for HyperAdjList<W, C> {
+impl<W, C: Container> IndexMut<usize> for HyperAdjListBase<W, C> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.adj[index]
     }
 }
 
-impl<W, C: Container> IndexMut<NodeId> for HyperAdjList<W, C> {
+impl<W, C: Container> IndexMut<NodeId> for HyperAdjListBase<W, C> {
     fn index_mut(&mut self, index: NodeId) -> &mut Self::Output {
         &mut self.adj[index as usize]
     }
 }
 
-impl<W, C: Container> IntoIterator for HyperAdjList<W, C> {
+impl<W, C: Container> IntoIterator for HyperAdjListBase<W, C> {
     type Item = C;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -152,7 +195,7 @@ impl<W, C: Container> IntoIterator for HyperAdjList<W, C> {
     }
 }
 
-impl<'a, W, C: Container> IntoIterator for &'a HyperAdjList<W, C> {
+impl<'a, W, C: Container> IntoIterator for &'a HyperAdjListBase<W, C> {
     type Item = &'a C;
     type IntoIter = std::slice::Iter<'a, C>;
 
@@ -161,12 +204,24 @@ impl<'a, W, C: Container> IntoIterator for &'a HyperAdjList<W, C> {
     }
 }
 
-impl<'a, W, C: Container> IntoIterator for &'a mut HyperAdjList<W, C> {
+impl<'a, W, C: Container> IntoIterator for &'a mut HyperAdjListBase<W, C> {
     type Item = &'a mut C;
     type IntoIter = std::slice::IterMut<'a, C>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.adj.iter_mut()
+    }
+}
+
+impl<W, C: Container> std::fmt::Debug for HyperAdjListBase<W, C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for n in 0..self.n() {
+            writeln!(f, "n: {}", n);
+            for (edge_id, edge_ref) in self.iter_incident_edges(n as NodeId) {
+                writeln!(f, "\t{} - {:?}", edge_id, edge_ref.nodes);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -188,6 +243,10 @@ pub trait Container {
 
     /// Optional implementation to optimize performance
     fn reserve(&mut self, additional: usize) {}
+
+    fn retain_ids<F>(&mut self, f: F)
+    where
+        F: FnMut(&EdgeId) -> bool;
 
     // #[inline(always)]
     // fn into_iter_neighbors(self) -> impl Iterator<Item = &mut EdgeId>;
@@ -211,6 +270,13 @@ impl Container for HashSet<NodeId, FixedState> {
     fn iter_edge_ids(&self) -> impl Iterator<Item = &EdgeId> {
         self.iter()
     }
+
+    fn retain_ids<F>(&mut self, f: F)
+    where
+        F: FnMut(&EdgeId) -> bool,
+    {
+        self.retain(f);
+    }
 }
 
 impl Container for Vec<NodeId> {
@@ -232,4 +298,14 @@ impl Container for Vec<NodeId> {
     fn iter_edge_ids(&self) -> impl Iterator<Item = &EdgeId> {
         self.iter()
     }
+
+    fn retain_ids<F>(&mut self, f: F)
+    where
+        F: FnMut(&EdgeId) -> bool,
+    {
+        self.retain(f);
+    }
 }
+
+pub type HyperAdjList<W> = HyperAdjListBase<W, Vec<NodeId>>;
+pub type HyperAdjSet<W> = HyperAdjListBase<W, HashSet<NodeId, FixedState>>;

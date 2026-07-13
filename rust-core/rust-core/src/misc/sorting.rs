@@ -1,7 +1,8 @@
 use num_traits::{AsPrimitive, PrimInt};
 
-use crate::types::hyperadj_list::HyperAdjList;
+use crate::types::hyperadj_list::{HyperAdjList, HyperAdjListBase};
 use crate::types::{Hx, Hypergraph, NodeId};
+use std::borrow::Cow;
 use std::hash::Hash;
 
 use crate::types::adj_list::AdjList;
@@ -173,7 +174,7 @@ pub fn degeneracy_ordering<C: AdjConfig>(adj: &AdjListBase<C>) -> (Vec<NodeId>, 
 /// Returns a degeneracy ordering of the hypergraph, the position of each vertex,
 /// and the degeneracy (k) of the hypergraph.
 /// Complexity: O(n + m)
-pub fn hyper_degeneracy_ordering<W>(adj: &HyperAdjList<W>) -> (Vec<usize>, Vec<usize>, usize) {
+pub fn hyper_degeneracy_ordering<W>(adj: &HyperAdjList<W>) -> (Vec<NodeId>, Vec<usize>, usize) {
     let n = adj.n();
     if n == 0 {
         return (vec![], vec![], 0);
@@ -249,7 +250,41 @@ pub fn hyper_degeneracy_ordering<W>(adj: &HyperAdjList<W>) -> (Vec<usize>, Vec<u
         }
     }
 
-    (order, pos, k)
+    (order.into_iter().map(|e| e as NodeId).collect(), pos, k)
+}
+
+pub enum Order<'a> {
+    /// maps position to node id
+    Order(&'a [NodeId]),
+    /// maps node id to position (assuming ids are in range 0..n)
+    Pos(&'a [usize]),
+}
+
+impl<'a> Order<'a> {
+    pub fn ger_order(&self) -> Cow<[NodeId]> {
+        match self {
+            Order::Order(order) => Cow::Borrowed(order),
+            Order::Pos(pos) => {
+                let mut rv = vec![0; pos.len()];
+                for (i, &p) in pos.iter().enumerate() {
+                    rv[p] = i as NodeId;
+                }
+                Cow::Owned(rv)
+            }
+        }
+    }
+    pub fn get_pos(&self) -> Cow<[usize]> {
+        match self {
+            Order::Order(order) => {
+                let mut rv = vec![0; order.len()];
+                for (i, &node) in order.iter().enumerate() {
+                    rv[node as usize] = i;
+                }
+                Cow::Owned(rv)
+            }
+            Order::Pos(pos) => Cow::Borrowed(pos),
+        }
+    }
 }
 
 // A version of degeneracy_ordering that accepts Python objects.
