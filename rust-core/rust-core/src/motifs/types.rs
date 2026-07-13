@@ -119,3 +119,8 @@ impl std::fmt::Display for MotifStats {
         )
     }
 }
+impl std::fmt::Debug for MotifStats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self)
+    }
+}

@@ -5,6 +5,9 @@ pub mod graph {
     use pyo3_stub_gen::reexport_module_members;
 
     #[pymodule_export]
+    use crate::loader::DatasetLoader;
+
+    #[pymodule_export]
     use super::super::adj_list::UnweightedUndirectedAdjList;
 
     #[pymodule_export]

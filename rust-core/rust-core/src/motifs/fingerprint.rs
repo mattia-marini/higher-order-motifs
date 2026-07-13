@@ -8,6 +8,7 @@ use crate::motifs::compressed_motif::{CMAssociated, CompactMotif, CompactMotifCo
 use crate::motifs::compressed_motif::{CompactMotif3, CompactMotif4};
 use crate::motifs::compressed_node_set::CompressedNodeSet;
 use crate::util::sorting_network::TryNetSort;
+use rust_core_macros::remove_attr;
 use std::cmp::{max, min};
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -108,8 +109,17 @@ pub struct Fingerprint4 {
     gen_stub_pymethods(module = "rust_core._core.motifs.types"),
     pymethods
 )]
+#[cfg_attr(not(feature = "bindings"), remove_attr("staticmethod"))]
 impl Fingerprint4 {
     const SIZE: usize = <Self as CMAssociated>::CMType::SIZE;
+
+    #[staticmethod]
+    pub fn new() -> Self {
+        Self {
+            order_map: [0u8; Self::SIZE],
+            inclusions: 0,
+        }
+    }
 
     pub fn get_canonical_rep(&self) -> CompactMotif4 {
         let mut rv = CompactMotif::<4>::zero();

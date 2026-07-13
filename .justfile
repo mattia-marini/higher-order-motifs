@@ -7,7 +7,7 @@ export PLOT_OUT_DIR := absolute_path(env("PLOT_OUT_DIR"))
 export PYO3_PYTHON := absolute_path(".venv/bin/python")
 
 gen-stubs:
-  cd rust-core && cargo run --bin stub_gen
+  cd rust-core && cargo run --bin stub_gen --features="bindings"
 
 test-python:
   uv run --package test-core all

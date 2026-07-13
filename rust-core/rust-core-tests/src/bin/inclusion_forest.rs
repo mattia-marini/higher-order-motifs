@@ -7,8 +7,10 @@ use rust_core::{
     types::{Hx, Hypergraph, hyperadj_list::HyperAdjList},
 };
 
-pub fn main() {
-    dblp();
+pub fn main() -> Result<(), Box<dyn Error>> {
+    dblp()?;
+
+    Ok(())
 }
 
 pub fn small() {

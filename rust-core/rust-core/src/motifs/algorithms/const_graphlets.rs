@@ -79,11 +79,12 @@ pub const TWO_EDGES_DISCONNECTED: CompactMotif<4> = {
     rv
 };
 
-pub const TRIANGLE_PLUS_ISOLATED: CompactMotif<4> = {
+pub const TAILED_TRIANGLE: CompactMotif<4> = {
     let mut rv = CompactMotif::<4>::zero();
     rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 1]));
     rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([0, 2]));
     rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([1, 2]));
+    rv.const_add_edge_with_nodes(CompressedNodeSet::from_array([2, 3]));
     rv
 };
 

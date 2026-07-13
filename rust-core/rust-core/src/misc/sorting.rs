@@ -261,7 +261,7 @@ pub enum Order<'a> {
 }
 
 impl<'a> Order<'a> {
-    pub fn ger_order(&self) -> Cow<[NodeId]> {
+    pub fn ger_order(&'a self) -> Cow<'a, [NodeId]> {
         match self {
             Order::Order(order) => Cow::Borrowed(order),
             Order::Pos(pos) => {
@@ -273,7 +273,7 @@ impl<'a> Order<'a> {
             }
         }
     }
-    pub fn get_pos(&self) -> Cow<[usize]> {
+    pub fn get_pos(&'a self) -> Cow<'a, [usize]> {
         match self {
             Order::Order(order) => {
                 let mut rv = vec![0; order.len()];

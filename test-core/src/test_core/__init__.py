@@ -12,7 +12,6 @@
 
 
 from . import test_orca
-from .rust import test_loader
 
 
 def main() -> None:

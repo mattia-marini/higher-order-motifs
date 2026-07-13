@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not};
 
 #[derive(Copy, Clone)]
@@ -30,6 +31,10 @@ impl CompressedNodeSet {
 
     pub fn remove(&mut self, node: usize) {
         self.nodes &= !(1 << node);
+    }
+
+    pub fn insert(&mut self, node: usize) {
+        self.nodes |= (1 << node);
     }
 
     pub const fn len(&self) -> u32 {
@@ -138,3 +143,16 @@ impl Not for CompressedNodeSet {
         Self { nodes: !self.nodes }
     }
 }
+
+impl Hash for CompressedNodeSet {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.nodes.hash(state);
+    }
+}
+impl PartialEq for CompressedNodeSet {
+    fn eq(&self, other: &Self) -> bool {
+        self.nodes == other.nodes
+    }
+}
+
+impl Eq for CompressedNodeSet {}

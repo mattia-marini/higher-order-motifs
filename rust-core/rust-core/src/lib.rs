@@ -28,6 +28,7 @@ pub mod _core {
     #[pymodule_export]
     use super::loader::loader;
 
+    #[pymodule_init]
     pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.init_submodules()?;
         Ok(())

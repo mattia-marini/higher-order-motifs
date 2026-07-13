@@ -361,7 +361,7 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
         let upper_bound = Neighbor::new(a.min(b).min(c), (), edge_ab as EdgeId);
 
         // 4-clique counting
-        common_neighbors_sorted_list_3_cloj(&adj[a], &adj[b], &adj[c], upper_bound, |i, j, k| {
+        common_neighbors_sorted_list_3_cloj(&adj[a], &adj[b], &adj[c], &upper_bound, |i, j, k| {
             let common = adj[a][i].node;
 
             orbit[a as usize][14] += 1.0;
@@ -669,7 +669,7 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
     motif_stats.insert(PATH_4.fingerprint(), path_4);
     motif_stats.insert(STAR_4.fingerprint(), star_4);
     motif_stats.insert(TWO_EDGES_DISCONNECTED.fingerprint(), two_edges_disconnected);
-    motif_stats.insert(TRIANGLE_PLUS_ISOLATED.fingerprint(), triangle_plus_isolated);
+    motif_stats.insert(TAILED_TRIANGLE.fingerprint(), triangle_plus_isolated);
     motif_stats.insert(PATH_3_PLUS_ISOLATED.fingerprint(), path_3_plus_isolated);
     motif_stats.insert(EDGE_PLUS_TWO_ISOLATED.fingerprint(), edge_plus_two_isolated);
     motif_stats.insert(FOUR_ISOLATED.fingerprint(), four_isolated);

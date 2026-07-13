@@ -56,6 +56,8 @@ impl<W> HyperCSR<W> {
         rv.lookup.reserve(hg.m());
         rv.weights.reserve(hg.m());
         rv.sizes.reserve(11);
+        rv.sizes.push((0, 0));
+        rv.sizes.push((0, 0));
         rv.m = hg.m();
         rv.n = hg.n();
 

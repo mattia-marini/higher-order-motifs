@@ -208,7 +208,7 @@ pub fn forward_hashed_cloj<W, I, F>(
     };
 
     for i in 0..n {
-        let u = order[i] as usize; // Cast once per outer loop
+        let u = order[i] as usize;
 
         for neighbor in &adj[u] {
             let v = neighbor.node as usize;

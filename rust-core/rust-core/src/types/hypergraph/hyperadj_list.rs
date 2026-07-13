@@ -53,6 +53,8 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
         csr.lookup.reserve(hg.m());
         csr.weights.reserve(hg.m());
         csr.sizes.reserve(11);
+        csr.sizes.push((0, 0));
+        csr.sizes.push((0, 0));
         csr.m = hg.m();
         csr.n = hg.n();
 
@@ -107,8 +109,9 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
     }
 
     pub fn iter_by_size(&self, size: usize) -> impl Iterator<Item = (EdgeId, EdgeRef<'_, W>)> {
-        let (start, count) = self.csr.sizes[size];
-        (start..start + count).map(move |id| (id as EdgeId, self.csr.get_edge_by_id(id as EdgeId)))
+        // let (start, count) = self.csr.sizes[size];
+        // (start..start + count).map(move |id| (id as EdgeId, self.csr.get_edge_by_id(id as EdgeId)))
+        self.csr.iter_by_size(size)
     }
 
     pub fn iter_all_incident_edges(&self) -> impl Iterator<Item = &C> {

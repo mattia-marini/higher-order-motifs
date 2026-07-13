@@ -2,11 +2,11 @@ use std::error::Error;
 use std::sync::LazyLock;
 
 use rust_core::loader::DatasetLoader;
-use rust_core::misc::cycle::{count_c4, intensity_c4};
-use rust_core::misc::hyper_degeneracy_ordering;
-use rust_core::motifs::algorithms::escape;
+use rust_core::misc::cycle::intensity_c4;
+use rust_core::motifs::algorithms::escape::{self, unweighted_4, weighted_4};
 use rust_core::types::adj_list::{AdjList, Undirected, WithoutIncidence};
-use rust_core::types::hyperadj_list::HyperAdjListBase;
+use rust_core::types::hyperadj_list::{HyperAdjList, HyperAdjListBase};
+use rust_core::types::{Hx, Hypergraph, NodeId};
 use seq_macro::seq;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -14,6 +14,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     // simple_graph_intensity();
 
     dblp()?;
+    // hospital()?;
     Ok(())
 }
 
@@ -45,10 +46,72 @@ const SIMPLE_WEIGHTED: LazyLock<AdjList<f64, Undirected, WithoutIncidence>> = La
     adj
 });
 
+const SIMPLE_UNWEIGHTED_HYPERGRAPH: LazyLock<HyperAdjList<()>> = LazyLock::new(|| {
+    let mut hg = Hypergraph::new();
+    // K4
+    hg.extend_with_edges(vec![
+        Hx::new_unchecked([0, 1], ()),
+        Hx::new_unchecked([0, 2], ()),
+        Hx::new_unchecked([0, 3], ()),
+        Hx::new_unchecked([1, 2], ()),
+        Hx::new_unchecked([1, 3], ()),
+        Hx::new_unchecked([2, 3], ()),
+    ]);
+    //
+    // // Diamond
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([0, 1], ()),
+    //     Hx::new_unchecked([0, 2], ()),
+    //     Hx::new_unchecked([0, 3], ()),
+    //     Hx::new_unchecked([1, 2], ()),
+    //     Hx::new_unchecked([1, 3], ()),
+    // ]);
+    //
+    // // Tailed triangle
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([0, 1], ()),
+    //     Hx::new_unchecked([0, 2], ()),
+    //     Hx::new_unchecked([0, 3], ()),
+    //     Hx::new_unchecked([1, 2], ()),
+    // ]);
+    //
+    // // C4
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([0, 1], ()),
+    //     Hx::new_unchecked([0, 2], ()),
+    //     Hx::new_unchecked([1, 3], ()),
+    //     Hx::new_unchecked([2, 3], ()),
+    // ]);
+    //
+    // // Star 4
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([0, 1], ()),
+    //     Hx::new_unchecked([0, 2], ()),
+    //     Hx::new_unchecked([0, 3], ()),
+    // ]);
+    //
+    // // Path 4
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([0, 1], ()),
+    //     Hx::new_unchecked([0, 2], ()),
+    //     Hx::new_unchecked([1, 3], ()),
+    //     Hx::new_unchecked([2, 3], ()),
+    // ]);
+
+    // hg.extend_with_edges(vec![Hx::new_unchecked([0, 1, 2], ())]);
+    // hg.extend_with_edges(vec![Hx::new_unchecked([0, 1, 3], ())]);
+
+    let adj = HyperAdjList::from_hypergraph_unmapped(hg.clone());
+
+    adj
+});
+
 pub fn simple_graph_count() {
-    let mut adj = SIMPLE_UNWEIGHTED.clone();
-    println!("n: {}, m: {}", adj.n(), adj.m());
-    println!("Non induced c4 count {:?}", count_c4(&mut adj));
+    let adj = SIMPLE_UNWEIGHTED_HYPERGRAPH.clone();
+    let rv = unweighted_4(&adj);
+    for (number, (motif, stats)) in rv.iter().enumerate() {
+        println!("{}\t{}", stats.count, motif.get_canonical_rep());
+    }
 }
 
 pub fn simple_graph_intensity() {
@@ -70,13 +133,34 @@ pub fn dblp() -> Result<(), Box<dyn Error>> {
     });
     hg.remove_isolated_nodes();
 
-    let (hyperadj, _, _) = HyperAdjListBase::<()>::from_hypergraph_mapped(hg.0);
+    let (hyperadj, _, _) = HyperAdjList::<()>::from_hypergraph_mapped(hg.0);
 
     let t = std::time::Instant::now();
-    // escape::unweighted_4(&hyperadj);
-    let (_, _, k) = hyper_degeneracy_ordering(&hyperadj);
-    println!("{k}");
-    println!("dblp c3 count time: {:?}", t.elapsed());
+    println!("n: {}, m: {}", hyperadj.n(), hyperadj.m());
+    escape::unweighted_4(&hyperadj);
+    println!("Finished in: {:?}", t.elapsed());
+
+    Ok(())
+}
+
+pub fn hospital() -> Result<(), Box<dyn Error>> {
+    let mut hg = DatasetLoader::builder()
+        .cached(true)
+        .hospital()
+        .unweighted()
+        .load()?;
+
+    seq!(N in 3..11 {
+        hg.take_edges::<N>();
+    });
+    hg.remove_isolated_nodes();
+
+    let (hyperadj, _, _) = HyperAdjList::<()>::from_hypergraph_mapped(hg.0);
+
+    let t = std::time::Instant::now();
+    println!("n: {}, m: {}", hyperadj.n(), hyperadj.m());
+    escape::unweighted_4(&hyperadj);
+    println!("Finished in: {:?}", t.elapsed());
 
     Ok(())
 }
