@@ -21,6 +21,9 @@ test-rust *args:
 unit-test-rust *args:
   cd rust-core/rust-core-tests && cargo test {{args}}
 
+profile *args: 
+  cd rust-core/rust-core-tests && samply record cargo run --profile=profiling --bin {{args}}
+
 print-env: 
   @echo $PLOT_OUT_DIR
   @echo $DATASET_DIR

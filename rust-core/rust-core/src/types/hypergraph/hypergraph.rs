@@ -34,10 +34,10 @@ use rkyv::{
 use rust_core_macros::ct_map;
 
 use super::edge_collection::StaticEdgeSet;
-use super::edge_collection::{HashSet, MAX_HX_SIZE, MIN_HX_SIZE};
+use super::edge_collection::{MAX_HX_SIZE, MIN_HX_SIZE};
 use super::hyperedge::{Hx, UnweightedHx, WeightedHx};
 use crate::types::error::HypergraphError;
-use crate::types::{NodeId, NodeWeight};
+use crate::types::{HashSet, NodeId, NodeWeight};
 
 #[derive(Archive, Serialize, Deserialize, Debug, Clone)]
 pub struct Hypergraph<T, W> {
@@ -400,6 +400,26 @@ impl<T, W> Hypergraph<T, W> {
 
         (new_to_old, old_to_new)
     }
+
+    pub fn retain_orders(&mut self, orders: &[usize]) -> usize {
+        let mut count = 0;
+        let orders = {
+            let mut rv = HashSet::with_hasher(FixedState::default());
+            for &order in orders {
+                if order >= MIN_HX_SIZE && order <= MAX_HX_SIZE {
+                    rv.insert(order);
+                }
+            }
+            rv
+        };
+
+        seq!(N in 2..11 {
+            if !orders.contains(&N) {
+                count += self.take_edges::<N>().len();
+            }
+        });
+        count
+    }
 }
 
 #[cfg_attr(
@@ -542,7 +562,7 @@ mod bindings {
             rv
         }
 
-        fn has_hx(&self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
+        pub fn has_hx(&self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
             let order = edge.len()?;
             seq!( N in 2..11 {
             match order {
@@ -557,7 +577,7 @@ mod bindings {
             })
         }
 
-        fn get_hx<'a>(
+        pub fn get_hx<'a>(
             &self,
             py: Python<'a>,
             edge: Bound<'_, PyTuple>,
@@ -583,7 +603,7 @@ mod bindings {
             })
         }
 
-        fn remove_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
+        pub fn remove_hx(&mut self, edge: Bound<'_, PyTuple>) -> PyResult<bool> {
             let order = edge.len()?;
             seq!( N in 2..11 {
             match order {
@@ -598,8 +618,13 @@ mod bindings {
             })
         }
 
-        fn remove_isolated_nodes(&mut self) -> usize {
+        pub fn remove_isolated_nodes(&mut self) -> usize {
             self.0.remove_isolated_nodes()
+        }
+
+        pub fn retain_orders(&mut self, orders: Vec<usize>) -> usize {
+            println!("Retaining orders: {:?}", orders);
+            self.0.retain_orders(&orders)
         }
     }
 

@@ -13,8 +13,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     // simple_graph_count();
     // simple_graph_intensity();
 
-    dblp()?;
-    // hospital()?;
+    // dblp()?;
+    hospital()?;
     Ok(())
 }
 
@@ -48,15 +48,28 @@ const SIMPLE_WEIGHTED: LazyLock<AdjList<f64, Undirected, WithoutIncidence>> = La
 
 const SIMPLE_UNWEIGHTED_HYPERGRAPH: LazyLock<HyperAdjList<()>> = LazyLock::new(|| {
     let mut hg = Hypergraph::new();
-    // K4
+
     hg.extend_with_edges(vec![
-        Hx::new_unchecked([0, 1], ()),
-        Hx::new_unchecked([0, 2], ()),
-        Hx::new_unchecked([0, 3], ()),
-        Hx::new_unchecked([1, 2], ()),
-        Hx::new_unchecked([1, 3], ()),
-        Hx::new_unchecked([2, 3], ()),
+        // Hx::new_unchecked([0, 2, 3], ()),
+        // Hx::new_unchecked([1, 2, 3], ()),
+        Hx::new_unchecked([0, 1, 2], ()),
+        Hx::new_unchecked([0, 1, 3], ()),
     ]);
+
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([2, 3], ()),
+    //     Hx::new_unchecked([0, 1], ()),
+    // ]);
+
+    // // K4
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([0, 1], ()),
+    //     Hx::new_unchecked([0, 2], ()),
+    //     Hx::new_unchecked([0, 3], ()),
+    //     Hx::new_unchecked([1, 2], ()),
+    //     Hx::new_unchecked([1, 3], ()),
+    //     Hx::new_unchecked([2, 3], ()),
+    // ]);
     //
     // // Diamond
     // hg.extend_with_edges(vec![
@@ -109,7 +122,7 @@ const SIMPLE_UNWEIGHTED_HYPERGRAPH: LazyLock<HyperAdjList<()>> = LazyLock::new(|
 pub fn simple_graph_count() {
     let adj = SIMPLE_UNWEIGHTED_HYPERGRAPH.clone();
     let rv = unweighted_4(&adj);
-    for (number, (motif, stats)) in rv.iter().enumerate() {
+    for (_number, (motif, stats)) in rv.iter().enumerate() {
         println!("{}\t{}", stats.count, motif.get_canonical_rep());
     }
 }
@@ -128,7 +141,7 @@ pub fn dblp() -> Result<(), Box<dyn Error>> {
         .unweighted()
         .load()?;
 
-    seq!(N in 3..11 {
+    seq!(N in 4..11 {
         hg.take_edges::<N>();
     });
     hg.remove_isolated_nodes();
@@ -150,7 +163,7 @@ pub fn hospital() -> Result<(), Box<dyn Error>> {
         .unweighted()
         .load()?;
 
-    seq!(N in 3..11 {
+    seq!(N in 4..11 {
         hg.take_edges::<N>();
     });
     hg.remove_isolated_nodes();
@@ -159,8 +172,12 @@ pub fn hospital() -> Result<(), Box<dyn Error>> {
 
     let t = std::time::Instant::now();
     println!("n: {}, m: {}", hyperadj.n(), hyperadj.m());
-    escape::unweighted_4(&hyperadj);
+    let rv = escape::unweighted_4(&hyperadj);
     println!("Finished in: {:?}", t.elapsed());
+
+    for (_number, (motif, stats)) in rv.iter().enumerate() {
+        println!("{}\t{}", stats.count, motif.get_canonical_rep());
+    }
 
     Ok(())
 }

@@ -78,20 +78,30 @@ impl<W> HyperCSR<W> {
     }
 
     pub fn iter_by_size(&self, size: usize) -> impl Iterator<Item = (EdgeId, EdgeRef<'_, W>)> + '_ {
-        let (first_id, count) = self.sizes[size];
-        let start = self.lookup[first_id].0;
+        // 1. Safely get the size info. If it doesn't exist, this becomes None.
+        let mut maybe_iterator = None;
+        match self.sizes.get(size) {
+            Some((first_id, count)) => {
+                if *first_id < self.m() {
+                    let start = self.lookup[*first_id].0;
 
-        (0..count).map(move |number| {
-            let edge_id = first_id + number;
-            let edge_start = start + size * number;
+                    maybe_iterator = Some((0..*count).map(move |number| {
+                        let edge_id = first_id + number;
+                        let edge_start = start + size * number;
 
-            let edge_ref = EdgeRef {
-                nodes: &self.nodes[edge_start..edge_start + size],
-                weight: &self.weights[edge_id],
-            };
+                        let edge_ref = EdgeRef {
+                            nodes: &self.nodes[edge_start..edge_start + size],
+                            weight: &self.weights[edge_id],
+                        };
 
-            (edge_id as NodeId, edge_ref)
-        })
+                        (edge_id as EdgeId, edge_ref)
+                    }));
+                }
+            }
+            None => maybe_iterator = None,
+        }
+
+        maybe_iterator.into_iter().flatten()
     }
 
     pub fn get_edge_by_id(&self, edge_id: EdgeId) -> EdgeRef<'_, W> {

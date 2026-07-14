@@ -1,5 +1,6 @@
 use std::ops::BitOr;
 
+use bit_set::BitSet;
 use foldhash::fast::FixedState;
 use hashbrown::{HashMap, HashSet};
 
@@ -27,8 +28,6 @@ use crate::{
 };
 
 pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats> {
-    // let mut motif_stats = HashMap::new();
-
     let edges_2: Vec<(NodeId, NodeId, ())> = adj
         .iter_by_size(2)
         .map(|(_, e)| (e.nodes[0], e.nodes[1], ()))
@@ -38,21 +37,7 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
         AdjList::<(), Undirected, WithIncidence>::from_edges_mapped(edges_2);
     let adj_set: AdjSet<(), Undirected, WithIncidence> = adj_list.clone().into();
 
-    // adj.remove_multiedges();
-
-    // let mut inc_list = adj.clone();
-    // for u in 0..adj.n() {
-    //     for v in inc_list[u] {}
-    // }
-
-    // Create hash-based adjacency for O(1) edge lookups
-    // adj_hash[i] = HashMap<(neighbor_node_id, edge_id)>
-    // let mut adj_hash: Vec<HashMap<NodeId, NodeId, FixedState>> = adj_list
-    //     .adj
-    //     .iter()
-    //     .cloned()
-    //     .map(|neighbors| neighbors.into_iter().map(|e| (e.0, e.1.0)).collect())
-    //     .collect();
+    let mut rv = HashMap::new();
 
     // Initialize motif stats
     let mut triangle = MotifStats::new();
@@ -71,7 +56,6 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
 
     adj_list.sort_neighbors();
     let (order, pos, degeneracy) = degeneracy_ordering(&adj_list);
-    // println!("Adj list: {:?}", adj_list);
     // Compute triangles + cliques
     // Count triangles with forward hashed in O(m^1.5)
     // TODO: make it use degeneracy order instead of degree order
@@ -141,29 +125,6 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
     // c4 are enumerated efficiently
     c4.count = count_c4(&mut adj_list);
 
-    // println!("adj list: n {}, m {}", adj_list.n(), adj_list.m());
-    // println!("Tot triangles: {}", triangle.count);
-    // println!("Tot K4: {}", k4.count);
-    // println!("Tot C4: {}", c4.count);
-
-    // println!("{:?}", adj_list);
-    // After degree sorting, for each node u, the number of neighbors v such that v ≺ u
-    // let (order, rank, max_deg) = sort_by_degree(&mut adj_list, false);
-    // let n_less_count = adj_list
-    //     .iter_neighbors()
-    //     .enumerate()
-    //     .map(|(v, neighbors)| {
-    //         neighbors
-    //             .iter()
-    //             // .filter(|(&&(neighbor, ref weight))| {
-    //             .filter(|n| {
-    //                 adj_list[n.node].len() < neighbors.len()
-    //                     || (adj_list[n.node].len() == neighbors.len() && n.node < v as NodeId)
-    //             })
-    //             .count()
-    //     })
-    //     .collect::<Vec<usize>>();
-
     // converting to induced counts
     diamond.count -= 6 * k4.count;
     c4.count -= 3 * k4.count + diamond.count;
@@ -171,42 +132,34 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
     star4.count -= 4 * k4.count + 2 * diamond.count + tailed_triangle.count;
     path4.count -= 12 * k4.count + 6 * diamond.count + 2 * tailed_triangle.count + 4 * c4.count;
 
-    let mut rv = HashMap::new();
-
-    println!(
-        "path4: {}, star4: {}, k4: {}, c4: {}, diamond: {}, tailed_triangle: {}",
-        path4.count, star4.count, k4.count, c4.count, diamond.count, tailed_triangle.count
-    );
-
     // Add results to the motif stats hashmap
     rv.insert(PATH_4.fingerprint(), path4);
     rv.insert(STAR_4.fingerprint(), star4);
 
-    rv.insert(FOUR_CLIQUE.fingerprint(), c4);
-    rv.insert(FOUR_CYCLE.fingerprint(), k4);
+    rv.insert(FOUR_CLIQUE.fingerprint(), k4);
+    rv.insert(FOUR_CYCLE.fingerprint(), c4);
 
     rv.insert(DIAMOND.fingerprint(), diamond);
     rv.insert(TAILED_TRIANGLE.fingerprint(), tailed_triangle);
 
-    return rv;
-    // Hyper degeneracy to efficiently find inclusions of every edge
+    let mut mapped_nodes = vec![u8::MAX; adj.n()];
+    let mut black_nodes = BitSet::with_capacity(adj.n());
+    let mut inserted = BitSet::with_capacity(adj.n());
+    let mut extension_nodes = vec![[CompactMotif::<4>::zero(); 2]; adj.n()];
+    let mut node_list = Vec::with_capacity(adj.n() / 2);
+
+    // let mut black_nodes = HashSet::new();
+    // let mut extension_nodes = HashMap::new();
 
     for (pivot_edge_id, pivot_edge) in adj.iter_by_size(3) {
+        // println!("pivot edge: {:?}", pivot_edge_id);
         let nodes = pivot_edge.nodes;
         let min_inner_node = *nodes.iter().min().unwrap();
 
-        let mut mapped_nodes = [0; 3];
+        // let mut mapped_nodes = [0; 3];
         mapped_nodes[nodes[0] as usize] = 0;
         mapped_nodes[nodes[1] as usize] = 1;
         mapped_nodes[nodes[2] as usize] = 2;
-
-        let nodes_set = {
-            let mut rv = HashSet::new();
-            for n in nodes.iter() {
-                rv.insert(*n);
-            }
-            rv
-        };
 
         let mut center_motif = const {
             let mut motif_3 = CompactMotif::<4>::zero();
@@ -216,8 +169,6 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
             [motif_2, motif_3] // keeping them separated to subtract overcounted 2-uniform-motifs fast
         };
 
-        let mut extension_nodes = HashMap::new();
-
         for i in 0..3 {
             for (edge_id, edge) in adj.iter_incident_edges(nodes[i]) {
                 if edge.nodes.len() < 4 && pivot_edge_id != edge_id {
@@ -226,7 +177,7 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
                     let mut outer_nodes = [0; 2];
 
                     for n in edge.nodes {
-                        if nodes_set.contains(n) {
+                        if mapped_nodes[*n as usize] != u8::MAX {
                             inner_nodes[i1] = *n;
                             i1 += 1;
                         } else {
@@ -237,60 +188,165 @@ pub fn unweighted_4(adj: &HyperAdjList<()>) -> HashMap<Fingerprint4, MotifStats>
 
                     if i2 == 0 {
                         center_motif[0].add_edge_with_nodes(CompressedNodeSet::from_iter(
-                            inner_nodes[0..i1].into_iter().map(|e| *e as u8),
+                            inner_nodes[0..i1]
+                                .into_iter()
+                                .map(|e| mapped_nodes[*e as usize]),
                         ));
-                    }
-
-                    if outer_nodes.len() == 1 {
+                    } else if i2 == 1 {
+                        let outer_node = outer_nodes[0] as usize;
                         //avoid counting over counting
-                        if edge.nodes.len() == 3 && !(min_inner_node == outer_nodes[0]) {
+                        if edge.nodes.len() == 3 && !(pivot_edge_id < edge_id) {
+                            if !inserted.contains(outer_node) {
+                                node_list.push(outer_node);
+                                inserted.insert(outer_node);
+                            }
+                            black_nodes.insert(outer_node);
+                            // (outer_nodes[0]);
+                            // extension_nodes.remove(&outer_nodes[0]);
                             continue;
                         }
 
-                        let mut nodes = CompressedNodeSet::new(0);
-
-                        for n in inner_nodes {
-                            nodes.insert(mapped_nodes[n as usize]);
+                        if black_nodes.contains(outer_node) {
+                            continue;
                         }
 
-                        // assuming the added node is the last one without loss of generality
-                        nodes.insert(3);
+                        let nodes = {
+                            let mut rv = CompressedNodeSet::new(0);
+                            for n in inner_nodes[0..i1].iter() {
+                                rv.insert(mapped_nodes[*n as usize] as usize);
+                            }
+                            // assuming the added node is the last one without loss of generality
+                            rv.insert(3);
+                            rv
+                        };
 
                         let motif = {
                             let mut rv = CompactMotif::<4>::zero();
+                            // println!("nodes: {:?}", nodes);
                             rv.add_edge_with_nodes(nodes);
                             rv
                         };
 
-                        let mut peripheral_motifs = [CompactMotif::<4>::zero(); 2];
                         let bucket = edge.nodes.len() - 2;
-                        peripheral_motifs[bucket] = motif;
+                        let motifs = &mut extension_nodes[outer_node];
 
-                        extension_nodes
-                            .entry(outer_nodes[0])
-                            .and_modify(|motifs: &mut [CompactMotif<4>; 2]| {
-                                motifs[bucket] = motifs[bucket].bitor(motif)
-                            })
-                            .or_insert(peripheral_motifs);
+                        if inserted.contains(outer_node) {
+                            motifs[bucket] = motifs[bucket].bitor(motif);
+                        } else {
+                            let mut peripheral_motifs = [CompactMotif::<4>::zero(); 2];
+                            peripheral_motifs[bucket] = motif;
+                            *motifs = peripheral_motifs;
+                            inserted.insert(outer_node);
+                            node_list.push(outer_node);
+                        }
+                        // extension_nodes
+                        //     .entry(outer_nodes[0])
+                        //     .and_modify(|motifs: &mut [CompactMotif<4>; 2]| {
+                        //         motifs[bucket] = motifs[bucket].bitor(motif);
+                        //     })
+                        //     .or_insert(peripheral_motifs);
+                    }
+                }
+            }
+        }
+        // println!("{:?}", node_list);
+
+        // println!("extension nodes: {:?}", extension_nodes);
+        for &node in node_list.iter() {
+            if !black_nodes.contains(node) {
+                let motifs = &extension_nodes[node];
+                let uniform_2_motif = center_motif[0].bitor(motifs[0]);
+                let uniform_3_motif = center_motif[1].bitor(motifs[1]);
+                let combined = uniform_2_motif.bitor(uniform_3_motif);
+
+                // Correcting overcounting of 2-uniform motifs
+                rv.entry(uniform_2_motif.fingerprint())
+                    .and_modify(|stats: &mut MotifStats| stats.count -= 1);
+
+                rv.entry(combined.fingerprint())
+                    .and_modify(|stats: &mut MotifStats| stats.count += 1)
+                    .or_insert(MotifStats {
+                        count: 1,
+                        mean_intensity: 0.,
+                        mean_coherence: 0.,
+                        actual_intensity: 0.,
+                    });
+            }
+
+            black_nodes.remove(node);
+            inserted.remove(node);
+        }
+
+        node_list.clear();
+
+        mapped_nodes[nodes[0] as usize] = u8::MAX;
+        mapped_nodes[nodes[1] as usize] = u8::MAX;
+        mapped_nodes[nodes[2] as usize] = u8::MAX;
+    }
+
+    let mut edges_2 = HashSet::new();
+    let mut edges_3 = HashSet::new();
+
+    for (edge_id, edge) in adj.iter_by_size(2) {
+        edges_2.insert(edge.nodes);
+    }
+
+    for (edge_id, edge) in adj.iter_by_size(3) {
+        edges_3.insert(edge.nodes);
+    }
+
+    for (edge_id, edge) in adj.iter_by_size(4) {
+        // println!("Edge: {:?}", edge.nodes);
+        mapped_nodes[edge.nodes[0] as usize] = 0;
+        mapped_nodes[edge.nodes[1] as usize] = 1;
+        mapped_nodes[edge.nodes[2] as usize] = 2;
+        mapped_nodes[edge.nodes[3] as usize] = 3;
+
+        let mut motif = CompactMotif::<4>::zero();
+        for i in 0..4 {
+            for j in (i + 1)..4 {
+                if edges_2.contains([edge.nodes[i], edge.nodes[j]].as_slice()) {
+                    motif.add_edge_with_nodes(CompressedNodeSet::from_array([i as u8, j as u8]));
+                }
+            }
+        }
+
+        for i in 0..4 {
+            for j in (i + 1)..4 {
+                for k in (j + 1)..4 {
+                    if edges_3.contains([edge.nodes[i], edge.nodes[j], edge.nodes[k]].as_slice()) {
+                        motif.add_edge_with_nodes(CompressedNodeSet::from_array([
+                            i as u8, j as u8, k as u8,
+                        ]));
                     }
                 }
             }
         }
 
-        for (node, motifs) in extension_nodes {
-            let uniform_2_motf = center_motif[0].bitor(motifs[0]);
-            let uniform_3_motf = center_motif[1].bitor(motifs[1]);
-            let combined = uniform_2_motf.bitor(uniform_3_motf);
+        rv.entry(motif.fingerprint())
+            .and_modify(|stats: &mut MotifStats| stats.count -= 1);
 
-            // Correcting overcounting of 2-uniform motifs
-            rv.entry(uniform_2_motf.fingerprint())
-                .and_modify(|stats: &mut MotifStats| stats.count -= 1);
+        motif.add_edge_with_nodes(CompressedNodeSet::from_array([0, 1, 2, 3]));
 
-            rv.entry(combined.fingerprint())
-                .and_modify(|stats: &mut MotifStats| stats.count += 1)
-                .or_insert(MotifStats::new());
-        }
+        // println!("Motif: {:?}", motif);
+        // println!(
+        //     "Reconstructed motif: {}",
+        //     motif.fingerprint().get_canonical_rep()
+        // );
+
+        rv.entry(motif.fingerprint())
+            .and_modify(|stats: &mut MotifStats| stats.count += 1)
+            .or_insert(MotifStats {
+                count: 1,
+                mean_intensity: 0.,
+                mean_coherence: 0.,
+                actual_intensity: 0.,
+            });
     }
+
+    // for (_number, (motif, stats)) in rv.iter().enumerate() {
+    //     println!("{}\t{}", stats.count, motif.get_canonical_rep());
+    // }
 
     rv
 }

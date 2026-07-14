@@ -156,3 +156,9 @@ impl PartialEq for CompressedNodeSet {
 }
 
 impl Eq for CompressedNodeSet {}
+
+impl std::fmt::Debug for CompressedNodeSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CompressedNodeSet({:08b})", self.nodes)
+    }
+}

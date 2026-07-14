@@ -20,7 +20,7 @@ pub mod motifs {
             fingerprint::{Fingerprint3, Fingerprint4},
             types::MotifStats,
         },
-        types::PyHypergraph,
+        types::{PyHypergraph, hyperadj_list::HyperAdjList},
     };
     use pyo3::pyfunction;
     use pyo3_stub_gen::{derive::gen_stub_pyfunction, reexport_module_members};
@@ -70,6 +70,33 @@ pub mod motifs {
                 super::algorithms::orca::unweighted_4(&unweighted)
             }
             PyHypergraph::Weighted(weighted) => super::algorithms::orca::weighted_4(&weighted),
+        }
+    }
+
+    #[pyfunction]
+    #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
+    pub fn escape_3(hg: PyHypergraph) -> HashMap<Fingerprint3, MotifStats> {
+        todo!()
+        // match hg {
+        //     PyHypergraph::Unweighted(unweighted) => {
+        //         super::algorithms::escape::unweighted_4(&unweighted)
+        //     }
+        //     PyHypergraph::Weighted(weighted) => super::algorithms::orca::weighted_4(&weighted),
+        // }
+    }
+
+    #[pyfunction]
+    #[gen_stub_pyfunction(module = "rust_core._core.motifs")]
+    pub fn escape_4(hg: PyHypergraph) -> HashMap<Fingerprint4, MotifStats> {
+        match hg {
+            PyHypergraph::Unweighted(unweighted) => {
+                let (adj, _, _) = HyperAdjList::from_hypergraph_mapped(unweighted.0.clone());
+                super::algorithms::escape::unweighted_4(&adj)
+            }
+            PyHypergraph::Weighted(weighted) => {
+                let (adj, _, _) = HyperAdjList::from_hypergraph_mapped(weighted.0.clone());
+                super::algorithms::escape::weighted_4(&adj)
+            }
         }
     }
 

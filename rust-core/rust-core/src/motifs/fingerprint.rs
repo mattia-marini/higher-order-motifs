@@ -124,7 +124,6 @@ impl Fingerprint4 {
     pub fn get_canonical_rep(&self) -> CompactMotif4 {
         let mut rv = CompactMotif::<4>::zero();
 
-        // 1. Reconstruct 2-edges (Corrected Havel-Hakimi)
         let mut out_2 = [(0u8, 0u8); Self::SIZE];
         for i in 0..Self::SIZE {
             out_2[i] = (i as u8, self.order_map[i] & 3);
@@ -155,10 +154,8 @@ impl Fingerprint4 {
             }
         }
 
-        // 2. Reconstruct 3-edges and 4-edges
         let count_4 = (self.order_map[0] >> 4) & 3;
 
-        // Correctly extract the 3-degrees (shift by 2) and sum them up
         let total_3_deg: usize = self
             .order_map
             .iter()
@@ -166,7 +163,6 @@ impl Fingerprint4 {
             .sum();
         let count_3 = total_3_deg / 3;
 
-        // The exact nodes to exclude from each 3-edge are uniquely fixed by their 3-degrees
         let mut check_3_edges = || {
             match count_3 {
                 0 => {}
