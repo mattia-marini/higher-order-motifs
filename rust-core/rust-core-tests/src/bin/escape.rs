@@ -14,7 +14,10 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     // simple_graph_intensity();
 
     // dblp()?;
-    hospital()?;
+    // hospital()?;
+
+    friendship_hs()?;
+
     Ok(())
 }
 
@@ -178,6 +181,47 @@ pub fn hospital() -> Result<(), Box<dyn Error>> {
     for (_number, (motif, stats)) in rv.iter().enumerate() {
         println!("{}\t{}", stats.count, motif.get_canonical_rep());
     }
+
+    Ok(())
+}
+
+pub fn friendship_hs() -> Result<(), Box<dyn Error>> {
+    let mut hg = DatasetLoader::builder()
+        .cached(true)
+        .friendship_hs()
+        .unweighted()
+        .load()?;
+
+    // seq!(N in 4..11 {
+    //     hg.take_edges::<N>();
+    // });
+    // hg.remove_isolated_nodes();
+
+    println!("hg.m: {}", hg.m());
+    let mut count = 0;
+    seq!(N in 2..11 {
+        count += hg.0.edges::<N>().len();
+    });
+    println!("m before {}", count);
+
+    hg.normalize_node_ids();
+
+    let mut count = 0;
+    seq!(N in 2..11 {
+        count += hg.0.edges::<N>().len();
+    });
+    println!("m before {}", count);
+
+    // let (hyperadj, _, _) = HyperAdjList::<()>::from_hypergraph_mapped(hg.0);
+    //
+    // let t = std::time::Instant::now();
+    // println!("n: {}, m: {}", hyperadj.n(), hyperadj.m());
+    // let rv = escape::unweighted_4(&hyperadj);
+    // println!("Finished in: {:?}", t.elapsed());
+    //
+    // for (_number, (motif, stats)) in rv.iter().enumerate() {
+    //     println!("{}\t{}", stats.count, motif.get_canonical_rep());
+    // }
 
     Ok(())
 }

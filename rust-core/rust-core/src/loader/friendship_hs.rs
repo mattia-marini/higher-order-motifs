@@ -1,5 +1,5 @@
 use crate::types::{
-    Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
+    Hx, Hypergraph, NodeId, NodeWeight, UnweightedHx, UnweightedHypergraph, WeightedHx,
     WeightedHypergraph,
 };
 use crate::{loader::common::Loader, loader::error::LoaderError};
@@ -31,7 +31,10 @@ impl Loader for FriendshipHsStdUnweightedLoader {
             if parts.len() >= 2 {
                 let a = parts[0].parse().unwrap_or(0);
                 let b = parts[1].parse().unwrap_or(0);
-                hg.add_edge(UnweightedHx::new_unchecked([a, b]).0);
+                let mut nodes = [a, b];
+                nodes.sort_unstable();
+
+                hg.add_edge(UnweightedHx::new_unchecked(nodes).0);
             }
         }
 
@@ -60,10 +63,11 @@ impl Loader for FriendshipHsStdWeightedLoader {
             if parts.len() >= 2 {
                 let a = parts[0].parse().unwrap_or(0);
                 let b = parts[1].parse().unwrap_or(0);
-                if !hg.has_hyperedge::<2>(&[a, b]) {
-                    hg.add_edge(WeightedHx::new_unchecked([a, b], 0.0).0);
+                let e = Hx::new([a, b], 0.0).unwrap();
+                if !hg.has_hyperedge(&e.nodes) {
+                    hg.add_edge(e.clone());
                 }
-                hg.modify_hx_weigth_with::<2, _>(&[a, b], |w| w + 1.0);
+                hg.modify_hx_weigth_with(&e.nodes, |w| w + 1.0);
             }
         }
 

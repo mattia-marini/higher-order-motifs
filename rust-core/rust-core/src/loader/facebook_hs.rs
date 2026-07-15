@@ -14,8 +14,10 @@ impl Loader for FacebookHsStdUnweightedLoader {
 
     fn from_file(&self) -> Result<Self::Output, LoaderError> {
         let dataset_location = self.dataset_location.clone();
+
         // The python loader uses pandas and only reads triples (a,b,c) and if only_confirmed then c==1.
         // Here we'll load the file naively, assuming whitespace-separated columns a b c per line.
+        //
         use std::fs::File;
         use std::io::{BufRead, BufReader};
 
@@ -37,7 +39,10 @@ impl Loader for FacebookHsStdUnweightedLoader {
                     true
                 };
                 if include {
-                    hg.add_edge(UnweightedHx::new_unchecked([a, b]).0);
+                    let mut nodes = [a, b];
+                    nodes.sort_unstable();
+
+                    hg.add_edge(UnweightedHx::new_unchecked(nodes).0);
                 }
             }
         }

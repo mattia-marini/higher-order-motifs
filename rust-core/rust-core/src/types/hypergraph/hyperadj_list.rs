@@ -4,6 +4,7 @@ use hashbrown::{HashMap, HashSet};
 use num_traits::{AsPrimitive, Zero};
 use std::{
     borrow::Cow,
+    fmt::Debug,
     hash::Hash,
     ops::{Index, IndexMut},
 };
@@ -38,6 +39,7 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
         mut hg: Hypergraph<NodeId, W>,
     ) -> (Self, Vec<NodeId>, HashMap<NodeId, usize, FixedState>) {
         let (new_to_old, old_to_new) = hg.normalize_node_ids();
+
         let adj = Self::from_hypergraph_unmapped(hg);
         (adj, new_to_old, old_to_new)
     }
@@ -85,10 +87,6 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
                 adj[*n as usize].insert_id(edge_id as NodeId);
             }
         }
-
-        // for v in adj.iter_mut() {
-        //     v.sort
-        // }
 
         Self { csr, adj }
     }
@@ -216,7 +214,7 @@ impl<'a, W, C: Container> IntoIterator for &'a mut HyperAdjListBase<W, C> {
     }
 }
 
-impl<W, C: Container> std::fmt::Debug for HyperAdjListBase<W, C> {
+impl<W, C: Container> Debug for HyperAdjListBase<W, C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for n in 0..self.n() {
             writeln!(f, "n: {}", n);

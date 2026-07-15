@@ -623,7 +623,6 @@ mod bindings {
         }
 
         pub fn retain_orders(&mut self, orders: Vec<usize>) -> usize {
-            println!("Retaining orders: {:?}", orders);
             self.0.retain_orders(&orders)
         }
     }
