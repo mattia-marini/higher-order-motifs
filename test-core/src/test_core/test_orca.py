@@ -20,12 +20,19 @@ def run():
 
 def test_hospital(order: int):
     py_loader = load_hospital(StandardConstructionMethod(weighted=True))
-    rust_loader = DatasetLoader.builder().hospital().unweighted().cached(True).load()
+    rust_loader = DatasetLoader.builder().hospital().weighted().cached(True).load()
 
-    py_loader = py_loader.filter_orders([2, 3, 4])
-    rust_loader.retain_orders([2, 3, 4])
+    py_loader = py_loader.filter_orders([2])
+    rust_loader.retain_orders([2])
     print(f"rust: 2: {rust_loader.count(2)} 3: {rust_loader.count(3)}")
     print("")
+
+    count = 0
+    edges_2 = py_loader.get_order_map()[2]
+    for edge in edges_2:
+        count += edge.weight
+
+    print(f"Python 2 edges: {count / len(edges_2)}")
 
     print(f"Hash multiedges: {py_loader.has_multiedge()}")
     print(f"Hash self loops: {py_loader.has_self_loops()}")

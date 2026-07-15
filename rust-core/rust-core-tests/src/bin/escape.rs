@@ -6,7 +6,7 @@ use rust_core::misc::cycle::intensity_c4;
 use rust_core::motifs::algorithms::escape::{self, unweighted_4, weighted_4};
 use rust_core::types::adj_list::{AdjList, Undirected, WithoutIncidence};
 use rust_core::types::hyperadj_list::{HyperAdjList, HyperAdjListBase};
-use rust_core::types::{Hx, Hypergraph, NodeId};
+use rust_core::types::{Hx, Hypergraph, NodeId, NodeWeight};
 use seq_macro::seq;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -14,9 +14,9 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     // simple_graph_intensity();
 
     // dblp()?;
-    // hospital()?;
+    hospital_w()?;
 
-    friendship_hs()?;
+    // friendship_hs()?;
 
     Ok(())
 }
@@ -33,19 +33,28 @@ const SIMPLE_UNWEIGHTED: LazyLock<AdjList<(), Undirected, WithoutIncidence>> =
         adj
     });
 
-const SIMPLE_WEIGHTED: LazyLock<AdjList<f64, Undirected, WithoutIncidence>> = LazyLock::new(|| {
-    let edges = vec![
-        (0, 1, 1.0),
-        (1, 2, 1.0),
-        (2, 3, 1.0),
-        (3, 0, 1.0),
-        (2, 0, 1.0),
-        (0, 4, 1.0),
-        (4, 2, 1.0),
-    ];
+const SIMPLE_WEIGHTED: LazyLock<HyperAdjList<NodeWeight>> = LazyLock::new(|| {
+    let mut hg = Hypergraph::new();
 
-    let (adj, _, _) = AdjList::from_edges_mapped(edges);
+    hg.extend_with_edges(vec![
+        Hx::new_unchecked([0, 1], 1.0),
+        Hx::new_unchecked([0, 2], 1.0),
+        Hx::new_unchecked([0, 3], 1.0),
+        Hx::new_unchecked([1, 2], 1.0),
+        Hx::new_unchecked([1, 3], 1.0),
+        Hx::new_unchecked([2, 3], 1.0),
+        Hx::new_unchecked([0, 4], 1.0),
+        Hx::new_unchecked([1, 4], 1.0),
+    ]);
 
+    // hg.extend_with_edges(vec![
+    //     // Hx::new_unchecked([0, 2, 3], ()),
+    //     // Hx::new_unchecked([1, 2, 3], ()),
+    //     Hx::new_unchecked([0, 1, 2], 1.0),
+    //     Hx::new_unchecked([0, 1, 3], 1.0),
+    // ]);
+
+    let adj = HyperAdjList::from_hypergraph_unmapped(hg);
     adj
 });
 
@@ -131,10 +140,16 @@ pub fn simple_graph_count() {
 }
 
 pub fn simple_graph_intensity() {
-    let mut adj = SIMPLE_WEIGHTED.clone();
-
-    println!("n: {}, m: {}", adj.n(), adj.m());
-    println!("Non induced mean c4 intensity {:?}", intensity_c4(&mut adj));
+    let adj = SIMPLE_WEIGHTED.clone();
+    let rv = weighted_4(&adj);
+    for (_number, (motif, stats)) in rv.iter().enumerate() {
+        println!(
+            "{}\t{}\t{}",
+            stats.count,
+            stats.mean_intensity,
+            motif.get_canonical_rep()
+        );
+    }
 }
 
 pub fn dblp() -> Result<(), Box<dyn Error>> {
@@ -159,7 +174,7 @@ pub fn dblp() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn hospital() -> Result<(), Box<dyn Error>> {
+pub fn hospital_uw() -> Result<(), Box<dyn Error>> {
     let mut hg = DatasetLoader::builder()
         .cached(true)
         .hospital()
@@ -179,7 +194,49 @@ pub fn hospital() -> Result<(), Box<dyn Error>> {
     println!("Finished in: {:?}", t.elapsed());
 
     for (_number, (motif, stats)) in rv.iter().enumerate() {
-        println!("{}\t{}", stats.count, motif.get_canonical_rep());
+        println!(
+            "{}\t{}\t{}",
+            stats.count,
+            stats.mean_intensity,
+            motif.get_canonical_rep()
+        );
+    }
+
+    Ok(())
+}
+
+pub fn hospital_w() -> Result<(), Box<dyn Error>> {
+    let mut hg = DatasetLoader::builder()
+        .cached(true)
+        .hospital()
+        .weighted()
+        .load()?;
+
+    let mut sum = 0.0;
+    for edge in hg.0.edges::<2>() {
+        sum += edge.weight;
+    }
+    println!("Medium 2-deg = {}", sum / hg.0.edges::<2>().len() as f32);
+
+    seq!(N in 3..11 {
+        hg.take_edges::<N>();
+    });
+    hg.remove_isolated_nodes();
+
+    let (hyperadj, _, _) = HyperAdjList::<NodeWeight>::from_hypergraph_mapped(hg.0);
+
+    let t = std::time::Instant::now();
+    println!("n: {}, m: {}", hyperadj.n(), hyperadj.m());
+    let rv = escape::weighted_4(&hyperadj);
+    println!("Finished in: {:?}", t.elapsed());
+
+    for (_number, (motif, stats)) in rv.iter().enumerate() {
+        println!(
+            "{}\t{}\t{}",
+            stats.count,
+            stats.mean_intensity,
+            motif.get_canonical_rep()
+        );
     }
 
     Ok(())

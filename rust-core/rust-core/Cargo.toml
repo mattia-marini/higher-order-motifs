@@ -13,7 +13,7 @@ path = "src/bin/stub_gen.rs"
 required-features = ["bindings"]
 
 [features]
-default = ["bindings"]
+# default = ["bindings"]
 bindings = ["dep:pyo3", "dep:pyo3-stub-gen"]
 
 [dependencies]

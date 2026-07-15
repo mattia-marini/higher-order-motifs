@@ -231,3 +231,63 @@ pub fn forward_hashed_cloj<W, I, F>(
         }
     }
 }
+
+/// the order parameter specifies order and position array for the nodes. A vertex degree order or
+/// degeneracy order can be used. If None, the natural order is used
+pub fn forward_hashed_cloj_orient<W, I, F>(
+    adj: &mut AdjList<W, Undirected, I>,
+    order: Option<(&[NodeId], &[usize])>,
+    mut cloj: F,
+) where
+    F: FnMut(NodeId, NodeId, NodeId),
+    I: Incidence,
+{
+    let n = adj.n();
+    // let mut a = vec![Vec::new(); n];
+    let mut mark = vec![0usize; n];
+    let mut current = 1;
+
+    let (order, pos) = match order {
+        Some((o, p)) => (Cow::Borrowed(o), Cow::Borrowed(p)),
+        None => {
+            let n = adj.n();
+            let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
+            let natural_pos = (0..n).collect::<Vec<_>>();
+            (Cow::Owned(natural_order), Cow::Owned(natural_pos))
+        }
+    };
+
+    for (u, neighbors) in adj.iter_neighbors_mut().enumerate() {
+        neighbors.sort_unstable_by_key(|v| pos[v.node as usize]);
+    }
+    let forward_start = {
+        let mut rv = Vec::with_capacity(n);
+        for (u, neighbors) in adj.iter_neighbors().enumerate() {
+            rv.push(neighbors.partition_point(|n| pos[n.node as usize] < pos[u]))
+        }
+        rv
+    };
+    let mut backward_sizes = vec![0; n];
+
+    for i in 0..n {
+        let u = order[i] as usize;
+
+        for neighbor in &adj[u][forward_start[u]..] {
+            let v = neighbor.node as usize;
+
+            for w in &adj[u][..backward_sizes[u]] {
+                mark[w.node as usize] = current;
+            }
+
+            for w in &adj[v][..backward_sizes[v]] {
+                if mark[w.node as usize] == current {
+                    cloj(u as NodeId, v as NodeId, w.node);
+                }
+            }
+
+            current += 1;
+            // a[v].push(u as NodeId);
+            backward_sizes[v] += 1;
+        }
+    }
+}
