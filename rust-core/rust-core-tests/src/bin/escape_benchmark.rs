@@ -136,7 +136,7 @@ macro_rules! test_dataset {
             .unweighted()
             .load()?;
 
-        hg.retain_orders(vec![2, 3, 4]);
+        hg.retain_orders(&[2, 3, 4]);
 
         let n = hg.n();
         let count2 = hg.0.edges::<2>().len();
@@ -148,7 +148,7 @@ macro_rules! test_dataset {
         for neighbors in hyper_adj.iter_all_incident_edges() {
             max_degree = max_degree.max(neighbors.len());
         }
-        let (_, _, hyper_degeneracy) = hyper_degeneracy_ordering(&hyper_adj);
+        let (_, hyper_degeneracy) = hyper_degeneracy_ordering(&hyper_adj);
 
         let edges =
             hg.0.edges::<2>()
@@ -156,7 +156,7 @@ macro_rules! test_dataset {
                 .map(|e| (e.nodes[0], e.nodes[1], ()))
                 .collect::<Vec<_>>();
         let (adj, _, _) = AdjList::<(), Undirected, WithoutIncidence>::from_edges_mapped(edges);
-        let (_, _, degeneracy) = degeneracy_ordering(&adj);
+        let (_, degeneracy) = degeneracy_ordering(&adj);
 
         let unweighted_graph_infos = GraphInfos {
             n,
@@ -195,7 +195,7 @@ macro_rules! test_dataset {
             .weighted()
             .load()?;
 
-        hg.retain_orders(vec![2, 3]);
+        hg.retain_orders(&[2, 3]);
 
         let n_w = hg.n();
         let count2_w = hg.0.edges::<2>().len();
@@ -208,7 +208,7 @@ macro_rules! test_dataset {
         for neighbors in hyper_adj_w.iter_all_incident_edges() {
             max_degree_w = max_degree_w.max(neighbors.len());
         }
-        let (_, _, hyper_degeneracy_w) = hyper_degeneracy_ordering(&hyper_adj_w);
+        let (_, hyper_degeneracy_w) = hyper_degeneracy_ordering(&hyper_adj_w);
 
         let edges_w =
             hg.0.edges::<2>()
@@ -216,7 +216,7 @@ macro_rules! test_dataset {
                 .map(|e| (e.nodes[0], e.nodes[1], ()))
                 .collect::<Vec<_>>();
         let (adj_w, _, _) = AdjList::<(), Undirected, WithoutIncidence>::from_edges_mapped(edges_w);
-        let (_, _, degeneracy_w) = degeneracy_ordering(&adj_w);
+        let (_, degeneracy_w) = degeneracy_ordering(&adj_w);
 
         let weighted_graph_infos = GraphInfos {
             n: n_w,

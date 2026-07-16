@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    misc::Order,
+    misc::{Order, OrderAndPos},
     types::{EdgeId, EdgeRef, HyperCSR, Hypergraph, NodeId},
 };
 #[derive(Clone)]
@@ -122,14 +122,14 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
 
     /// Gets the oriented adj list following a provided order of nodes; This means that an hyperedge
     /// having nodes u,v,..., z will be incident only to u, given that u < v < ... < z
-    pub fn get_oriented(&self, order: Order) -> Self
+    pub fn get_oriented(&self, order_pos: &OrderAndPos) -> Self
     where
         C: Clone,
         W: Clone,
     {
+        let OrderAndPos { order, pos, .. } = order_pos;
         let mut cached_min = vec![u32::MAX; self.m()];
 
-        let mut pos = order.get_pos();
         let mut adj = self.adj.clone();
 
         for (u, incidend_edges) in adj.iter_mut().enumerate() {

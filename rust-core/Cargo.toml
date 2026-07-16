@@ -27,3 +27,9 @@ pyo3-stub-gen = { git = "https://github.com/mattia-marini/pyo3-stub-gen", branch
 [profile.profiling]
 inherits = "release"
 debug = true
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"

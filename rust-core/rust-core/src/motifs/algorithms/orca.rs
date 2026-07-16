@@ -85,8 +85,10 @@ pub fn unweighted_3(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint3, MotifS
     //     .map(|neighboors| neighboors.into_iter().collect())
     //     .collect();
 
-    let (order, pos, degeneracy) = degeneracy_ordering(&adj);
-    forward_hashed_cloj(&adj, Some((&order, &pos)), |a, b, c| {
+    let (mut order_pos, degeneracy) = degeneracy_ordering(&adj);
+    order_pos.reverse();
+
+    forward_hashed_cloj(&adj, Some(&order_pos), |a, b, c| {
         triangles.count += 1;
     });
 
@@ -204,8 +206,10 @@ pub fn weighted_3(hg: &Hypergraph<NodeId, NodeWeight>) -> HashMap<Fingerprint3, 
         tot_2_count
     };
 
-    let (order, pos, degeneracy) = degeneracy_ordering(&adj);
-    forward_hashed_cloj(&adj, Some((&order, &pos)), |a, b, c| {
+    let (mut order_pos, degeneracy) = degeneracy_ordering(&adj);
+    order_pos.reverse();
+
+    forward_hashed_cloj(&adj, Some(&order_pos), |a, b, c| {
         let w_ab = adj_hash[a].get(&b).unwrap().0 as f64;
         let w_ac = adj_hash[a].get(&c).unwrap().0 as f64;
         let w_bc = adj_hash[b].get(&c).unwrap().0 as f64;
@@ -346,8 +350,10 @@ pub fn unweighted_4(hg: &Hypergraph<NodeId, ()>) -> HashMap<Fingerprint4, MotifS
 
     // Count triangles with forward hashed in O(m^1.5)
     let mut triangles = Vec::new();
-    let (order, pos, degeneracy) = degeneracy_ordering(&adj);
-    forward_hashed_cloj(&adj, Some((&order, &pos)), |a, b, c| {
+    let (mut order_pos, degeneracy) = degeneracy_ordering(&adj);
+    order_pos.reverse();
+
+    forward_hashed_cloj(&adj, Some(&order_pos), |a, b, c| {
         triangles.push((a, b, c));
 
         let edge_ab = adj_hash[a][&b].1 as usize;

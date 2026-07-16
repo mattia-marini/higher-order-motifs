@@ -1,5 +1,5 @@
 use crate::{
-    misc::degeneracy_ordering,
+    misc::{OrderAndPos, degeneracy_ordering},
     types::adj_list::{
         adj_list::AdjListBase,
         traits::{AdjConfig, NeighborContainer},
@@ -43,7 +43,7 @@ pub fn kclist<C: AdjConfig>(adj: &AdjListBase<C>) -> usize {
     }
 
     // 1. Get the degeneracy ordering
-    let (order, pos, _) = degeneracy_ordering(adj);
+    let (OrderAndPos { order, pos , ..}, _) = degeneracy_ordering(adj);
 
     // 2. Re-orient edges: only keep edges u -> v where pos[u] < pos[v]
     // This creates a Directed Acyclic Graph (DAG)

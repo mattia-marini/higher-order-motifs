@@ -2,22 +2,21 @@ use std::error::Error;
 use std::sync::LazyLock;
 
 use rust_core::loader::DatasetLoader;
-use rust_core::misc::cycle::intensity_c4;
 use rust_core::motifs::algorithms::escape::{self, unweighted_4, weighted_4};
 use rust_core::types::adj_list::{AdjList, Undirected, WithoutIncidence};
-use rust_core::types::hyperadj_list::{HyperAdjList, HyperAdjListBase};
-use rust_core::types::{Hx, Hypergraph, NodeId, NodeWeight};
+use rust_core::types::hyperadj_list::HyperAdjList;
+use rust_core::types::{Hx, Hypergraph, NodeWeight};
 use seq_macro::seq;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     // simple_graph_count();
     // simple_graph_intensity();
 
-    // dblp()?;
+    // dblp_uw()?;
+    // dblp_w()?;
+
     hospital_w()?;
-
     // friendship_hs()?;
-
     Ok(())
 }
 
@@ -152,7 +151,7 @@ pub fn simple_graph_intensity() {
     }
 }
 
-pub fn dblp() -> Result<(), Box<dyn Error>> {
+pub fn dblp_uw() -> Result<(), Box<dyn Error>> {
     let mut hg = DatasetLoader::builder()
         .cached(true)
         .dblp()
@@ -169,6 +168,28 @@ pub fn dblp() -> Result<(), Box<dyn Error>> {
     let t = std::time::Instant::now();
     println!("n: {}, m: {}", hyperadj.n(), hyperadj.m());
     escape::unweighted_4(&hyperadj);
+    println!("Finished in: {:?}", t.elapsed());
+
+    Ok(())
+}
+
+pub fn dblp_w() -> Result<(), Box<dyn Error>> {
+    let mut hg = DatasetLoader::builder()
+        .cached(true)
+        .dblp()
+        .weighted()
+        .load()?;
+
+    seq!(N in 4..11 {
+        hg.take_edges::<N>();
+    });
+    hg.remove_isolated_nodes();
+
+    let (hyperadj, _, _) = HyperAdjList::<NodeWeight>::from_hypergraph_mapped(hg.0);
+
+    let t = std::time::Instant::now();
+    println!("n: {}, m: {}", hyperadj.n(), hyperadj.m());
+    escape::weighted_4(&hyperadj);
     println!("Finished in: {:?}", t.elapsed());
 
     Ok(())

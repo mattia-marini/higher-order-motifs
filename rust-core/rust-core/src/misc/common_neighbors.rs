@@ -148,15 +148,16 @@ where
     }
 }
 
-pub fn common_neighbors_sorted_list_3_by_key<T, F, G, K>(
-    a: &[T],
-    b: &[T],
-    c: &[T],
-    hint: &K,
+pub fn common_neighbors_sorted_list_3_by_key<'a, 'b, T, F, G, K>(
+    a: &'a [T],
+    b: &'a [T],
+    c: &'a [T],
+    hint: &'b K,
     key: G,
     mut f: F,
 ) where
-    G: Fn(&T) -> &K,
+    'b: 'a,
+    G: Fn(&'a T) -> &'b K,
     F: FnMut(usize, usize, usize),
     K: Eq + Ord,
 {
@@ -188,6 +189,30 @@ pub fn common_neighbors_sorted_list_3_by_key<T, F, G, K>(
             while k < c.len() && key(&c[k]) < max {
                 k += 1;
             }
+        }
+    }
+}
+
+pub fn common_neighbors_sorted_list_by_key<T, F, G, K>(a: &[T], b: &[T], key: G, mut f: F)
+where
+    G: Fn(&T) -> K,
+    F: FnMut(usize, usize),
+    K: Eq + Ord,
+{
+    let (mut i, mut j) = (0, 0);
+
+    while i < a.len() && j < b.len() {
+        let ka = key(&a[i]);
+        let kb = key(&b[j]);
+
+        if ka == kb {
+            f(i, j);
+            i += 1;
+            j += 1;
+        } else if ka < kb {
+            i += 1;
+        } else {
+            j += 1;
         }
     }
 }

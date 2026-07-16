@@ -2,7 +2,7 @@ use foldhash::fast::FixedState;
 use hashbrown::HashMap;
 
 use crate::{
-    misc::Order,
+    misc::OrderAndPos,
     types::{EdgeId, NodeId, hyperadj_list::HyperAdjList},
 };
 use std::{borrow::Cow, ops::Deref};
@@ -14,19 +14,20 @@ use std::{borrow::Cow, ops::Deref};
 /// good enough).
 fn inclusion_forest_base<W: Clone>(
     adj: &HyperAdjList<W>,
-    order: Option<(&[NodeId], &[usize])>,
+    order: Option<&OrderAndPos>,
 ) -> Vec<Vec<EdgeId>> {
-    let (order, pos) = match order {
-        Some((o, p)) => (Cow::Borrowed(o), Cow::Borrowed(p)),
+    let order_pos = match order {
+        Some(o) => Cow::Borrowed(o),
         None => {
             let n = adj.n();
             let natural_order = (0..n).map(|i| i as NodeId).collect::<Vec<_>>();
             let natural_pos = (0..n).collect::<Vec<_>>();
-            (Cow::Owned(natural_order), Cow::Owned(natural_pos))
+
+            Cow::Owned(OrderAndPos::new(natural_order, natural_pos, true))
         }
     };
 
-    let oriented = adj.get_oriented(Order::Order(order.deref()));
+    let oriented = adj.get_oriented(&order_pos);
     // let oriented = adj;
     // println!("Oriented {:?}", oriented);
 
@@ -257,7 +258,7 @@ fn inclusion_forest_base<W: Clone>(
 
 pub fn inclusion_forest<W: Clone>(
     adj: &mut HyperAdjList<W>,
-    order: Option<(&[NodeId], &[usize])>,
+    order_pos: Option<&OrderAndPos>,
 ) -> Vec<Vec<EdgeId>> {
     // sorting each incident list by increasing hyperedge size
     {
@@ -274,7 +275,7 @@ pub fn inclusion_forest<W: Clone>(
     }
     // println!("{:?}", adj);
 
-    inclusion_forest_base(adj, order)
+    inclusion_forest_base(adj, order_pos)
 }
 
 // pub fn inclusion_forest_no_sort<W: Clone>(

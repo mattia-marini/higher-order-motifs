@@ -1,10 +1,13 @@
-use crate::misc::{bfs, common_neighbors_sorted_list, degeneracy_ordering, degree_ordering};
+use crate::misc::{
+    OrderAndPos, bfs, common_neighbors_sorted_list, degeneracy_ordering, degree_ordering,
+};
 use crate::triangle::forward::forward_hashed;
 use crate::types::adj_list::common::{Neighbor, Undirected};
 use crate::types::adj_list::traits::{AdjConfig, Incidence, NeighborContainer};
 use crate::types::adj_list::{AdjList, AdjSet, WithoutIncidence};
 
 #[cfg(feature = "bindings")]
+
 #[pyo3::pymodule(submodule)]
 pub mod cetc {
     use pyo3::prelude::*;
@@ -94,7 +97,7 @@ where
             al0[u].push(Neighbor::new(v.node, (), ()));
         }
     }
-    let (order, pos, degeneracy) = degeneracy_ordering(&al0);
+    let (OrderAndPos { order, pos, .. }, degeneracy) = degeneracy_ordering(&al0);
     count += forward_hashed(&al0, Some((&order, &pos)));
 
     for u in 0..n {

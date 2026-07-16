@@ -94,7 +94,7 @@ fn test_common<W: Clone>(mut hg: Hypergraph<NodeId, W>) -> Result<(), Box<dyn Er
     println!("adj1: {}, {}", adj1.n(), adj1.m());
 
     let time = Instant::now();
-    let (_, _, deg1) = degeneracy_ordering(&adj1);
+    let (_, deg1) = degeneracy_ordering(&adj1);
     println!("Degeneracy: {}", deg1);
     println!(
         "Computed 2-uniform degeneracy ordering in {:?}",
@@ -108,7 +108,7 @@ fn test_common<W: Clone>(mut hg: Hypergraph<NodeId, W>) -> Result<(), Box<dyn Er
     println!("adj2: {}, {}", adj2.n(), adj2.m());
 
     let time = Instant::now();
-    let (_, _, deg2) = hyper_degeneracy_ordering(&adj2);
+    let (_, deg2) = hyper_degeneracy_ordering(&adj2);
     println!("Degeneracy: {}", deg2);
     println!("Computed degeneracy ordering in {:?}", time.elapsed());
 

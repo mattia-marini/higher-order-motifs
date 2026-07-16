@@ -1,18 +1,24 @@
 use std::ops::AddAssign;
 
 use crate::{
-    misc::{degree_ordering, sort_by_degree},
+    misc::{Order, degree_ordering, sort_by_degree},
     types::{
         NodeId,
         adj_list::{AdjList, common::Undirected, traits::Incidence},
     },
 };
 
+pub struct Cycle4<'a, W, I: Incidence> {
+    pub nodes: [NodeId; 4],
+    pub edges: [I::EdgeType; 4],
+    pub weights: [&'a W; 4],
+}
+
 // Orient the adj list such that:
 //
 // Sort the adjacency list N +(v) of each vertex v, such that the neighborhood
 // begins with N −(v) (in arbitrary order), and then is followed by N +(v) (sorted in order of ≺).
-fn count_c4_base<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, order: &[NodeId]) -> usize {
+fn count_c4_base<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, order: &Order) -> usize {
     let mut n_less_count = vec![0; adj.n()];
 
     let n_less_count = adj
@@ -71,8 +77,8 @@ fn count_c4_base<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, order: &[Node
 ///
 /// A mut ref is required for adj list neighbors sorting
 pub fn count_c4<W, I: Incidence>(adj: &mut AdjList<W, Undirected, I>) -> usize {
-    let (order, _pos, _max_deg) = sort_by_degree(adj, false);
-    count_c4_base(adj, &order)
+    let (mut order_pos, degeneracy) = sort_by_degree(adj, false);
+    count_c4_base(adj, &order_pos.order)
 }
 
 /// Paul Burkhardt and David G. Harris 4-cycle heuristic
@@ -80,10 +86,7 @@ pub fn count_c4<W, I: Incidence>(adj: &mut AdjList<W, Undirected, I>) -> usize {
 /// The implementation assumes that the adjacency list is already sorted by degree, so no
 /// preprocessing is required. If the adjacency list is not sorted, use `count_c_4()` instead,
 /// otherwise the result will be incorrect.
-pub fn count_c4_no_sort<W, I: Incidence>(
-    adj: &AdjList<W, Undirected, I>,
-    order: &[NodeId],
-) -> usize {
+pub fn count_c4_no_sort<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, order: &Order) -> usize {
     count_c4_base(adj, order)
 }
 
@@ -92,7 +95,10 @@ pub fn count_c4_no_sort<W, I: Incidence>(
 /// The implementation assumes that the adjacency list is already sorted by degree, so no
 /// preprocessing is required. If the adjacency list is not sorted, use `count_c_4()` instead,
 /// otherwise the result will be incorrect.
-fn intensity_c4_base<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, order: &[NodeId]) -> f64
+fn intensity_c4_base<W, I: Incidence>(
+    adj: &AdjList<W, Undirected, I>,
+    order: &Order,
+) -> (usize, f64)
 where
     W: num_traits::Float + num_traits::AsPrimitive<f64>,
 {
@@ -159,19 +165,19 @@ where
             }
         }
     }
-    c_4_intensity / c_4_count as f64
+    (c_4_count, c_4_intensity / c_4_count as f64)
 }
 
 /// Paul Burkhardt and David G. Harris 4-cycle heuristic
 ///
 /// The implementation assumes that the adjacency list is already sorted by degree, so no
 /// preprocessing is required.
-pub fn intensity_c4<W, I: Incidence>(adj: &mut AdjList<W, Undirected, I>) -> f64
+pub fn intensity_c4<W, I: Incidence>(adj: &mut AdjList<W, Undirected, I>) -> (usize, f64)
 where
     W: num_traits::Float + num_traits::AsPrimitive<f64>,
 {
-    let (order, _pos, _max_deg) = sort_by_degree(adj, false);
-    intensity_c4_base(adj, &order)
+    let (mut order_pos, degeneracy) = sort_by_degree(adj, false);
+    intensity_c4_base(adj, &order_pos.order)
 }
 
 /// Paul Burkhardt and David G. Harris 4-cycle heuristic
@@ -180,8 +186,8 @@ where
 /// preprocessing is required.
 pub fn intensity_c4_no_sort<W, I: Incidence>(
     adj: &AdjList<W, Undirected, I>,
-    order: &[NodeId],
-) -> f64
+    order: &Order,
+) -> (usize, f64)
 where
     W: num_traits::Float + num_traits::AsPrimitive<f64>,
 {

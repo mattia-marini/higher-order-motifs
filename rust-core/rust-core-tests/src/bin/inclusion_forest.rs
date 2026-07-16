@@ -26,9 +26,9 @@ pub fn small() {
     ]);
 
     let mut adj = HyperAdjList::from_hypergraph_unmapped(hg);
-    let (order, pos, _deg) = hyper_degeneracy_ordering(&adj);
+    let (order_pos, _deg) = hyper_degeneracy_ordering(&adj);
 
-    let forest = inclusion_forest(&mut adj, Some((&order, &pos)));
+    let forest = inclusion_forest(&mut adj, Some(&order_pos));
     println!("Inclusion forest: {:?}", forest);
 }
 
@@ -76,11 +76,11 @@ pub fn dblp() -> Result<(), Box<dyn Error>> {
     let mut adj = HyperAdjList::from_hypergraph_unmapped(hg.0);
 
     let time = Instant::now();
-    let (order, pos, _deg) = hyper_degeneracy_ordering(&adj);
+    let (order_pos, _deg) = hyper_degeneracy_ordering(&adj);
     println!("Hyper degeneracy compute time: {:?}", time.elapsed());
 
     let time = Instant::now();
-    let _forest = inclusion_forest(&mut adj, Some((&order, &pos)));
+    let _forest = inclusion_forest(&mut adj, Some(&order_pos));
     println!("Inclusion forest compute time: {:?}", time.elapsed());
 
     // println!("Inclusion forest: {:?}", forest);

@@ -3,11 +3,20 @@ use std::ops::Deref;
 
 use crate::triangle::cbs::hcbs::HCBSGraph;
 
-use crate::misc::{count_common_neighbors_sorted_list, degeneracy_ordering, degree_ordering};
-use crate::types::NodeId;
+use crate::misc::{
+    OrderAndPos, common_neighbors_sorted_list_by_key, count_common_neighbors_sorted_list,
+    degeneracy_ordering, degree_ordering,
+};
 use crate::types::adj_list::AdjList;
 use crate::types::adj_list::common::Undirected;
 use crate::types::adj_list::traits::Incidence;
+use crate::types::{EdgeId, NodeId};
+
+pub struct Triangle<'a, W, I: Incidence> {
+    pub nodes: [NodeId; 3],
+    pub edges: [I::EdgeType; 3],
+    pub weights: [&'a W; 3],
+}
 
 /// Computes the degree ordering: (order, position)
 
@@ -62,7 +71,7 @@ pub fn forward<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, sort_degrees: b
     let mut count = 0;
 
     if sort_degrees {
-        let (order, pos, _) = degree_ordering(adj, true);
+        let (OrderAndPos { order, pos, .. }, _) = degree_ordering(adj, true);
 
         for i in 0..n {
             let u = order[i]; // order usually contains NodeId
@@ -155,7 +164,7 @@ pub fn forward_hbs<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, sort_degree
     let mut count = 0;
 
     if sort_degrees {
-        let (order, pos, _) = degree_ordering(adj, true);
+        let (OrderAndPos { order, pos, .. }, _) = degree_ordering(adj, true);
 
         for i in 0..n {
             let u = order[i];
@@ -186,7 +195,7 @@ pub fn forward_hbs<W, I: Incidence>(adj: &AdjList<W, Undirected, I>, sort_degree
 /// degeneracy order can be used. If None, the natural order is used
 pub fn forward_hashed_cloj<W, I, F>(
     adj: &AdjList<W, Undirected, I>,
-    order: Option<(&[NodeId], &[usize])>,
+    order: Option<&OrderAndPos>,
     mut cloj: F,
 ) where
     F: FnMut(NodeId, NodeId, NodeId),
@@ -198,7 +207,7 @@ pub fn forward_hashed_cloj<W, I, F>(
     let mut current = 1;
 
     let (order, pos) = match order {
-        Some((o, p)) => (Cow::Borrowed(o), Cow::Borrowed(p)),
+        Some(OrderAndPos { order, pos, .. }) => (Cow::Borrowed(order), Cow::Borrowed(pos)),
         None => {
             let n = adj.n();
             let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
@@ -234,21 +243,22 @@ pub fn forward_hashed_cloj<W, I, F>(
 
 /// the order parameter specifies order and position array for the nodes. A vertex degree order or
 /// degeneracy order can be used. If None, the natural order is used
-pub fn forward_hashed_cloj_orient<W, I, F>(
+///
+/// this differs from forward_hashed_cloj in that it sorts the adjacency lists of each node
+/// according to the order and position arrays, which can improve cache locality and also allows to
+/// return edge ids as well without excessive hashing overhead
+pub fn forward_sorted_cloj<W, I, F>(
     adj: &mut AdjList<W, Undirected, I>,
-    order: Option<(&[NodeId], &[usize])>,
+    order: Option<&OrderAndPos>,
     mut cloj: F,
 ) where
-    F: FnMut(NodeId, NodeId, NodeId),
+    F: FnMut(&AdjList<W, Undirected, I>, Triangle<W, I>),
     I: Incidence,
 {
     let n = adj.n();
-    // let mut a = vec![Vec::new(); n];
-    let mut mark = vec![0usize; n];
-    let mut current = 1;
 
     let (order, pos) = match order {
-        Some((o, p)) => (Cow::Borrowed(o), Cow::Borrowed(p)),
+        Some(OrderAndPos { order, pos, .. }) => (Cow::Borrowed(order), Cow::Borrowed(pos)),
         None => {
             let n = adj.n();
             let natural_order = ((0 as NodeId)..(n as NodeId)).collect::<Vec<_>>();
@@ -275,18 +285,23 @@ pub fn forward_hashed_cloj_orient<W, I, F>(
         for neighbor in &adj[u][forward_start[u]..] {
             let v = neighbor.node as usize;
 
-            for w in &adj[u][..backward_sizes[u]] {
-                mark[w.node as usize] = current;
-            }
+            common_neighbors_sorted_list_by_key(
+                &adj[u][..backward_sizes[u]],
+                &adj[v][..backward_sizes[v]],
+                |n| pos[n.node as usize],
+                |i, j| {
+                    let common = adj[u][i].node;
+                    cloj(
+                        adj,
+                        Triangle {
+                            nodes: [u as NodeId, v as NodeId, common],
+                            edges: [neighbor.edge, adj[u][i].edge, adj[v][j].edge],
+                            weights: [&neighbor.weight, &adj[u][i].weight, &adj[v][j].weight],
+                        },
+                    );
+                },
+            );
 
-            for w in &adj[v][..backward_sizes[v]] {
-                if mark[w.node as usize] == current {
-                    cloj(u as NodeId, v as NodeId, w.node);
-                }
-            }
-
-            current += 1;
-            // a[v].push(u as NodeId);
             backward_sizes[v] += 1;
         }
     }
