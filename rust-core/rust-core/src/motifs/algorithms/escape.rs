@@ -7,7 +7,7 @@ use hashbrown::{HashMap, HashSet};
 use crate::{
     misc::{
         OrderAndPos, common_neighbors_sorted_list_3_by_key, common_neighbors_sorted_list_3_cloj,
-        cycle::{count_c4, count_c4_no_sort, intensity_c4},
+        cycle::{count_c4, count_c4_no_sort, intensity_c4, intensity_c4_subinc},
         degeneracy_ordering, degree_ordering, sort_by_degree,
     },
     motifs::{
@@ -645,32 +645,97 @@ impl NewtonTriplet {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct NewtonEdge {
-    /// For each triangle incident to the edge, w(a,b)w(a,c)w(b,c)^(1/4)
-    s_4: NewtonPair,
-    /// For each triangle incident to the edge, w(a,b)w(a,c)w(b,c)^(1/5)
-    s_5: NewtonPair,
+struct EdgeInfo {
+    /// the number of triangle incident to the node a
+    t_count: usize,
 
-    /// For each triangle incident to the edge (a, b), w(a,d)^(1/3)
-    s3_upper: NewtonPair,
-    /// For each triangle incident to the edge (a, b), w(b,d)^(1/3)
-    s3_lower: NewtonPair,
+    /// sum of (w(a,b)w(a,d)w(b,d))^(1/3) for each triangle incident to the edge (a, b)
+    triangle_13: f32,
+    /// sum of (w(a,b)w(a,c)w(b,c))^(1/4) for each triangle incident to the edge (a,b)
+    triangle_14: f32,
+    /// sum of (w(a,b)w(a,c)w(b,c))^(2/4) for each triangle incident to the edge (a,b)
+    triangle_24: f32,
+
+    /// sum of (w(a,b)w(a,c)w(b,c))^(1/5) for each triangle incident to the edge (a,b)
+    triangle_15: f32,
+    /// sum of (w(a,b)w(a,c)w(b,c))^(2/5) for each triangle incident to the edge (a,b)
+    triangle_25: f32,
+
+    /// sum of w(a,d)^(1/3) if a>b, else w(b,d)^(1/3) for each triangle incident to the edge (a, b)
+    edge_upper_13: f32,
+    /// sum of w(a,d)^(1/3) if a>b, else w(b,d)^(2/3) for each triangle incident to the edge (a, b)
+    edge_upper_23: f32,
+
+    /// sum of w(b,d)^(1/3) if a>b, else w(b,d)^(1/3) for each triangle incident to the edge (a, b)
+    edge_lower_13: f32,
+    /// sum of w(b,d)^(1/3) if a>b, else w(b,d)^(2/3) for each triangle incident to the edge (a, b)
+    edge_lower_23: f32,
+
+    /// sum of w(a,d)^(1/3) + w(b,d)^(1/3) for each triangle incident to the edge (a, b)
+    distal_edge_sum_13: f32,
+    /// sum of w(a,d)^(1/3) + w(b,d)^(1/4) for each triangle incident to the edge (a, b)
+    distal_edge_sum_14: f32,
+
+    /// sum of (w(a,b)w(a,d)w(a,d)w(b,d))^(1/3) + (w(a,b)w(a,d)w(b,d)w(b,d))^(1/3) for each triangle incident to the edge (a, b)
+    unbalanced_triangle_13: f32,
+    /// sum of (w(a,b)w(a,d)w(a,d)w(b,d))^(1/4) + (w(a,b)w(a,d)w(b,d)w(b,d))^(1/3) for each triangle incident to the edge (a, b)
+    unbalanced_triangle_14: f32,
 }
 
-impl NewtonEdge {
+impl EdgeInfo {
     pub fn empty() -> Self {
         Self {
-            s_4: NewtonPair::empty(),
-            s_5: NewtonPair::empty(),
-            s3_upper: NewtonPair::empty(),
-            s3_lower: NewtonPair::empty(),
+            t_count: 0,
+            triangle_14: 0.,
+            triangle_24: 0.,
+            triangle_15: 0.,
+            triangle_25: 0.,
+            edge_upper_13: 0.,
+            edge_upper_23: 0.,
+            edge_lower_13: 0.,
+            edge_lower_23: 0.,
+            triangle_13: 0.,
+            distal_edge_sum_13: 0.,
+            unbalanced_triangle_13: 0.,
+            distal_edge_sum_14: 0.,
+            unbalanced_triangle_14: 0.,
         }
     }
 }
 
+pub fn newton_girard_2(s1: f32, s2: f32) -> f32 {
+    (s1 * s1 - s2) / 2.0
+}
+
+pub fn newton_girard_3(s1: f32, s2: f32, s3: f32) -> f32 {
+    (s1 * s1 * s1 - 3.0 * s1 * s2 + 2.0 * s3) / 6.0
+}
+
 #[derive(Debug, Clone, Copy)]
-struct NewtonVertex {
-    s_3: NewtonTriplet,
+struct NodeInfo {
+    /// the number of triangle incident to the node a
+    t_count: usize,
+
+    /// sum w(a,b) for each edge (a,b) incident to the node a
+    sum_11: f32,
+    /// sum w(a,b)^(1/3) for each edge (a,b) incident to the node a
+    sum_13: f32,
+    /// sum w(a,b)^(2/3) for each edge (a,b) incident to the node a
+    sum_23: f32,
+    /// sum w(a,b)^(1/4) for each edge (a,b) incident to the node a
+    sum_14: f32,
+}
+
+impl NodeInfo {
+    pub fn empty() -> Self {
+        Self {
+            t_count: 0,
+            sum_11: 0.,
+            sum_13: 0.,
+            sum_23: 0.,
+            sum_14: 0.,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -686,6 +751,20 @@ impl MotifStatsPair {
             non_induced: MotifStats::new(),
         }
     }
+}
+
+/// Helper macro to access the mean intensity of the induced motif stats in a MotifStatsPair
+macro_rules! ii {
+    ($name:ident) => {
+        $name.induced.mean_intensity
+    };
+}
+
+/// Helper macro to access the mean intensity of the non-induced motif stats in a MotifStatsPair
+macro_rules! nii {
+    ($name:ident) => {
+        $name.non_induced.mean_intensity
+    };
 }
 
 pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, MotifStats> {
@@ -711,12 +790,12 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
     let mut c4 = MotifStats::new();
 
     let mut diamond = MotifStats::new();
-    let mut tailed_triangle = MotifStats::new();
+    let mut paw = MotifStats::new();
 
-    let mut tri_edge_count = vec![0; adj.m()];
-    let mut tri_edge_intensity = vec![0.0; adj.m()];
-    let mut tri_vertex = vec![0; adj.n()];
-    let mut tri_distal_edge = vec![((0.0, 0.0), (0.0, 0.0)); adj.m()];
+    // let mut tri_edge_count = vec![0; adj.m()];
+    // let mut tri_edge_intensity = vec![0.0; adj.m()];
+    // let mut tri_vertex = vec![0; adj.n()];
+    // let mut tri_distal_edge = vec![((0.0, 0.0), (0.0, 0.0)); adj.m()];
 
     // Saving partial stats to convert rom induced to non induced
     // <motif_a>_in_<motif_b> stores the stats of the non induced occurences of motif_a in motif_b
@@ -740,40 +819,37 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
     // path4
     let mut path4_in_paw = MotifStatsPair::new();
     let mut path4_in_c4 = MotifStatsPair::new();
+
     let mut path4_in_diamond = MotifStatsPair::new();
+    let mut path4_in_diamond_ring = MotifStatsPair::new();
+    let mut path4_in_diamond_inner = MotifStatsPair::new();
+
     let mut path4_in_k4 = MotifStatsPair::new();
 
     /// Coefficient per edge used for fast combinatorial computation of iintensities
-    let mut newton_edge = vec![NewtonEdge::empty(); adj.m()];
-    let mut newton_vertex = Vec::with_capacity(adj.n());
-
-    let mut neighbors_weight_sum_s1 = Vec::with_capacity(adj_list.n());
-    let mut neighbors_weight_sum_s3 = Vec::with_capacity(adj_list.n());
-    let mut neighbors_weight_sum_s4 = Vec::with_capacity(adj_list.n());
+    let mut edge_infos = vec![EdgeInfo::empty(); adj.m()];
+    let mut node_infos = Vec::with_capacity(adj.n());
 
     for x in 0..adj_list.n() {
-        let mut s1 = 0.0;
-        let mut s3 = 0.0;
-        let mut s4 = 0.0;
-        let mut newton_triplet = NewtonTriplet::empty();
+        let mut sum_11 = 0.0;
+        let mut sum_13 = 0.0;
+        let mut sum_23 = 0.0;
+        let mut sum_14 = 0.0;
 
         for y in adj_list[x].iter() {
-            s1 += y.weight;
-            s3 += y.weight.powf(1.0 / 3.0);
-            s4 += y.weight.powf(1.0 / 4.0);
-
-            let root = y.weight.powf(1.0 / 3.0);
-            newton_triplet.s1 += root;
-            newton_triplet.s2 += root * root;
-            newton_triplet.s3 += root * root * root;
+            sum_11 += y.weight;
+            sum_13 += y.weight.powf(1.0 / 3.0);
+            sum_23 += y.weight.powf(2.0 / 3.0);
+            sum_14 += y.weight.powf(1.0 / 4.0);
         }
 
-        newton_vertex.push(NewtonVertex {
-            s_3: newton_triplet,
+        node_infos.push(NodeInfo {
+            t_count: 0,
+            sum_11,
+            sum_13,
+            sum_23,
+            sum_14,
         });
-        neighbors_weight_sum_s1.push(s1);
-        neighbors_weight_sum_s3.push(s3);
-        neighbors_weight_sum_s4.push(s4);
     }
 
     let (mut order_pos, degeneracy) = degeneracy_ordering(&adj_list);
@@ -799,9 +875,13 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
         triangle.count += 1;
         triangle.mean_intensity += prod.powf(1.0 / 3.0) as f64;
 
-        tri_edge_count[edge_ab] += 1;
-        tri_edge_count[edge_ac] += 1;
-        tri_edge_count[edge_bc] += 1;
+        edge_infos[edge_ab].t_count += 1;
+        edge_infos[edge_ac].t_count += 1;
+        edge_infos[edge_bc].t_count += 1;
+
+        node_infos[a].t_count += 1;
+        node_infos[b].t_count += 1;
+        node_infos[c].t_count += 1;
 
         {
             // for paw counting
@@ -810,31 +890,18 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
             let weight_ac = weight_ac.powf(1.0 / 4.0);
             let weight_bc = weight_bc.powf(1.0 / 4.0);
 
-            tri_edge_intensity[edge_ab] += prod;
-            tri_edge_intensity[edge_ac] += prod;
-            tri_edge_intensity[edge_bc] += prod;
+            edge_infos[edge_ab].distal_edge_sum_14 += weight_ac + weight_bc;
+            edge_infos[edge_ab].unbalanced_triangle_14 += prod * weight_ac + prod * weight_bc;
 
-            tri_distal_edge[edge_ab].0.0 += weight_ac;
-            tri_distal_edge[edge_ab].0.1 += prod * weight_ac;
-            tri_distal_edge[edge_ab].1.0 += weight_bc;
-            tri_distal_edge[edge_ab].1.1 += prod * weight_bc;
+            edge_infos[edge_ac].distal_edge_sum_14 += weight_ab + weight_bc;
+            edge_infos[edge_ac].unbalanced_triangle_14 += prod * weight_ab + prod * weight_bc;
 
-            tri_distal_edge[edge_ac].0.0 += weight_ab;
-            tri_distal_edge[edge_ac].0.1 += prod * weight_ab;
-            tri_distal_edge[edge_ac].1.0 += weight_bc;
-            tri_distal_edge[edge_ac].1.1 += prod * weight_bc;
+            edge_infos[edge_bc].distal_edge_sum_14 += weight_ab + weight_ac;
+            edge_infos[edge_bc].unbalanced_triangle_14 += prod * weight_ab + prod * weight_ac;
 
-            tri_distal_edge[edge_bc].0.0 += weight_ab;
-            tri_distal_edge[edge_bc].0.1 += prod * weight_ab;
-            tri_distal_edge[edge_bc].1.0 += weight_ac;
-            tri_distal_edge[edge_bc].1.1 += prod * weight_ac;
-
-            tailed_triangle.mean_intensity +=
-                (prod * (neighbors_weight_sum_s4[a] - weight_ab - weight_ac)) as f64;
-            tailed_triangle.mean_intensity +=
-                (prod * (neighbors_weight_sum_s4[b] - weight_ab - weight_bc)) as f64;
-            tailed_triangle.mean_intensity +=
-                (prod * (neighbors_weight_sum_s4[c] - weight_ac - weight_bc)) as f64;
+            paw.mean_intensity += (prod * (node_infos[a].sum_14 - weight_ab - weight_ac)) as f64;
+            paw.mean_intensity += (prod * (node_infos[b].sum_14 - weight_ab - weight_bc)) as f64;
+            paw.mean_intensity += (prod * (node_infos[c].sum_14 - weight_ac - weight_bc)) as f64;
         }
 
         {
@@ -844,77 +911,103 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
             let weight_ac = weight_ac.powf(1.0 / 3.0);
             let weight_bc = weight_bc.powf(1.0 / 3.0);
 
-            star4_in_paw.non_induced.mean_intensity +=
-                ((prod / weight_bc) * (neighbors_weight_sum_s3[a] - weight_ab - weight_ac)) as f64;
-            star4_in_paw.non_induced.mean_intensity +=
-                ((prod / weight_ac) * (neighbors_weight_sum_s3[b] - weight_ab - weight_bc)) as f64;
-            star4_in_paw.non_induced.mean_intensity +=
-                ((prod / weight_ab) * (neighbors_weight_sum_s3[c] - weight_ac - weight_bc)) as f64;
+            edge_infos[edge_ab].distal_edge_sum_13 += weight_ac + weight_bc;
+            edge_infos[edge_ab].unbalanced_triangle_13 += prod * weight_ac + prod * weight_bc;
+
+            edge_infos[edge_ac].distal_edge_sum_13 += weight_ab + weight_bc;
+            edge_infos[edge_ac].unbalanced_triangle_13 += prod * weight_ab + prod * weight_bc;
+
+            edge_infos[edge_bc].distal_edge_sum_13 += weight_ab + weight_ac;
+            edge_infos[edge_bc].unbalanced_triangle_13 += prod * weight_ab + prod * weight_ac;
+
+            nii!(star4_in_paw) +=
+                ((prod / weight_bc) * (node_infos[a].sum_13 - weight_ab - weight_ac)) as f64;
+            nii!(star4_in_paw) +=
+                ((prod / weight_ac) * (node_infos[b].sum_13 - weight_ab - weight_bc)) as f64;
+            nii!(star4_in_paw) +=
+                ((prod / weight_ab) * (node_infos[c].sum_13 - weight_ac - weight_bc)) as f64;
+
+            nii!(path4_in_paw) += (weight_bc
+                * (weight_ab * (node_infos[a].sum_13 - weight_ab - weight_ac)
+                    + weight_ac * (node_infos[a].sum_13 - weight_ab - weight_ac)))
+                as f64;
+
+            nii!(path4_in_paw) += (weight_ac
+                * (weight_ab * (node_infos[b].sum_13 - weight_ab - weight_bc)
+                    + weight_bc * (node_infos[b].sum_13 - weight_ab - weight_bc)))
+                as f64;
+
+            nii!(path4_in_paw) += (weight_ab
+                * (weight_ac * (node_infos[c].sum_13 - weight_ac - weight_bc)
+                    + weight_bc * (node_infos[c].sum_13 - weight_ac - weight_bc)))
+                as f64;
         }
 
-        let s4_s1 = prod.powf(1.0 / 4.0);
-        let s4_s2 = prod.powf(2.0 / 4.0);
+        let s13 = prod.powf(1.0 / 3.0);
 
-        let s5_s1 = prod.powf(1.0 / 5.0);
-        let s5_s2 = prod.powf(2.0 / 5.0);
+        let s14 = prod.powf(1.0 / 4.0);
+        let s24 = prod.powf(2.0 / 4.0);
 
-        newton_edge[edge_ab].s_4.s1 += s4_s1;
-        newton_edge[edge_ab].s_4.s2 += s4_s2;
+        let s15 = prod.powf(1.0 / 5.0);
+        let s25 = prod.powf(2.0 / 5.0);
 
-        newton_edge[edge_ac].s_4.s1 += s4_s1;
-        newton_edge[edge_ac].s_4.s2 += s4_s2;
+        edge_infos[edge_ab].triangle_13 += s13;
+        edge_infos[edge_ac].triangle_13 += s13;
+        edge_infos[edge_bc].triangle_13 += s13;
 
-        newton_edge[edge_bc].s_4.s1 += s4_s1;
-        newton_edge[edge_bc].s_4.s2 += s4_s2;
+        edge_infos[edge_ab].triangle_14 += s14;
+        edge_infos[edge_ab].triangle_24 += s24;
 
-        newton_edge[edge_ab].s_5.s1 += s5_s1;
-        newton_edge[edge_ab].s_5.s2 += s5_s2;
+        edge_infos[edge_ac].triangle_14 += s14;
+        edge_infos[edge_ac].triangle_24 += s24;
 
-        newton_edge[edge_ac].s_5.s1 += s5_s1;
-        newton_edge[edge_ac].s_5.s2 += s5_s2;
+        edge_infos[edge_bc].triangle_14 += s14;
+        edge_infos[edge_bc].triangle_24 += s24;
 
-        newton_edge[edge_bc].s_5.s1 += s5_s1;
-        newton_edge[edge_bc].s_5.s2 += s5_s2;
+        edge_infos[edge_ab].triangle_15 += s15;
+        edge_infos[edge_ab].triangle_25 += s25;
+
+        edge_infos[edge_ac].triangle_15 += s15;
+        edge_infos[edge_ac].triangle_25 += s25;
+
+        edge_infos[edge_bc].triangle_15 += s15;
+        edge_infos[edge_bc].triangle_25 += s25;
 
         if a < b {
-            newton_edge[edge_ab].s3_lower.s1 += weight_ac.powf(1.0 / 3.0);
-            newton_edge[edge_ab].s3_lower.s2 += weight_ac.powf(2.0 / 3.0);
-            newton_edge[edge_ab].s3_upper.s1 += weight_bc.powf(1.0 / 3.0);
-            newton_edge[edge_ab].s3_upper.s2 += weight_bc.powf(2.0 / 3.0);
+            edge_infos[edge_ab].edge_lower_13 += weight_ac.powf(1.0 / 3.0);
+            edge_infos[edge_ab].edge_lower_23 += weight_ac.powf(2.0 / 3.0);
+            edge_infos[edge_ab].edge_upper_13 += weight_bc.powf(1.0 / 3.0);
+            edge_infos[edge_ab].edge_upper_23 += weight_bc.powf(2.0 / 3.0);
         } else {
-            newton_edge[edge_ab].s3_upper.s1 += weight_ac.powf(1.0 / 3.0);
-            newton_edge[edge_ab].s3_upper.s2 += weight_ac.powf(2.0 / 3.0);
-            newton_edge[edge_ab].s3_lower.s1 += weight_bc.powf(1.0 / 3.0);
-            newton_edge[edge_ab].s3_lower.s2 += weight_bc.powf(2.0 / 3.0);
+            edge_infos[edge_ab].edge_upper_13 += weight_ac.powf(1.0 / 3.0);
+            edge_infos[edge_ab].edge_upper_23 += weight_ac.powf(2.0 / 3.0);
+            edge_infos[edge_ab].edge_lower_13 += weight_bc.powf(1.0 / 3.0);
+            edge_infos[edge_ab].edge_lower_23 += weight_bc.powf(2.0 / 3.0);
         }
 
         if a < c {
-            newton_edge[edge_ac].s3_lower.s1 += weight_ab.powf(1.0 / 3.0);
-            newton_edge[edge_ac].s3_lower.s2 += weight_ab.powf(2.0 / 3.0);
-            newton_edge[edge_ac].s3_upper.s1 += weight_bc.powf(1.0 / 3.0);
-            newton_edge[edge_ac].s3_upper.s2 += weight_bc.powf(2.0 / 3.0);
+            edge_infos[edge_ac].edge_lower_13 += weight_ab.powf(1.0 / 3.0);
+            edge_infos[edge_ac].edge_lower_23 += weight_ab.powf(2.0 / 3.0);
+            edge_infos[edge_ac].edge_upper_13 += weight_bc.powf(1.0 / 3.0);
+            edge_infos[edge_ac].edge_upper_23 += weight_bc.powf(2.0 / 3.0);
         } else {
-            newton_edge[edge_ac].s3_upper.s1 += weight_ab.powf(1.0 / 3.0);
-            newton_edge[edge_ac].s3_upper.s2 += weight_ab.powf(2.0 / 3.0);
-            newton_edge[edge_ac].s3_lower.s1 += weight_bc.powf(1.0 / 3.0);
-            newton_edge[edge_ac].s3_lower.s2 += weight_bc.powf(2.0 / 3.0);
+            edge_infos[edge_ac].edge_upper_13 += weight_ab.powf(1.0 / 3.0);
+            edge_infos[edge_ac].edge_upper_23 += weight_ab.powf(2.0 / 3.0);
+            edge_infos[edge_ac].edge_lower_13 += weight_bc.powf(1.0 / 3.0);
+            edge_infos[edge_ac].edge_lower_23 += weight_bc.powf(2.0 / 3.0);
         }
 
         if b < c {
-            newton_edge[edge_bc].s3_lower.s1 += weight_ab.powf(1.0 / 3.0);
-            newton_edge[edge_bc].s3_lower.s2 += weight_ab.powf(2.0 / 3.0);
-            newton_edge[edge_bc].s3_upper.s1 += weight_ac.powf(1.0 / 3.0);
-            newton_edge[edge_bc].s3_upper.s2 += weight_ac.powf(2.0 / 3.0);
+            edge_infos[edge_bc].edge_lower_13 += weight_ab.powf(1.0 / 3.0);
+            edge_infos[edge_bc].edge_lower_23 += weight_ab.powf(2.0 / 3.0);
+            edge_infos[edge_bc].edge_upper_13 += weight_ac.powf(1.0 / 3.0);
+            edge_infos[edge_bc].edge_upper_23 += weight_ac.powf(2.0 / 3.0);
         } else {
-            newton_edge[edge_bc].s3_upper.s1 += weight_ab.powf(1.0 / 3.0);
-            newton_edge[edge_bc].s3_upper.s2 += weight_ab.powf(2.0 / 3.0);
-            newton_edge[edge_bc].s3_lower.s1 += weight_ac.powf(1.0 / 3.0);
-            newton_edge[edge_bc].s3_lower.s2 += weight_ac.powf(2.0 / 3.0);
+            edge_infos[edge_bc].edge_upper_13 += weight_ab.powf(1.0 / 3.0);
+            edge_infos[edge_bc].edge_upper_23 += weight_ab.powf(2.0 / 3.0);
+            edge_infos[edge_bc].edge_lower_13 += weight_ac.powf(1.0 / 3.0);
+            edge_infos[edge_bc].edge_lower_23 += weight_ac.powf(2.0 / 3.0);
         }
-
-        tri_vertex[a] += 1;
-        tri_vertex[b] += 1;
-        tri_vertex[c] += 1;
 
         let upper_bound = order_pos.pos[a].min(order_pos.pos[b]).min(order_pos.pos[c]);
         // 4-clique counting
@@ -937,7 +1030,7 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
                 k4.count += 1;
                 k4.mean_intensity += prod.powf(1.0 / 6.0) as f64;
 
-                diamond_in_k4.non_induced.mean_intensity += ((prod / weight_ab).powf(1.0 / 5.0)
+                nii!(diamond_in_k4) += ((prod / weight_ab).powf(1.0 / 5.0)
                     + (prod / weight_ac).powf(1.0 / 5.0)
                     + (prod / weight_bc).powf(1.0 / 5.0)
                     + (prod / weight_ad).powf(1.0 / 5.0)
@@ -945,8 +1038,7 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
                     + (prod / weight_cd).powf(1.0 / 5.0))
                     as f64;
 
-                c4_in_k4.non_induced.mean_intensity += ((prod / weight_ab / weight_cd)
-                    .powf(1.0 / 4.0)
+                nii!(c4_in_k4) += ((prod / weight_ab / weight_cd).powf(1.0 / 4.0)
                     + (prod / weight_ac / weight_bd).powf(1.0 / 4.0)
                     + (prod / weight_ad / weight_bc).powf(1.0 / 4.0))
                     as f64;
@@ -956,7 +1048,7 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
                 let t3 = weight_bc * weight_cd * weight_bd;
                 let t4 = weight_ab * weight_ad * weight_bd;
 
-                paw_in_k4.non_induced.mean_intensity += ((t1 * weight_bd).powf(1.0 / 4.0)
+                nii!(paw_in_k4) += ((t1 * weight_bd).powf(1.0 / 4.0)
                     + (t1 * weight_ad).powf(1.0 / 4.0)
                     + (t1 * weight_cd).powf(1.0 / 4.0)
                     + (t2 * weight_ab).powf(1.0 / 4.0)
@@ -967,11 +1059,9 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
                     + (t3 * weight_ac).powf(1.0 / 4.0)
                     + (t4 * weight_ac).powf(1.0 / 4.0)
                     + (t4 * weight_bc).powf(1.0 / 4.0)
-                    + (t4 * weight_cd).powf(1.0 / 4.0))
-                    as f64;
+                    + (t4 * weight_cd).powf(1.0 / 4.0)) as f64;
 
-                star4_in_k4.non_induced.mean_intensity += ((weight_ab * weight_ac * weight_ad)
-                    .powf(1.0 / 3.0)
+                nii!(star4_in_k4) += ((weight_ab * weight_ac * weight_ad).powf(1.0 / 3.0)
                     + (weight_ab * weight_bc * weight_bd).powf(1.0 / 3.0)
                     + (weight_ac * weight_bc * weight_cd).powf(1.0 / 3.0)
                     + (weight_bd * weight_cd * weight_ad).powf(1.0 / 3.0))
@@ -981,17 +1071,17 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
                 let horizontal = (weight_ab * weight_cd).powf(1.0 / 3.0);
                 let inner = (weight_ad * weight_bc).powf(1.0 / 3.0);
 
-                path4_in_k4.non_induced.mean_intensity +=
-                    ((weight_ad.powf(1.0 / 3.0) + weight_bc.powf(1.0 / 3.0))
-                        * (horizontal + vertical)
-                        + weight_ab.powf(1.0 / 3.0) * inner
-                        + weight_cd.powf(1.0 / 3.0) * inner
-                        + weight_ac.powf(1.0 / 3.0) * inner
-                        + weight_bd.powf(1.0 / 3.0) * inner
-                        + weight_ab.powf(1.0 / 3.0) * vertical
-                        + weight_cd.powf(1.0 / 3.0) * vertical
-                        + weight_ac.powf(1.0 / 3.0) * horizontal
-                        + weight_bd.powf(1.0 / 3.0) * horizontal) as f64;
+                nii!(path4_in_k4) += ((weight_ad.powf(1.0 / 3.0) + weight_bc.powf(1.0 / 3.0))
+                    * (horizontal + vertical)
+                    + weight_ab.powf(1.0 / 3.0) * inner
+                    + weight_cd.powf(1.0 / 3.0) * inner
+                    + weight_ac.powf(1.0 / 3.0) * inner
+                    + weight_bd.powf(1.0 / 3.0) * inner
+                    + weight_ab.powf(1.0 / 3.0) * vertical
+                    + weight_cd.powf(1.0 / 3.0) * vertical
+                    + weight_ac.powf(1.0 / 3.0) * horizontal
+                    + weight_bd.powf(1.0 / 3.0) * horizontal)
+                    as f64;
             },
         );
     });
@@ -1000,9 +1090,13 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
     for x in 0..adj_list.n() {
         let deg_x = adj_list[x].len();
         star4.count += deg_x * (deg_x - 1) * (deg_x - 2) / 6;
-        star4.mean_intensity += newton_vertex[x].s_3.get_sum_of_products() as f64;
+        star4.mean_intensity += newton_girard_3(
+            node_infos[x].sum_13,
+            node_infos[x].sum_23,
+            node_infos[x].sum_11,
+        ) as f64;
 
-        tailed_triangle.count += tri_vertex[x] * (deg_x - 2);
+        paw.count += node_infos[x].t_count * (deg_x - 2);
 
         let mut y = 0;
         loop {
@@ -1019,106 +1113,131 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
             let deg_y = adj_list[neighbor_y].len();
 
             path4.count += (deg_x - 1) * (deg_y - 1);
-            path4.mean_intensity += (weight_xy
-                * (neighbors_weight_sum_s1[x] - weight_xy)
-                * (neighbors_weight_sum_s1[neighbor_y] - weight_xy))
+            path4.mean_intensity += (weight_xy.powf(1.0 / 3.0)
+                * (node_infos[x].sum_13 - weight_xy.powf(1.0 / 3.0))
+                * (node_infos[neighbor_y].sum_13 - weight_xy.powf(1.0 / 3.0)))
                 as f64;
 
-            tri_edge_count[edge_xy] = max(tri_edge_count[edge_xy], 1);
-            diamond.count += tri_edge_count[edge_xy] * (tri_edge_count[edge_xy] - 1) / 2;
-            diamond.mean_intensity +=
-                (newton_edge[edge_xy].s_5.get_sum_of_products() / weight_xy.powf(1.0 / 5.0)) as f64;
+            edge_infos[edge_xy].t_count = max(edge_infos[edge_xy].t_count, 1);
+            diamond.count += edge_infos[edge_xy].t_count * (edge_infos[edge_xy].t_count - 1) / 2;
+            diamond.mean_intensity += (newton_girard_2(
+                edge_infos[edge_xy].triangle_15,
+                edge_infos[edge_xy].triangle_25,
+            ) / weight_xy.powf(1.0 / 5.0)) as f64;
 
-            c4_in_diamond.non_induced.mean_intensity +=
-                (newton_edge[edge_xy].s_4.get_sum_of_products() / weight_xy.powf(2.0 / 4.0)) as f64;
+            nii!(c4_in_diamond) += (newton_girard_2(
+                edge_infos[edge_xy].triangle_14,
+                edge_infos[edge_xy].triangle_24,
+            ) / weight_xy.powf(2.0 / 4.0)) as f64;
 
-            paw_in_diamond.non_induced.mean_intensity +=
-                (tri_distal_edge[edge_xy].0.0 * tri_edge_intensity[edge_xy]
-                    + tri_distal_edge[edge_xy].1.0 * tri_edge_intensity[edge_xy]
-                    - tri_distal_edge[edge_xy].0.1
-                    - tri_distal_edge[edge_xy].1.1) as f64;
+            nii!(paw_in_diamond) +=
+                (edge_infos[edge_xy].triangle_14 * edge_infos[edge_xy].distal_edge_sum_14
+                    - edge_infos[edge_xy].unbalanced_triangle_14) as f64;
 
-            star4_in_diamond.non_induced.mean_intensity += (weight_xy.powf(1.0 / 3.0)
-                * (newton_edge[edge_xy].s3_upper.get_sum_of_products()
-                    + newton_edge[edge_xy].s3_lower.get_sum_of_products()))
+            nii!(star4_in_diamond) += (weight_xy.powf(1.0 / 3.0)
+                * (newton_girard_2(
+                    edge_infos[edge_xy].edge_upper_13,
+                    edge_infos[edge_xy].edge_upper_23,
+                ) + newton_girard_2(
+                    edge_infos[edge_xy].edge_lower_13,
+                    edge_infos[edge_xy].edge_lower_23,
+                ))) as f64;
+
+            nii!(path4_in_diamond_ring) += ((edge_infos[edge_xy].triangle_13
+                * edge_infos[edge_xy].distal_edge_sum_13
+                - edge_infos[edge_xy].unbalanced_triangle_13)
+                / weight_xy.powf(1.0 / 3.0)) as f64;
+
+            // can collapse into triangles but they are subtracted later
+            nii!(path4_in_diamond_inner) += (weight_xy.powf(1.0 / 3.0)
+                * (edge_infos[edge_xy].edge_upper_13)
+                * (edge_infos[edge_xy].edge_lower_13))
                 as f64;
-
-            path4_in_diamond.non_induced.mean_intensity += (weight_xy.powf(1.0 / 3.0)
-                * (newton_edge[edge_xy].s3_upper.s1 * newton_edge[edge_xy].s3_lower.s1))
-                as f64;
-
             y += 1;
         }
     }
     path4.count -= 3 * triangle.count;
     path4.mean_intensity -= 3.0 * triangle.mean_intensity;
+    nii!(path4_in_diamond_inner) -= 3.0 * triangle.mean_intensity;
+    println!("triangle count: {}", triangle.count);
+    println!("triangle mean intensity: {}", triangle.mean_intensity);
 
     // c4 are enumerated efficiently. the adj list's neighbors are sorted by degree!!
-    (c4.count, c4.mean_intensity) = intensity_c4(&mut adj_list);
+    (c4.count, c4.mean_intensity, nii!(path4_in_c4)) = intensity_c4_subinc(&mut adj_list);
     c4.mean_intensity *= c4.count.max(1) as f64; // restore to sum instead of mean
+    nii!(path4_in_c4) *= 4.0 * c4.count.max(1) as f64;
 
     // converting subgraphlets to induced counts
-    //diamond
-    diamond_in_k4.induced = diamond_in_k4.non_induced;
+    // diamond
+    ii!(diamond_in_k4) = nii!(diamond_in_k4);
 
-    //c4
-    c4_in_k4.induced.mean_intensity = c4_in_k4.non_induced.mean_intensity;
-    c4_in_diamond.induced.mean_intensity =
-        c4_in_diamond.non_induced.mean_intensity - 2.0 * c4_in_k4.induced.mean_intensity;
+    // c4
+    ii!(c4_in_k4) = nii!(c4_in_k4);
+    ii!(c4_in_diamond) = nii!(c4_in_diamond) - 2.0 * ii!(c4_in_k4);
 
     // paw
-    paw_in_k4.induced.mean_intensity = paw_in_k4.non_induced.mean_intensity;
-    paw_in_diamond.induced.mean_intensity =
-        paw_in_diamond.non_induced.mean_intensity - 2.0 * paw_in_k4.induced.mean_intensity;
+    ii!(paw_in_k4) = nii!(paw_in_k4);
+    ii!(paw_in_diamond) = nii!(paw_in_diamond) - 2.0 * ii!(paw_in_k4);
 
-    //star4
-    star4_in_k4.induced.mean_intensity = star4_in_k4.non_induced.mean_intensity;
-    star4_in_diamond.induced.mean_intensity =
-        star4_in_diamond.non_induced.mean_intensity - 3.0 * star4_in_k4.induced.mean_intensity;
-    star4_in_paw.induced.mean_intensity = star4_in_paw.non_induced.mean_intensity
-        - 2.0 * star4_in_diamond.induced.mean_intensity
-        - 3.0 * star4_in_k4.induced.mean_intensity;
-    println!(
-        "star4 non induced: {}",
-        star4_in_k4.non_induced.mean_intensity
-    );
-    println!("non induced");
-    println!("star4_in_k4: {}", star4_in_k4.non_induced.mean_intensity);
-    println!(
-        "star4_in_diamond: {}",
-        star4_in_diamond.non_induced.mean_intensity
-    );
-    println!("star4_in_paw: {}", star4_in_paw.non_induced.mean_intensity);
+    // star4
+    ii!(star4_in_k4) = nii!(star4_in_k4);
+    ii!(star4_in_diamond) = nii!(star4_in_diamond) - 3.0 * ii!(star4_in_k4);
+    ii!(star4_in_paw) = nii!(star4_in_paw) - 2.0 * ii!(star4_in_diamond) - 3.0 * ii!(star4_in_k4);
 
-    println!("induced");
-    println!("star4_in_k4: {}", star4_in_k4.induced.mean_intensity);
-    println!(
-        "star4_in_diamond: {}",
-        star4_in_diamond.induced.mean_intensity
-    );
-    println!("star4_in_paw: {}", star4_in_paw.induced.mean_intensity);
+    // path4
+    nii!(path4_in_diamond) = nii!(path4_in_diamond_ring) + nii!(path4_in_diamond_inner);
+    ii!(path4_in_k4) = nii!(path4_in_k4);
+    // ii!(path4_in_diamond) = nii!(path4_in_diamond) - 3.0 * ii!(path4_in_k4);
+    ii!(path4_in_diamond_ring) = nii!(path4_in_diamond_ring) - 2.0 * ii!(path4_in_k4);
+    ii!(path4_in_diamond_inner) = nii!(path4_in_diamond_inner) - ii!(path4_in_k4);
+    ii!(path4_in_c4) = nii!(path4_in_c4) - ii!(path4_in_diamond_ring) - ii!(path4_in_k4);
+    ii!(path4_in_paw) = nii!(path4_in_paw)
+        - ii!(path4_in_diamond_ring)
+        - 2.0 * ii!(path4_in_diamond_inner)
+        - 2.0 * ii!(path4_in_k4);
+
+    // ii!(path4_in_diamond_ring) = nii!(path4_in_diamond_ring) - 3.0 * ii!(path4_in_k4);
+
+    // println!("path4 non induced: {}", nii!(path4_in_k4));
+    println!("Path 4 mean intensity: {}", path4.mean_intensity);
+    println!("non_induced:");
+    println!("path4_in_k4: {}", nii!(path4_in_k4));
+    println!("path4_in_diamond_ring: {}", nii!(path4_in_diamond_ring));
+    println!("path4_in_diamond_inner: {}", nii!(path4_in_diamond_inner));
+    println!("path4_in_c4: {}", nii!(path4_in_c4));
+    println!("path4_in_paw: {}", nii!(path4_in_paw));
+
+    println!("induced:");
+    println!("path4_in_k4: {}", ii!(path4_in_k4));
+    println!("path4_in_diamond_ring: {}", ii!(path4_in_diamond_ring));
+    println!("path4_in_diamond_inner: {}", ii!(path4_in_diamond_inner));
+    println!("path4_in_c4: {}", ii!(path4_in_c4));
+    println!("path4_in_paw: {}", ii!(path4_in_paw));
 
     // converting to induced counts
     diamond.count -= 6 * k4.count;
     c4.count -= 3 * k4.count + diamond.count;
-    tailed_triangle.count -= 12 * k4.count + 4 * diamond.count;
-    star4.count -= 4 * k4.count + 2 * diamond.count + tailed_triangle.count;
-    path4.count -= 12 * k4.count + 6 * diamond.count + 2 * tailed_triangle.count + 4 * c4.count;
+    paw.count -= 12 * k4.count + 4 * diamond.count;
+    star4.count -= 4 * k4.count + 2 * diamond.count + paw.count;
+    path4.count -= 12 * k4.count + 6 * diamond.count + 2 * paw.count + 4 * c4.count;
 
     // converting to induced intensities
-    diamond.mean_intensity -= diamond_in_k4.induced.mean_intensity;
-    c4.mean_intensity -= c4_in_diamond.induced.mean_intensity + c4_in_k4.induced.mean_intensity;
-    tailed_triangle.mean_intensity -=
-        paw_in_diamond.induced.mean_intensity + paw_in_k4.induced.mean_intensity;
-    star4.mean_intensity -= star4_in_paw.induced.mean_intensity
-        + star4_in_diamond.induced.mean_intensity
-        + star4_in_k4.induced.mean_intensity;
+    diamond.mean_intensity -= ii!(diamond_in_k4);
+    c4.mean_intensity -= ii!(c4_in_diamond) + ii!(c4_in_k4);
+    paw.mean_intensity -= ii!(paw_in_diamond) + ii!(paw_in_k4);
+    star4.mean_intensity -= ii!(star4_in_paw) + ii!(star4_in_diamond) + ii!(star4_in_k4);
+    path4.mean_intensity -= ii!(path4_in_paw)
+        + ii!(path4_in_c4)
+        + ii!(path4_in_diamond_ring)
+        + ii!(path4_in_diamond_inner)
+        + ii!(path4_in_k4);
 
     k4.mean_intensity /= k4.count.max(1) as f64;
     diamond.mean_intensity /= diamond.count.max(1) as f64;
     c4.mean_intensity /= c4.count.max(1) as f64;
-    tailed_triangle.mean_intensity /= tailed_triangle.count.max(1) as f64;
+    paw.mean_intensity /= paw.count.max(1) as f64;
     star4.mean_intensity /= star4.count.max(1) as f64;
+    path4.mean_intensity /= path4.count.max(1) as f64;
 
     // Add results to the motif stats hashmap
     rv.insert(PATH_4.fingerprint(), path4);
@@ -1128,7 +1247,7 @@ pub fn weighted_4(adj: &HyperAdjList<NodeWeight>) -> HashMap<Fingerprint4, Motif
     rv.insert(FOUR_CLIQUE.fingerprint(), k4);
 
     rv.insert(DIAMOND.fingerprint(), diamond);
-    rv.insert(TAILED_TRIANGLE.fingerprint(), tailed_triangle);
+    rv.insert(TAILED_TRIANGLE.fingerprint(), paw);
 
     return rv;
 

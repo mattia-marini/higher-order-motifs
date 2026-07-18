@@ -2,21 +2,26 @@ use std::error::Error;
 use std::sync::LazyLock;
 
 use rust_core::loader::DatasetLoader;
+use rust_core::misc::cycle::intensity_c4_subinc;
 use rust_core::motifs::algorithms::escape::{self, unweighted_4, weighted_4};
 use rust_core::types::adj_list::{AdjList, Undirected, WithoutIncidence};
 use rust_core::types::hyperadj_list::HyperAdjList;
 use rust_core::types::{Hx, Hypergraph, NodeWeight};
+use rust_core_tests::shared::graphlets::*;
 use seq_macro::seq;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     // simple_graph_count();
     // simple_graph_intensity();
+    // all_simple_graphlets();
 
     // dblp_uw()?;
     // dblp_w()?;
 
     hospital_w()?;
     // friendship_hs()?;
+    // simple_c4_w();
+
     Ok(())
 }
 
@@ -34,7 +39,7 @@ const SIMPLE_UNWEIGHTED: LazyLock<AdjList<(), Undirected, WithoutIncidence>> =
 
 const SIMPLE_WEIGHTED: LazyLock<HyperAdjList<NodeWeight>> = LazyLock::new(|| {
     let mut hg = Hypergraph::new();
-
+    //
     hg.extend_with_edges(vec![
         Hx::new_unchecked([0, 1], 1.0),
         Hx::new_unchecked([0, 2], 1.0),
@@ -42,9 +47,16 @@ const SIMPLE_WEIGHTED: LazyLock<HyperAdjList<NodeWeight>> = LazyLock::new(|| {
         Hx::new_unchecked([1, 2], 1.0),
         Hx::new_unchecked([1, 3], 1.0),
         Hx::new_unchecked([2, 3], 1.0),
-        Hx::new_unchecked([0, 4], 1.0),
-        Hx::new_unchecked([1, 4], 1.0),
+        // Hx::new_unchecked([0, 4], 1.0),
+        // Hx::new_unchecked([1, 4], 1.0),
     ]);
+    //
+    // hg.extend_with_edges(vec![
+    //     Hx::new_unchecked([0, 1], 1.0),
+    //     Hx::new_unchecked([1, 2], 1.0),
+    //     Hx::new_unchecked([2, 3], 1.0),
+    //     Hx::new_unchecked([0, 3], 1.0),
+    // ]);
 
     // hg.extend_with_edges(vec![
     //     // Hx::new_unchecked([0, 2, 3], ()),
@@ -149,6 +161,17 @@ pub fn simple_graph_intensity() {
             motif.get_canonical_rep()
         );
     }
+}
+
+pub fn simple_c4_w() {
+    let adj = SIMPLE_WEIGHTED.clone();
+    let edges = adj
+        .iter_by_size(2)
+        .map(|(_, e)| (e.nodes[0], e.nodes[1], *e.weight))
+        .collect::<Vec<_>>();
+    let (mut adj, _, _) =
+        AdjList::<NodeWeight, Undirected, WithoutIncidence>::from_edges_mapped(edges);
+    println!("{:?}", intensity_c4_subinc(&mut adj));
 }
 
 pub fn dblp_uw() -> Result<(), Box<dyn Error>> {
@@ -302,4 +325,28 @@ pub fn friendship_hs() -> Result<(), Box<dyn Error>> {
     // }
 
     Ok(())
+}
+
+pub fn all_simple_graphlets() {
+    let graphlets = [
+        ("Path 4", PATH4_W.clone()),
+        ("Star 4", STAR4_W.clone()),
+        ("Paw", PAW_W.clone()),
+        ("C4", C4_W.clone()),
+        ("Diamond", DIAMOND_W.clone()),
+        ("K4", K4_W.clone()),
+    ];
+
+    for (name, (_hg, adj)) in graphlets.iter() {
+        println!("{}", name);
+        let rv = weighted_4(adj);
+        for (_number, (motif, stats)) in rv.iter().enumerate() {
+            println!(
+                "{}\t{}\t{}",
+                stats.count,
+                stats.mean_intensity,
+                motif.get_canonical_rep()
+            );
+        }
+    }
 }
