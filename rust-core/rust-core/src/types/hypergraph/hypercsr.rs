@@ -77,31 +77,33 @@ impl<W> HyperCSR<W> {
         rv
     }
 
-    pub fn iter_by_size(&self, size: usize) -> impl Iterator<Item = (EdgeId, EdgeRef<'_, W>)> + '_ {
-        // 1. Safely get the size info. If it doesn't exist, this becomes None.
-        let mut maybe_iterator = None;
-        match self.sizes.get(size) {
-            Some((first_id, count)) => {
-                if *first_id < self.m() {
-                    let start = self.lookup[*first_id].0;
-
-                    maybe_iterator = Some((0..*count).map(move |number| {
-                        let edge_id = first_id + number;
-                        let edge_start = start + size * number;
-
-                        let edge_ref = EdgeRef {
-                            nodes: &self.nodes[edge_start..edge_start + size],
-                            weight: &self.weights[edge_id],
-                        };
-
-                        (edge_id as EdgeId, edge_ref)
-                    }));
-                }
-            }
-            None => maybe_iterator = None,
+    pub fn count_by_size(&self, size: usize) -> usize {
+        if size < self.sizes.len() {
+            self.sizes[size].1
+        } else {
+            0
         }
+    }
 
-        maybe_iterator.into_iter().flatten()
+    pub fn iter_by_size(&self, size: usize) -> impl Iterator<Item = (EdgeId, EdgeRef<'_, W>)> + '_ {
+        let (first_id, count, start) = match self.sizes.get(size) {
+            Some(&(first_id, count)) if first_id < self.m() => {
+                (first_id, count, self.lookup[first_id].0)
+            }
+            _ => (0, 0, 0), // A count of 0 makes the range (0..0) instantly empty
+        };
+
+        (0..count).map(move |number| {
+            let edge_id = first_id + number;
+            let edge_start = start + size * number;
+
+            let edge_ref = EdgeRef {
+                nodes: &self.nodes[edge_start..edge_start + size],
+                weight: &self.weights[edge_id],
+            };
+
+            (edge_id as EdgeId, edge_ref)
+        })
     }
 
     pub fn get_edge_by_id(&self, edge_id: EdgeId) -> EdgeRef<'_, W> {

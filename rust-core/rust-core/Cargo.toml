@@ -21,7 +21,7 @@ pyo3 = { workspace = true, optional = true }
 pyo3-stub-gen = { workspace = true, optional = true}
 
 timed = "0.2.1"
-bit-set = "0.10"
+bit-set = {workspace=true}
 num-traits = {workspace=true}
 rkyv = {version = "0.8.15", features = ["hashbrown-0_17"]}
 itertools = "0.14.0"

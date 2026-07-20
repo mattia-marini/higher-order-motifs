@@ -17,6 +17,9 @@ use crate::{
 pub struct HyperAdjListBase<W, C: Container> {
     pub(crate) csr: HyperCSR<W>,
     pub(crate) adj: Vec<C>,
+
+    /// for each vertex, the position in the neighbor list of the first edge with the given size and its size
+    pub(crate) sizes: Vec<Vec<(usize, usize)>>,
 }
 
 impl<W, C: Container> HyperAdjListBase<W, C> {
@@ -24,6 +27,7 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
         Self {
             csr: HyperCSR::new(),
             adj: Vec::new(),
+            sizes: Vec::new(),
         }
     }
 
@@ -76,8 +80,13 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
         });
 
         let mut adj = Vec::with_capacity(hg.n());
+        let mut sizes = Vec::with_capacity(hg.n());
         adj.resize_with(hg.n(), C::empty);
         for v in 0..hg.n() {
+            let mut node_sizes = Vec::with_capacity(11);
+            node_sizes.push((0, 0));
+            node_sizes.push((0, 0));
+            sizes.push(node_sizes);
             adj[v].reserve(degrees[v]);
         }
 
@@ -85,10 +94,19 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
             let edge = csr.get_edge_by_id(edge_id as NodeId);
             for n in edge.nodes {
                 adj[*n as usize].insert_id(edge_id as NodeId);
+
+                let last = sizes[*n as usize].last_mut().unwrap();
+                let new_size = (last.0 + last.1, 0);
+                while sizes[*n as usize].len() <= edge.nodes.len() {
+                    sizes[*n as usize].push(new_size);
+                }
+
+                let last = sizes[*n as usize].last_mut().unwrap();
+                last.1 += 1;
             }
         }
 
-        Self { csr, adj }
+        Self { csr, adj, sizes }
     }
 
     /// Returns the set of incident edges ids for a given node.
@@ -104,6 +122,10 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
         self.adj[node_id as usize]
             .iter_edge_ids()
             .map(move |&id| (id as EdgeId, self.csr.get_edge_by_id(id as EdgeId)))
+    }
+
+    pub fn count_by_size(&self, size: usize) -> usize {
+        self.csr.count_by_size(size)
     }
 
     pub fn iter_by_size(&self, size: usize) -> impl Iterator<Item = (EdgeId, EdgeRef<'_, W>)> {
@@ -131,31 +153,62 @@ impl<W, C: Container> HyperAdjListBase<W, C> {
         let mut cached_min = vec![u32::MAX; self.m()];
 
         let mut adj = self.adj.clone();
+        let mut sizes = self.sizes.clone();
 
         for (u, incidend_edges) in adj.iter_mut().enumerate() {
             incidend_edges.retain_ids(|edge_id| {
+                let edge = self.csr.get_edge_by_id(*edge_id);
                 let min = if cached_min[*edge_id as usize] == u32::MAX {
-                    let min = *self
-                        .csr
-                        .get_edge_by_id(*edge_id)
-                        .nodes
-                        .iter()
-                        .min_by_key(|n| pos[**n as usize])
-                        .unwrap();
+                    let min = *edge.nodes.iter().min_by_key(|n| pos[**n as usize]).unwrap();
                     cached_min[*edge_id as usize] = min;
                     min
                 } else {
                     cached_min[*edge_id as usize]
                 };
 
+                sizes[u][edge.nodes.len()].1 -= (u as NodeId != min) as usize;
                 u as NodeId == min
             });
+        }
+
+        for (u, incidend_edges) in adj.iter_mut().enumerate() {
+            let mut new_start = 0;
+            for (start, count) in sizes[u].iter_mut() {
+                *start = new_start;
+                new_start += *count;
+            }
         }
 
         HyperAdjListBase {
             csr: self.csr.clone(),
             adj,
+            sizes,
         }
+    }
+}
+
+impl<W> HyperAdjList<W> {
+    pub fn iter_incident_by_size(
+        &self,
+        node: NodeId,
+        size: usize,
+    ) -> impl Iterator<Item = (EdgeId, EdgeRef<'_, W>)> {
+        // 1. Evaluate the conditions upfront.
+        // Fallback to 0..0 if anything fails, making the range instantly empty.
+        let range = match self
+            .sizes
+            .get(node as usize)
+            .and_then(|sizes| sizes.get(size))
+        {
+            Some(&(first_id, count)) if first_id < self.m() => first_id..(first_id + count),
+            _ => 0..0,
+        };
+
+        // 2. Return a direct, single Map iterator with no flattening required.
+        range.map(move |number| {
+            let edge_id = self.adj[node as usize][number];
+            (edge_id, self.csr.get_edge_by_id(edge_id as EdgeId))
+        })
     }
 }
 

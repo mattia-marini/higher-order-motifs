@@ -89,3 +89,25 @@ pub const K4_W: LazyLock<RvPairW> = LazyLock::new(|| {
     let adj = HyperAdjList::from_hypergraph_unmapped(hg.clone());
     (hg, adj)
 });
+
+pub const STD_HG: LazyLock<RvPairW> = LazyLock::new(|| {
+    let mut hg = Hypergraph::new();
+    hg.extend_with_edges(vec![
+        Hx::new_unchecked([0, 1], 1.0),
+        Hx::new_unchecked([0, 2], 1.0),
+        // Hx::new_unchecked([0, 3], 1.0),
+        // Hx::new_unchecked([1, 2], 1.0),
+        // Hx::new_unchecked([1, 3], 1.0),
+        // Hx::new_unchecked([2, 3], 1.0),
+    ]);
+
+    hg.extend_with_edges(vec![
+        Hx::new_unchecked([0, 1, 2], 1.0),
+        Hx::new_unchecked([1, 2, 3], 1.0),
+        Hx::new_unchecked([0, 1, 3], 1.0),
+        Hx::new_unchecked([0, 2, 3], 1.0),
+        Hx::new_unchecked([2, 3, 4], 1.0),
+    ]);
+    let adj = HyperAdjList::from_hypergraph_unmapped(hg.clone());
+    (hg, adj)
+});

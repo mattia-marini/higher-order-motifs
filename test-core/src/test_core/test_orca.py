@@ -1,3 +1,5 @@
+import math
+
 import python_core.motifs.motifs2 as motifs2
 from python_core.graph import StandardConstructionMethod
 from python_core.loaders import load_conference, load_hospital, load_pacs
@@ -22,8 +24,8 @@ def test_hospital(order: int):
     py_loader = load_hospital(StandardConstructionMethod(weighted=True))
     rust_loader = DatasetLoader.builder().hospital().weighted().cached(True).load()
 
-    py_loader = py_loader.filter_orders([2])
-    rust_loader.retain_orders([2])
+    py_loader = py_loader.filter_orders([2, 3, 4])
+    rust_loader.retain_orders([2, 3, 4])
     print(f"rust: 2: {rust_loader.count(2)} 3: {rust_loader.count(3)}")
     print("")
 
@@ -112,10 +114,21 @@ def test_dataset_order_4(py_hg, rust_hg):
 
     py_counts = sorted([v.count for v in py_rv_3.values() if v.count > 0])
     rust_counts = sorted([stat.count for stat in rust_rv_3.values()])
+
+    py_intensities = sorted([v.intensity for v in py_rv_3.values() if v.count > 0])
+    rust_intensities = sorted([stat.mean_intensity for stat in rust_rv_3.values()])
+
     if py_counts != rust_counts:
         print(f"Python counts: {py_counts}")
         print(f"Rust counts: {rust_counts}")
     assert py_counts == rust_counts, f"Python counts: {py_counts}, Rust counts: {rust_counts}"
+
+    intensities_match = all(math.isclose(a, b, abs_tol=0.001) for a, b in zip(py_intensities, rust_intensities))
+    if not intensities_match:
+        print(f"Python intensities: {py_intensities}")
+        print(f"Rust intensities: {rust_intensities}")
+
+    assert intensities_match, f"Python intensities: {py_intensities}, Rust intensities: {rust_intensities}"
 
     # print(f"Expected 3 motifs: {py_rv_3}, time: {py_time_3:.4f}s")
     # print(f"Rust ORCA 3 motifs: {rust_rv_3}, time: {rust_time_3:.4f}s")

@@ -96,7 +96,12 @@ pub struct MotifStats {
 impl MotifStats {
     #[staticmethod]
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            count: 0,
+            mean_intensity: 0.0,
+            mean_coherence: 1.0,
+            actual_intensity: 0.0,
+        }
     }
 }
 

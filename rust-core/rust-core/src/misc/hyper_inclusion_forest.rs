@@ -262,7 +262,7 @@ pub fn inclusion_forest<W: Clone>(
 ) -> Vec<Vec<EdgeId>> {
     // sorting each incident list by increasing hyperedge size
     {
-        let HyperAdjList { csr, adj } = adj;
+        let HyperAdjList { csr, adj, .. } = adj;
 
         // Sort by hyperedge size; hyperedges with the same size will be sorted by their edge id
         for incident in adj.iter_mut() {

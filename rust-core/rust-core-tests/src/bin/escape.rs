@@ -18,7 +18,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     // dblp_uw()?;
     // dblp_w()?;
 
-    hospital_w()?;
+    hospital_uw()?;
+    // hospital_w()?;
     // friendship_hs()?;
     // simple_c4_w();
 
@@ -262,7 +263,7 @@ pub fn hospital_w() -> Result<(), Box<dyn Error>> {
     }
     println!("Medium 2-deg = {}", sum / hg.0.edges::<2>().len() as f32);
 
-    seq!(N in 3..11 {
+    seq!(N in 4..11 {
         hg.take_edges::<N>();
     });
     hg.remove_isolated_nodes();
